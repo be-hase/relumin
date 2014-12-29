@@ -1,0 +1,4 @@
+server:
+  session-timeout: 86400
+  tomcat:
+    uri-encoding: UTF-8

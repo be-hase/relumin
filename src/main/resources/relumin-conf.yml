@@ -1,0 +1,11 @@
+server:
+  port: 8080
+  monitorPort: 8081
+
+#log:
+#  dir: 
+#  level: 
+
+redis:
+  host: 127.0.0.1
+  port: 6379
