@@ -2,10 +2,12 @@ server:
   port: 8080
   monitorPort: 8081
 
-#log:
-#  dir: 
-#  level: 
+log:
+  type: console
+  dir: 
+  level: 
 
 redis:
-  host: 127.0.0.1
+  host: 192.168.33.10
   port: 6379
+

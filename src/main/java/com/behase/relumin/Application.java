@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
@@ -23,7 +23,6 @@ import redis.clients.jedis.JedisPool;
 
 import com.behase.relumin.config.ReluminConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Configuration
 @EnableAutoConfiguration
+@EnableScheduling
 @ComponentScan
 public class Application extends WebMvcConfigurerAdapter {
 	private static final String CONFIG_LOCATION = "config";
@@ -42,13 +42,19 @@ public class Application extends WebMvcConfigurerAdapter {
 	private int redisPort;
 
 	public static void main(String[] args) throws IOException {
-		String configLocation = System.getProperty(CONFIG_LOCATION, "relumin-conf.yml");
+		String configLocation = System.getProperty(CONFIG_LOCATION, "relumin-local-conf.yml");
 		checkArgument(configLocation != null, "Specify config VM parameter.");
 
-		ClassPathResource configResource = new ClassPathResource(configLocation);
-		ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-		ReluminConfig config = mapper.readValue(configResource.getInputStream(), ReluminConfig.class);
+		ReluminConfig config = ReluminConfig.create(configLocation);
 		log.info("config : {}", config);
+
+		if ("console".equalsIgnoreCase(config.getLog().getType())) {
+			System.setProperty("log.type", "console");
+		} else {
+			System.setProperty("log.type", "file");
+			System.setProperty("log.dir", config.getLog().getDir());
+			System.setProperty("log.level", config.getLog().getLevel());
+		}
 
 		SpringApplication app = new SpringApplication(Application.class);
 		app.setAddCommandLineProperties(false);
@@ -93,6 +99,7 @@ public class Application extends WebMvcConfigurerAdapter {
 		config.setTestOnBorrow(true);
 
 		JedisPool pool = new JedisPool(config, redisHost, redisPort);
+
 		return pool;
 	}
 }
