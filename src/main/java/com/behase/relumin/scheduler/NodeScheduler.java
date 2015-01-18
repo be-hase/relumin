@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -37,7 +38,10 @@ public class NodeScheduler {
 	@Autowired
 	ObjectMapper mapper;
 
-	@Scheduled(fixedDelay = 5 * 1000)
+	@Value("${scheduler.collectStaticsInfoMaxCount:1500}")
+	private long collectStaticsInfoMaxCount;
+
+	@Scheduled(fixedDelayString = "${scheduler.collectStaticsInfoIntervalMillis:120000}")
 	public void collectStaticsIndo() throws ApiException, IOException {
 		log.info("collectStaticsIndo call");
 		Set<String> clusterNames = clusterService.getClusters();
@@ -55,7 +59,7 @@ public class NodeScheduler {
 							String key = Constants.REDIS_PREFIX + ".cluster." + clusterName + ".node."
 								+ clusterNode.getHostAndPort() + ".staticsInfo";
 							jedis.lpush(key, mapper.writeValueAsString(staticsInfo));
-							jedis.ltrim(key, 0, 3);
+							jedis.ltrim(key, 0, collectStaticsInfoMaxCount - 1);
 						}
 					} catch (Exception e) {
 						log.error("collectStaticsIndo fail. {}, {}", clusterName, clusterNode.getHostAndPort(), e);

@@ -2,6 +2,10 @@ package com.behase.relumin.controller;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,32 +15,34 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.behase.relumin.exception.ApiException;
+import com.behase.relumin.model.Cluster;
 import com.behase.relumin.service.ClusterService;
 import com.google.common.collect.Maps;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
+//@Slf4j
 @RestController
 @RequestMapping(value = "/cluster")
 public class ClusterController {
 	@Autowired
 	ClusterService clusterService;
 
+	@Autowired
+	ScriptEngine engine;
+
 	@RequestMapping(value = "/list", method = RequestMethod.GET)
-	public Object getClusterList() {
+	public Set<String> getClusterList() {
 		return clusterService.getClusters();
 	}
 
 	@RequestMapping(value = "/{clusterName}", method = RequestMethod.GET)
-	public Object getCluster(
+	public Cluster getCluster(
 			@PathVariable String clusterName
 			) throws ApiException, IOException {
 		return clusterService.getCluster(clusterName);
 	}
 
 	@RequestMapping(value = "/{clusterName}", method = RequestMethod.POST)
-	public Object setCluster(
+	public Cluster setCluster(
 			@PathVariable String clusterName,
 			@RequestParam String hostAndPort
 			) throws ApiException, IOException {
@@ -45,7 +51,7 @@ public class ClusterController {
 	}
 
 	@RequestMapping(value = "/{clusterName}", method = RequestMethod.DELETE)
-	public Object deleteCluster(
+	public Map<String, Boolean> deleteCluster(
 			@PathVariable String clusterName
 			) throws ApiException {
 		clusterService.deleteCluster(clusterName);
@@ -53,5 +59,12 @@ public class ClusterController {
 		Map<String, Boolean> result = Maps.newHashMap();
 		result.put("isSuccess", true);
 		return result;
+	}
+
+	@RequestMapping(value = "/{clusterName}/add-node")
+	public Object rubyTest(
+			@PathVariable String clusterName
+			) throws ApiException, IOException, ScriptException {
+		return engine.eval("/Users/JP11644/Desktop/redis-trib.rb");
 	}
 }

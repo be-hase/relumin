@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class SchedulerConfig {
-	private long refreshClustersIntervalMill;
-	private long collectStaticsInfoIntervalMill;
+	private long refreshClustersIntervalMillis;
+	private long collectStaticsInfoIntervalMillis;
+	private long collectStaticsInfoMaxCount;
 }

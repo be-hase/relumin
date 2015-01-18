@@ -14,7 +14,7 @@ public class ClusterScheduler {
 	@Autowired
 	ClusterService clusterService;
 
-	@Scheduled(fixedDelay = 5 * 60 * 1000)
+	@Scheduled(fixedDelayString = "${scheduler.refreshClustersIntervalMillis:120000}")
 	public void refreshClusters() {
 		log.info("refreshClusters call");
 		clusterService.refreshClusters();

@@ -12,9 +12,7 @@ import com.behase.relumin.util.JedisUtils;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.Maps;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
+//@Slf4j
 @Service
 public class NodeServiceImpl implements NodeService {
 	@Override

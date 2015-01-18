@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -21,11 +22,13 @@ import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterInfo;
 import com.behase.relumin.model.ClusterNode;
+import com.behase.relumin.model.SlotInfo;
 import com.behase.relumin.util.JedisUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,9 +60,47 @@ public class ClusterServiceImpl implements ClusterService {
 			String clusterInfoResult = jedis.clusterInfo();
 			ClusterInfo info = parseClusterInfoResult(clusterInfoResult);
 			List<ClusterNode> nodes = parseClusterNodesResult(jedis.clusterNodes(), node.getHostAndPort());
+			nodes.sort((o1, o2) -> o1.getHostAndPort().compareTo(o2.getHostAndPort()));
+
+			List<SlotInfo> slots = Lists.newArrayList();
+			Map<String, List<Map<String, String>>> slaveRelations = Maps.newHashMap();
+			nodes.forEach(v -> {
+				Map<String, String> nodeMap = Maps.newLinkedHashMap();
+				nodeMap.put("nodeId", v.getNodeId());
+				nodeMap.put("hostAndPort", v.getHostAndPort());
+
+				boolean isMaster = StringUtils.isNotBlank(v.getServedSlots());
+				if (isMaster) {
+					String servedSlots = v.getServedSlots();
+					String[] slotsRangesArray = StringUtils.split(servedSlots, ",");
+					log.info("hoge : {}", servedSlots);
+					for (String slotsRangeStr : slotsRangesArray) {
+						String[] slotsRange = StringUtils.split(slotsRangeStr, "-");
+
+						SlotInfo slotInfo = new SlotInfo();
+						slotInfo.setStartSlotNumber(Integer.valueOf(slotsRange[0]));
+						slotInfo.setEndSlotNumber(Integer.valueOf(slotsRange[1]));
+						slotInfo.setMaster(nodeMap);
+						slots.add(slotInfo);
+					}
+				} else {
+					List<Map<String, String>> slaves = slaveRelations.get(v.getMasterNodeId());
+					if (slaves == null) {
+						slaves = Lists.newArrayList();
+						slaveRelations.put(v.getMasterNodeId(), slaves);
+					}
+					slaves.add(nodeMap);
+				}
+			});
+			slots.forEach(v -> {
+				List<Map<String, String>> slaves = slaveRelations.get(v.getMaster().get("nodeId"));
+				v.setSlaves(slaves);
+			});
+			slots.sort((o1, o2) -> Integer.compare(o1.getStartSlotNumber(), o2.getStartSlotNumber()));
 
 			cluster.setInfo(info);
 			cluster.setNodes(nodes);
+			cluster.setSlots(slots);
 			return cluster;
 		}
 	}

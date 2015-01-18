@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -101,5 +104,12 @@ public class Application extends WebMvcConfigurerAdapter {
 		JedisPool pool = new JedisPool(config, redisHost, redisPort);
 
 		return pool;
+	}
+
+	@Bean
+	public ScriptEngine scriptEngine() {
+		ScriptEngineManager manager = new ScriptEngineManager();
+		ScriptEngine engine = manager.getEngineByName("jruby");
+		return engine;
 	}
 }

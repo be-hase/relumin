@@ -8,4 +8,5 @@ import lombok.Data;
 public class Cluster {
 	private ClusterInfo info;
 	private List<ClusterNode> nodes;
+	private List<SlotInfo> slots;
 }
