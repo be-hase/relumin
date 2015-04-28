@@ -58,12 +58,12 @@ public class ClusterServiceImpl implements ClusterService {
 
 		try (Jedis jedis = JedisUtils.getJedisByHostAndPort(node.getHostAndPort())) {
 			String clusterInfoResult = jedis.clusterInfo();
-			ClusterInfo info = parseClusterInfoResult(clusterInfoResult);
+			ClusterInfo info = JedisUtils.parseClusterInfoResult(clusterInfoResult);
 			List<ClusterNode> nodes = parseClusterNodesResult(jedis.clusterNodes(), node.getHostAndPort());
 			nodes.sort((o1, o2) -> o1.getHostAndPort().compareTo(o2.getHostAndPort()));
 
 			List<SlotInfo> slots = Lists.newArrayList();
-			Map<String, List<Map<String, String>>> slaveRelations = Maps.newHashMap();
+			Map<String, List<Map<String, String>>> replicaRelations = Maps.newHashMap();
 			nodes.forEach(v -> {
 				Map<String, String> nodeMap = Maps.newLinkedHashMap();
 				nodeMap.put("nodeId", v.getNodeId());
@@ -83,17 +83,17 @@ public class ClusterServiceImpl implements ClusterService {
 						slots.add(slotInfo);
 					}
 				} else {
-					List<Map<String, String>> slaves = slaveRelations.get(v.getMasterNodeId());
+					List<Map<String, String>> slaves = replicaRelations.get(v.getMasterNodeId());
 					if (slaves == null) {
 						slaves = Lists.newArrayList();
-						slaveRelations.put(v.getMasterNodeId(), slaves);
+						replicaRelations.put(v.getMasterNodeId(), slaves);
 					}
 					slaves.add(nodeMap);
 				}
 			});
 			slots.forEach(v -> {
-				List<Map<String, String>> slaves = slaveRelations.get(v.getMaster().get("nodeId"));
-				v.setSlaves(slaves);
+				List<Map<String, String>> replicas = replicaRelations.get(v.getMaster().get("nodeId"));
+				v.setReplicas(replicas);
 			});
 			slots.sort((o1, o2) -> Integer.compare(o1.getStartSlotNumber(), o2.getStartSlotNumber()));
 
@@ -238,57 +238,5 @@ public class ClusterServiceImpl implements ClusterService {
 			clusterNodes.add(clusterNode);
 		}
 		return clusterNodes;
-	}
-
-	private ClusterInfo parseClusterInfoResult(String result) {
-		ClusterInfo clusterInfo = new ClusterInfo();
-
-		String[] line = StringUtils.split(result, "\n");
-		for (String each : line) {
-			String[] eachArray = StringUtils.split(each, ":");
-			if (eachArray.length != 2) {
-				continue;
-			}
-
-			String key = StringUtils.trim(eachArray[0]);
-			String value = StringUtils.trim(eachArray[1]);
-
-			switch (key) {
-				case "cluster_state":
-					clusterInfo.setOk("ok".equals(value));
-					break;
-				case "cluster_slots_assigned":
-					clusterInfo.setSlotsAssigned(Integer.valueOf(value));
-					break;
-				case "cluster_slots_ok":
-					clusterInfo.setSlotsOk(Integer.valueOf(value));
-					break;
-				case "cluster_slots_pfail":
-					clusterInfo.setSlotsPfail(Integer.valueOf(value));
-					break;
-				case "cluster_slots_fail":
-					clusterInfo.setSlotsFail(Integer.valueOf(value));
-					break;
-				case "cluster_known_nodes":
-					clusterInfo.setKnownNodes(Integer.valueOf(value));
-					break;
-				case "cluster_size":
-					clusterInfo.setSize(Integer.valueOf(value));
-					break;
-				case "cluster_current_epoch":
-					clusterInfo.setCurrentEpoch(Integer.valueOf(value));
-					break;
-				case "cluster_stats_messages_sent":
-					clusterInfo.setStatsMessagesSent(Long.valueOf(value));
-					break;
-				case "cluster_stats_messages_received":
-					clusterInfo.setStatsMessagesReceived(Long.valueOf(value));
-					break;
-				default:
-					break;
-			}
-		}
-
-		return clusterInfo;
 	}
 }

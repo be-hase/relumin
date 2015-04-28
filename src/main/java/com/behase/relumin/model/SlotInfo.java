@@ -13,5 +13,5 @@ public class SlotInfo {
 	private int startSlotNumber;
 	private int endSlotNumber;
 	private Map<String, String> master = Maps.newLinkedHashMap();
-	private List<Map<String, String>> slaves = Lists.newArrayList();
+	private List<Map<String, String>> replicas = Lists.newArrayList();
 }

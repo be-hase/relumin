@@ -1,4 +1,4 @@
-package com.behase.relumin.controller;
+package com.behase.relumin.service;
 
 import java.io.IOException;
 import java.util.Map;
@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.behase.relumin.model.Cluster;
-import com.behase.relumin.service.ClusterService;
 import com.google.common.collect.Maps;
 
 //@Slf4j

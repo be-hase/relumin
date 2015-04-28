@@ -52,7 +52,7 @@ public class NodeScheduler {
 
 				for (ClusterNode clusterNode : clusterNodes) {
 					try {
-						Map<String, Object> staticsInfo = nodeService.getStaticsInfo(clusterNode);
+						Map<String, String> staticsInfo = nodeService.getStaticsInfo(clusterNode);
 						log.info("staticsInfo : {}", staticsInfo);
 
 						try (Jedis jedis = datastoreJedisPool.getResource()) {
