@@ -1,7 +1,2 @@
-server:
-  session-timeout: 86400
-  tomcat:
-    uri-encoding: UTF-8
-
 management:
   add-application-context-header: false

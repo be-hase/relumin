@@ -46,12 +46,12 @@ public class ClusterServiceImpl implements ClusterService {
 	@Override
 	public Set<String> getClusters() {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			return dataStoreJedis.smembers(Constants.REDIS_PREFIX + ".clusters");
+			return dataStoreJedis.smembers(Constants.getClustersKey());
 		}
 	}
 
 	@Override
-	public Cluster getCluster(String clusterName) throws IOException, ApiException {
+	public Cluster getCluster(String clusterName) throws IOException {
 		Cluster cluster = new Cluster();
 
 		ClusterNode node = getActiveClusterNode(clusterName);
@@ -73,7 +73,6 @@ public class ClusterServiceImpl implements ClusterService {
 				if (isMaster) {
 					String servedSlots = v.getServedSlots();
 					String[] slotsRangesArray = StringUtils.split(servedSlots, ",");
-					log.info("hoge : {}", servedSlots);
 					for (String slotsRangeStr : slotsRangesArray) {
 						String[] slotsRange = StringUtils.split(slotsRangeStr, "-");
 
@@ -106,7 +105,7 @@ public class ClusterServiceImpl implements ClusterService {
 	}
 
 	@Override
-	public void setCluster(String clusterName, String hostAndPort) throws ApiException, JsonProcessingException {
+	public void setCluster(String clusterName, String hostAndPort) throws JsonProcessingException {
 		validateClusterName(clusterName);
 		validateNode(hostAndPort);
 
@@ -115,28 +114,26 @@ public class ClusterServiceImpl implements ClusterService {
 				Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
 			List<ClusterNode> nodes = parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
 
-			dataStoreJedis.watch(Constants.REDIS_PREFIX + ".clusters", Constants.REDIS_PREFIX + ".cluster."
-				+ clusterName);
+			dataStoreJedis.watch(Constants.getClustersKey(), Constants.getClusterKey(clusterName));
 			Transaction t = dataStoreJedis.multi();
-			t.sadd(Constants.REDIS_PREFIX + ".clusters", clusterName);
-			t.set(Constants.REDIS_PREFIX + ".cluster." + clusterName, mapper.writeValueAsString(nodes));
+			t.sadd(Constants.getClustersKey(), clusterName);
+			t.set(Constants.getClusterKey(clusterName), mapper.writeValueAsString(nodes));
 			t.exec();
 		} catch (JedisException e) {
 			log.warn("redis error.", e);
-			throw new ApiException("400_002", "Redis Error. " + e.getMessage(), HttpStatus.BAD_REQUEST);
+			throw new ApiException(Constants.ERR_CODE_REDIS_SET_FAILED, "Redis Set Error. " + e.getMessage(), HttpStatus.BAD_REQUEST);
 		}
 	}
 
 	@Override
 	public void deleteCluster(String clusterName) {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			Set<String> keys = dataStoreJedis.keys(Constants.REDIS_PREFIX + ".cluster." + clusterName + ".*");
+			Set<String> keys = dataStoreJedis.keys(Constants.getClusterKey(clusterName) + ".*");
 
-			dataStoreJedis.watch(Constants.REDIS_PREFIX + ".clusters", Constants.REDIS_PREFIX + ".cluster."
-				+ clusterName);
+			dataStoreJedis.watch(Constants.getClustersKey(), Constants.getClusterKey(clusterName));
 			Transaction t = dataStoreJedis.multi();
-			t.srem(Constants.REDIS_PREFIX + ".clusters", clusterName);
-			t.del(Constants.REDIS_PREFIX + ".cluster." + clusterName);
+			t.srem(Constants.getClustersKey(), clusterName);
+			t.del(Constants.getClusterKey(clusterName));
 			if (keys.size() > 0) {
 				t.del(keys.toArray(new String[keys.size()]));
 			}
@@ -157,11 +154,11 @@ public class ClusterServiceImpl implements ClusterService {
 		}
 	}
 
-	private ClusterNode getActiveClusterNode(String clusterName) throws IOException, ApiException {
+	private ClusterNode getActiveClusterNode(String clusterName) throws IOException {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			String result = dataStoreJedis.get(Constants.REDIS_PREFIX + ".cluster." + clusterName);
+			String result = dataStoreJedis.get(Constants.getClusterKey(clusterName));
 			if (StringUtils.isBlank(result)) {
-				throw new ApiException("404_001", "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
+				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
 			}
 
 			List<ClusterNode> existCluterNodes = mapper.readValue(result, new TypeReference<List<ClusterNode>>() {
@@ -179,25 +176,25 @@ public class ClusterServiceImpl implements ClusterService {
 				}
 			}
 
-			throw new ApiException("500_001", "All node is down.", HttpStatus.INTERNAL_SERVER_ERROR);
+			throw new ApiException(Constants.ERR_CODE_ALL_NODE_DOWN, "All node is down.", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
-	private void validateClusterName(String name) throws ApiException {
+	private void validateClusterName(String name) {
 		if (!name.matches(NAME_REGEX)) {
-			throw new ApiException("400_001", "Name is invalid.", HttpStatus.BAD_REQUEST);
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Name is invalid.", HttpStatus.BAD_REQUEST);
 		}
 	}
 
-	private void validateNode(String node) throws ApiException {
+	private void validateNode(String node) {
 		String[] hostAndPortArray = StringUtils.split(node, ":");
 		if (hostAndPortArray.length != 2) {
-			throw new ApiException("400_001", "Node is invalid.", HttpStatus.BAD_REQUEST);
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Node is invalid.", HttpStatus.BAD_REQUEST);
 		}
 		try {
 			Integer.valueOf(hostAndPortArray[1]);
 		} catch (Exception e) {
-			throw new ApiException("400_001", "Node's port is invalid.", HttpStatus.BAD_REQUEST);
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Node's port is invalid.", HttpStatus.BAD_REQUEST);
 		}
 	}
 

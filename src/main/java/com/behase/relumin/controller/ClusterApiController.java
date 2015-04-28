@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,57 +11,46 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.service.ClusterService;
 import com.google.common.collect.Maps;
 
 //@Slf4j
 @RestController
-@RequestMapping(value = "/cluster")
-public class ClusterController {
+@RequestMapping(value = "/api")
+public class ClusterApiController {
 	@Autowired
 	ClusterService clusterService;
 
-	@Autowired
-	ScriptEngine engine;
-
-	@RequestMapping(value = "/list", method = RequestMethod.GET)
+	@RequestMapping(value = "/clusters", method = RequestMethod.GET)
 	public Set<String> getClusterList() {
 		return clusterService.getClusters();
 	}
 
-	@RequestMapping(value = "/{clusterName}", method = RequestMethod.GET)
+	@RequestMapping(value = "/cluster/{clusterName}", method = RequestMethod.GET)
 	public Cluster getCluster(
 			@PathVariable String clusterName
-			) throws ApiException, IOException {
+			) throws IOException {
 		return clusterService.getCluster(clusterName);
 	}
 
-	@RequestMapping(value = "/{clusterName}", method = RequestMethod.POST)
+	@RequestMapping(value = "/cluster/{clusterName}", method = RequestMethod.POST)
 	public Cluster setCluster(
 			@PathVariable String clusterName,
 			@RequestParam String hostAndPort
-			) throws ApiException, IOException {
+			) throws IOException {
 		clusterService.setCluster(clusterName, hostAndPort);
 		return clusterService.getCluster(clusterName);
 	}
 
-	@RequestMapping(value = "/{clusterName}", method = RequestMethod.DELETE)
+	@RequestMapping(value = "/cluster/{clusterName}", method = RequestMethod.DELETE)
 	public Map<String, Boolean> deleteCluster(
 			@PathVariable String clusterName
-			) throws ApiException {
+			) {
 		clusterService.deleteCluster(clusterName);
 
 		Map<String, Boolean> result = Maps.newHashMap();
 		result.put("isSuccess", true);
 		return result;
-	}
-
-	@RequestMapping(value = "/{clusterName}/add-node")
-	public Object rubyTest(
-			@PathVariable String clusterName
-			) throws ApiException, IOException, ScriptException {
-		return engine.eval("/Users/JP11644/Desktop/redis-trib.rb");
 	}
 }

@@ -7,7 +7,7 @@ import com.behase.relumin.model.ErrorResponse;
 import lombok.Getter;
 import lombok.Setter;
 
-public class ApiException extends Exception {
+public class ApiException extends RuntimeException {
 	private static final long serialVersionUID = 3285456520279227122L;
 
 	@Getter
@@ -19,13 +19,13 @@ public class ApiException extends Exception {
 	private HttpStatus httpStatus;
 
 	public ApiException(ErrorResponse errorResponse, HttpStatus httpStatus) {
-		super();
+		super(errorResponse.getError().getMessage());
 		this.errorResponse = errorResponse;
 		this.httpStatus = httpStatus;
 	}
 
 	public ApiException(String code, String message, HttpStatus httpStatus) {
-		super();
+		super(message);
 		this.errorResponse = new ErrorResponse(code, message);
 		this.httpStatus = httpStatus;
 	}
