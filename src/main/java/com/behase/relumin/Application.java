@@ -22,7 +22,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 import redis.clients.jedis.JedisPool;
 
 import com.behase.relumin.config.ReluminConfig;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 
 import lombok.extern.slf4j.Slf4j;
@@ -48,14 +51,6 @@ public class Application extends WebMvcConfigurerAdapter {
 		ReluminConfig config = ReluminConfig.create(configLocation);
 		log.info("config : {}", config);
 
-		if ("console".equalsIgnoreCase(config.getLog().getType())) {
-			System.setProperty("log.type", "console");
-		} else {
-			System.setProperty("log.type", "file");
-			System.setProperty("log.dir", config.getLog().getDir());
-			System.setProperty("log.level", config.getLog().getLevel());
-		}
-
 		SpringApplication app = new SpringApplication(Application.class);
 		app.setAddCommandLineProperties(false);
 		app.setDefaultProperties(config.getProperties());
@@ -68,6 +63,11 @@ public class Application extends WebMvcConfigurerAdapter {
 		ObjectMapper objectMapper = new ObjectMapper();
 
 		objectMapper.registerModule(new AfterburnerModule());
+		objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+		objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+		objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
 		format.setTimeZone(TimeZone.getTimeZone("UTC"));
 		objectMapper.setDateFormat(format);

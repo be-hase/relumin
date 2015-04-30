@@ -15,7 +15,6 @@ import lombok.Data;
 @Data
 public class ReluminConfig {
 	private ServerConfig server = new ServerConfig();
-	private LogConfig log = new LogConfig();
 	private RedisConfig redis = new RedisConfig();
 	private SchedulerConfig scheduler = new SchedulerConfig();
 

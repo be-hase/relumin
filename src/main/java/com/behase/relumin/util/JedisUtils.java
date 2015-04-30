@@ -1,14 +1,20 @@
 package com.behase.relumin.util;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
 import redis.clients.jedis.Jedis;
+import scala.collection.mutable.StringBuilder;
 
-import com.behase.relumin.model.ClusterInfo;
-import com.google.common.base.CaseFormat;
+import com.behase.relumin.model.ClusterNode;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public class JedisUtils {
 	private JedisUtils() {
@@ -36,7 +42,6 @@ public class JedisUtils {
 				continue;
 			}
 			String key = StringUtils.trim(eachArray[0]);
-			key = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, key);
 			String value = StringUtils.trim(eachArray[1]);
 			map.put(key, value);
 		}
@@ -44,8 +49,8 @@ public class JedisUtils {
 		return map;
 	}
 
-	public static ClusterInfo parseClusterInfoResult(String result) {
-		ClusterInfo clusterInfo = new ClusterInfo();
+	public static Map<String, String> parseClusterInfoResult(String result) {
+		Map<String, String> map = Maps.newLinkedHashMap();
 
 		String[] line = StringUtils.split(result, "\n");
 		for (String each : line) {
@@ -56,43 +61,136 @@ public class JedisUtils {
 
 			String key = StringUtils.trim(eachArray[0]);
 			String value = StringUtils.trim(eachArray[1]);
-
-			switch (key) {
-				case "cluster_state":
-					clusterInfo.setOk("ok".equals(value));
-					break;
-				case "cluster_slots_assigned":
-					clusterInfo.setSlotsAssigned(Integer.valueOf(value));
-					break;
-				case "cluster_slots_ok":
-					clusterInfo.setSlotsOk(Integer.valueOf(value));
-					break;
-				case "cluster_slots_pfail":
-					clusterInfo.setSlotsPfail(Integer.valueOf(value));
-					break;
-				case "cluster_slots_fail":
-					clusterInfo.setSlotsFail(Integer.valueOf(value));
-					break;
-				case "cluster_known_nodes":
-					clusterInfo.setKnownNodes(Integer.valueOf(value));
-					break;
-				case "cluster_size":
-					clusterInfo.setSize(Integer.valueOf(value));
-					break;
-				case "cluster_current_epoch":
-					clusterInfo.setCurrentEpoch(Integer.valueOf(value));
-					break;
-				case "cluster_stats_messages_sent":
-					clusterInfo.setStatsMessagesSent(Long.valueOf(value));
-					break;
-				case "cluster_stats_messages_received":
-					clusterInfo.setStatsMessagesReceived(Long.valueOf(value));
-					break;
-				default:
-					break;
-			}
+			map.put(key, value);
 		}
 
-		return clusterInfo;
+		return map;
+	}
+
+	public static List<ClusterNode> parseClusterNodesResult(String result, String hostAndPort) {
+		List<ClusterNode> clusterNodes = Lists.newArrayList();
+		for (String resultLine : StringUtils.split(result, "\n")) {
+			ClusterNode clusterNode = new ClusterNode();
+
+			String[] resultLineArray = StringUtils.split(resultLine);
+			clusterNode.setNodeId(resultLineArray[0]);
+
+			String eachHostAndPort = resultLineArray[1];
+			if (StringUtils.isBlank(hostAndPort)) {
+				clusterNode.setHostAndPort(eachHostAndPort);
+			} else {
+				String[] eachHostAndPortArray = StringUtils.split(eachHostAndPort, ":");
+				if ("127.0.0.1".equals(eachHostAndPortArray[0]) || "localhost".equals(eachHostAndPortArray[0])) {
+					clusterNode.setHostAndPort(hostAndPort);
+				} else {
+					clusterNode.setHostAndPort(eachHostAndPort);
+				}
+			}
+
+			String eachFlag = resultLineArray[2];
+			List<String> eachFlagList = Arrays.asList(StringUtils.split(eachFlag, ","));
+			Set<String> eachFlagSet = Sets.newLinkedHashSet(eachFlagList);
+			clusterNode.setFlags(eachFlagSet);
+
+			clusterNode.setMasterNodeId("-".equals(resultLineArray[3]) ? "" : resultLineArray[3]);
+
+			clusterNode.setPingSent(Long.valueOf(resultLineArray[4]));
+			clusterNode.setPongReceived(Long.valueOf(resultLineArray[5]));
+
+			clusterNode.setConfigEpoch(Long.valueOf(resultLineArray[6]));
+
+			clusterNode.setConnect("connected".equals(resultLineArray[7]));
+
+			List<String> slots = Lists.newArrayList();
+			for (int i = 8; i < resultLineArray.length; i++) {
+				if (clusterNode.hasFlag("myself") && StringUtils.startsWith(resultLineArray[i], "[")) {
+					String trimed = StringUtils.substring(resultLineArray[i], 1, -1);
+					if (StringUtils.indexOf(trimed, "->-") != StringUtils.INDEX_NOT_FOUND) {
+						String[] trimedArray = StringUtils.split(trimed, "->-");
+						clusterNode.getMigration().put(trimedArray[0], trimedArray[1]);
+					} else if (StringUtils.indexOf(trimed, "-<-") != StringUtils.INDEX_NOT_FOUND) {
+						String[] trimedArray = StringUtils.split(trimed, "-<-");
+						clusterNode.getImporting().put(trimedArray[0], trimedArray[1]);
+					}
+				} else {
+					slots.add(resultLineArray[i]);
+				}
+			}
+
+			slots.forEach(v -> {
+				if (StringUtils.indexOf(v, "-") == StringUtils.INDEX_NOT_FOUND) {
+					clusterNode.getServedSlotsSet().add(Integer.valueOf(v));
+				} else {
+					String[] startAndEnd = StringUtils.split(v, "-");
+					int start = Integer.valueOf(startAndEnd[0]);
+					int end = Integer.valueOf(startAndEnd[1]);
+					for (int i = start; i <= end; i++) {
+						clusterNode.getServedSlotsSet().add(Integer.valueOf(i));
+					}
+				}
+			});
+
+			clusterNodes.add(clusterNode);
+		}
+		return clusterNodes;
+	}
+
+	public static String slotsDisplay(Collection<Integer> slots) {
+		if (slots == null || slots.isEmpty()) {
+			return "";
+		}
+
+		List<String> result = Lists.newArrayList();
+		int i = 0;
+		int first = 0;
+		int last = 0;
+		for (int current : slots) {
+			// if first loop
+			if (i == 0) {
+				if (slots.size() == 1) {
+					result.add(String.valueOf(current));
+					break;
+				}
+
+				first = current;
+				last = current;
+				i++;
+				continue;
+			}
+
+			if (current == last + 1) {
+				// if last loop
+				if (i == slots.size() - 1) {
+					result.add(new StringBuilder().append(String.valueOf(first)).append("-").append(String.valueOf(current)).toString());
+					break;
+				}
+
+				last = current;
+				i++;
+				continue;
+			} else {
+				// if last loop
+				if (i == slots.size() - 1) {
+					if (first == last) {
+						result.add(String.valueOf(first));
+					} else {
+						result.add(new StringBuilder().append(String.valueOf(first)).append("-").append(String.valueOf(last)).toString());
+					}
+					result.add(String.valueOf(current));
+					break;
+				}
+
+				if (first == last) {
+					result.add(String.valueOf(first));
+				} else {
+					result.add(new StringBuilder().append(String.valueOf(first)).append("-").append(String.valueOf(last)).toString());
+				}
+				first = current;
+				last = current;
+				i++;
+				continue;
+			}
+		}
+		return StringUtils.join(result, ",");
 	}
 }

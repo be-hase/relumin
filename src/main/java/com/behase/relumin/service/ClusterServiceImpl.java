@@ -1,7 +1,6 @@
 package com.behase.relumin.service;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,6 @@ import redis.clients.jedis.exceptions.JedisException;
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.Cluster;
-import com.behase.relumin.model.ClusterInfo;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.SlotInfo;
 import com.behase.relumin.util.JedisUtils;
@@ -57,42 +55,49 @@ public class ClusterServiceImpl implements ClusterService {
 		ClusterNode node = getActiveClusterNode(clusterName);
 
 		try (Jedis jedis = JedisUtils.getJedisByHostAndPort(node.getHostAndPort())) {
-			String clusterInfoResult = jedis.clusterInfo();
-			ClusterInfo info = JedisUtils.parseClusterInfoResult(clusterInfoResult);
-			List<ClusterNode> nodes = parseClusterNodesResult(jedis.clusterNodes(), node.getHostAndPort());
+			// info
+			Map<String, String> info = JedisUtils.parseClusterInfoResult(jedis.clusterInfo());
+
+			// nodes
+			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), node.getHostAndPort());
 			nodes.sort((o1, o2) -> o1.getHostAndPort().compareTo(o2.getHostAndPort()));
 
+			// slots
 			List<SlotInfo> slots = Lists.newArrayList();
 			Map<String, List<Map<String, String>>> replicaRelations = Maps.newHashMap();
 			nodes.forEach(v -> {
 				Map<String, String> nodeMap = Maps.newLinkedHashMap();
-				nodeMap.put("nodeId", v.getNodeId());
-				nodeMap.put("hostAndPort", v.getHostAndPort());
+				nodeMap.put("node_id", v.getNodeId());
+				nodeMap.put("host_and_port", v.getHostAndPort());
 
 				boolean isMaster = StringUtils.isNotBlank(v.getServedSlots());
 				if (isMaster) {
 					String servedSlots = v.getServedSlots();
 					String[] slotsRangesArray = StringUtils.split(servedSlots, ",");
 					for (String slotsRangeStr : slotsRangesArray) {
-						String[] slotsRange = StringUtils.split(slotsRangeStr, "-");
-
 						SlotInfo slotInfo = new SlotInfo();
-						slotInfo.setStartSlotNumber(Integer.valueOf(slotsRange[0]));
-						slotInfo.setEndSlotNumber(Integer.valueOf(slotsRange[1]));
 						slotInfo.setMaster(nodeMap);
+						if (StringUtils.indexOf(slotsRangeStr, "-") == StringUtils.INDEX_NOT_FOUND) {
+							slotInfo.setStartSlotNumber(Integer.valueOf(slotsRangeStr));
+							slotInfo.setEndSlotNumber(Integer.valueOf(slotsRangeStr));
+						} else {
+							String[] slotsRange = StringUtils.split(slotsRangeStr, "-");
+							slotInfo.setStartSlotNumber(Integer.valueOf(slotsRange[0]));
+							slotInfo.setEndSlotNumber(Integer.valueOf(slotsRange[1]));
+						}
 						slots.add(slotInfo);
 					}
 				} else {
-					List<Map<String, String>> slaves = replicaRelations.get(v.getMasterNodeId());
-					if (slaves == null) {
-						slaves = Lists.newArrayList();
-						replicaRelations.put(v.getMasterNodeId(), slaves);
+					List<Map<String, String>> replicas = replicaRelations.get(v.getMasterNodeId());
+					if (replicas == null) {
+						replicas = Lists.newArrayList();
+						replicaRelations.put(v.getMasterNodeId(), replicas);
 					}
-					slaves.add(nodeMap);
+					replicas.add(nodeMap);
 				}
 			});
 			slots.forEach(v -> {
-				List<Map<String, String>> replicas = replicaRelations.get(v.getMaster().get("nodeId"));
+				List<Map<String, String>> replicas = replicaRelations.get(v.getMaster().get("node_id"));
 				v.setReplicas(replicas);
 			});
 			slots.sort((o1, o2) -> Integer.compare(o1.getStartSlotNumber(), o2.getStartSlotNumber()));
@@ -112,16 +117,27 @@ public class ClusterServiceImpl implements ClusterService {
 		try (
 				Jedis jedis = JedisUtils.getJedisByHostAndPort(hostAndPort);
 				Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			List<ClusterNode> nodes = parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
+			try {
+				jedis.ping();
+			} catch (Exception e) {
+				log.warn("redis error.", e);
+				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("Failed to connect to Redis Cluster(%s). Please confirm.", hostAndPort), HttpStatus.BAD_REQUEST);
+			}
+
+			Map<String, String> info = JedisUtils.parseInfoResult(jedis.info());
+			log.debug("cluster info={}", info);
+			String clusterEnabled = info.get("cluster_enabled");
+			if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
+				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("This Redis(%s) is not cluster mode.", hostAndPort), HttpStatus.BAD_REQUEST);
+			}
+
+			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
 
 			dataStoreJedis.watch(Constants.getClustersKey(), Constants.getClusterKey(clusterName));
 			Transaction t = dataStoreJedis.multi();
 			t.sadd(Constants.getClustersKey(), clusterName);
 			t.set(Constants.getClusterKey(clusterName), mapper.writeValueAsString(nodes));
 			t.exec();
-		} catch (JedisException e) {
-			log.warn("redis error.", e);
-			throw new ApiException(Constants.ERR_CODE_REDIS_SET_FAILED, "Redis Set Error. " + e.getMessage(), HttpStatus.BAD_REQUEST);
 		}
 	}
 
@@ -196,47 +212,5 @@ public class ClusterServiceImpl implements ClusterService {
 		} catch (Exception e) {
 			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Node's port is invalid.", HttpStatus.BAD_REQUEST);
 		}
-	}
-
-	private List<ClusterNode> parseClusterNodesResult(String result, String hostAndPort) {
-		List<ClusterNode> clusterNodes = Lists.newArrayList();
-		for (String resultLine : StringUtils.split(result, "\n")) {
-			ClusterNode clusterNode = new ClusterNode();
-
-			String[] resultLineArray = StringUtils.split(resultLine);
-			clusterNode.setNodeId(resultLineArray[0]);
-
-			String eachHostAndPort = resultLineArray[1];
-			String[] eachHostAndPortArray = StringUtils.split(eachHostAndPort, ":");
-			if ("127.0.0.1".equals(eachHostAndPortArray[0]) || "localhost".equals(eachHostAndPortArray[0])) {
-				clusterNode.setHostAndPort(hostAndPort);
-			} else {
-				clusterNode.setHostAndPort(eachHostAndPort);
-			}
-
-			String eachFlag = resultLineArray[2];
-			List<String> eachFlagList = Arrays.asList(StringUtils.split(eachFlag, ","));
-			clusterNode.setMaster(eachFlagList.contains("master"));
-			clusterNode.setSlave(eachFlagList.contains("slave"));
-			clusterNode.setFail(eachFlagList.contains("fail"));
-
-			clusterNode.setMasterNodeId("-".equals(resultLineArray[3]) ? "" : resultLineArray[3]);
-
-			clusterNode.setTimeLastPing(Long.valueOf(resultLineArray[4]));
-			clusterNode.setTimeLastPong(Long.valueOf(resultLineArray[5]));
-
-			clusterNode.setEpoch(Long.valueOf(resultLineArray[6]));
-
-			clusterNode.setConnect("connected".equals(resultLineArray[7]));
-
-			List<String> slots = Lists.newArrayList();
-			for (int i = 8; i < resultLineArray.length; i++) {
-				slots.add(resultLineArray[i]);
-			}
-			clusterNode.setServedSlots(StringUtils.join(slots, ","));
-
-			clusterNodes.add(clusterNode);
-		}
-		return clusterNodes;
 	}
 }

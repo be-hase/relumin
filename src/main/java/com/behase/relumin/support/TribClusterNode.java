@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,94 +13,142 @@ import org.apache.commons.lang3.StringUtils;
 
 import redis.clients.jedis.Jedis;
 
-import com.behase.relumin.model.ClusterInfo;
+import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.util.JedisUtils;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TribClusterNode implements Closeable {
 	private Jedis jedis;
-	private Info info;
+	private ClusterNode info;
 	private boolean dirty = false;
-	private List<Info> friends = Lists.newArrayList();
+	private List<ClusterNode> friends = Lists.newArrayList();
+	private Set<Integer> tmpSlots = Sets.newTreeSet();
 
 	public TribClusterNode(String hostAndPort) {
 		String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
 		checkArgument(hostAndPortArray.length >= 2, "Invalid IP or Port. Use IP:Port format");
 
-		info = new Info();
-		info.setHost(hostAndPortArray[0]);
-		info.setPort(Integer.valueOf(hostAndPortArray[1]));
+		info = new ClusterNode();
+		info.setHostAndPort(hostAndPort);
 	}
 
-	public List<Info> getFriends() {
+	public List<ClusterNode> getFriends() {
 		return friends;
 	}
 
-	public Map<String, String> getSlots() {
-		return info.getSlots();
+	public String getServedSlots() {
+		return info.getServedSlots();
 	}
 
 	public boolean hasFlag(String flag) {
 		return info.getFlags().contains(flag);
 	}
 
-	public void connect() {
+	public void connect() throws RedisTribException {
 		connect(false);
 	}
 
-	public void connect(boolean abort) {
+	public void connect(boolean abort) throws RedisTribException {
 		if (jedis != null) {
 			return;
 		}
 
 		try {
-			jedis = new Jedis(info.getHost(), info.getPort());
+			jedis = new Jedis(info.getHostAndPort());
 			if (!"PONG".equalsIgnoreCase(jedis.ping())) {
 				log.error("Invalid PONG-message.");
-				throw new IllegalArgumentException("Invalid PONG-message.");
+				throw new RedisTribException("Invalid PONG-message.");
 			}
 		} catch (Exception e) {
 			log.error("Failed to connect to node.");
 			if (abort) {
-				throw new IllegalArgumentException("Failed to connect to node.");
+				throw new RedisTribException("Failed to connect to node.");
 			}
 			jedis = null;
 		}
 	}
 
-	public void assertCluster() {
+	public void assertCluster() throws RedisTribException {
 		Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
-		String clusterEnabled = infoResult.get("clusterEnabled");
+		log.debug("cluster info={}", infoResult);
+		String clusterEnabled = infoResult.get("cluster_enabled");
 		if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
-			throw new IllegalArgumentException(String.format("%s:%s is not configured as a cluster node.", info.getHost(), info.getPort()));
+			throw new RedisTribException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()));
 		}
 	}
 
-	public void assertEmpty() {
+	public void assertEmpty() throws RedisTribException {
 		Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
-		ClusterInfo clusterInfo = JedisUtils.parseClusterInfoResult(jedis.clusterInfo());
-		if (infoResult.get("db0") != null || clusterInfo.getKnownNodes() != 1) {
-			throw new IllegalArgumentException(String.format("%s:%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHost(), info.getPort()));
+		Map<String, String> clusterInfoResult = JedisUtils.parseInfoResult(jedis.clusterInfo());
+		log.debug("cluster info={}", infoResult);
+		if (infoResult.get("db0") != null || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
+			throw new RedisTribException(String.format("%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHostAndPort()));
 		}
 	}
 
-	public void loadInfo() {
+	public void loadInfo() throws RedisTribException {
 		loadInfo(false);
 	}
 
-	public void loadInfo(boolean getFriend) {
+	public void loadInfo(boolean getFriend) throws RedisTribException {
 		connect();
-		//now developing
+
+		List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), info.getHostAndPort());
+		nodes.forEach(v -> {
+			if (v.hasFlag("myself")) {
+				info = v;
+			} else {
+				friends.add(v);
+			}
+		});
 	}
 
-	public Info getInfo() {
+	public void addTmpSlots(Collection<Integer> slots) {
+		if (slots.isEmpty()) {
+			return;
+		}
+		tmpSlots.addAll(tmpSlots);
+		dirty = true;
+	}
+
+	public void setAsReplica(String masterNodeId) {
+		info.setMasterNodeId(masterNodeId);
+		dirty = true;
+	}
+
+	public void flushNodeConfig() {
+		if (!dirty) {
+			return;
+		}
+		if (StringUtils.isBlank(info.getMasterNodeId())) {
+			try {
+				jedis.clusterReplicate(info.getMasterNodeId());
+			} catch (Exception e) {
+				log.error("Replicate error.", e);
+				// If the cluster did not already joined it is possible that
+				// the slave does not know the master node yet. So on errors
+				// we return ASAP leaving the dirty flag set, to flush the
+				// config later.
+				return;
+			}
+		} else {
+			int[] intArray = new int[tmpSlots.size()];
+			int i = 0;
+			for (Integer item : tmpSlots) {
+				intArray[i] = item;
+				i++;
+			}
+			jedis.clusterAddSlots(intArray);
+			tmpSlots.clear();
+		}
+		dirty = false;
+	}
+
+	public ClusterNode getInfo() {
 		return info;
 	}
 
@@ -117,17 +166,4 @@ public class TribClusterNode implements Closeable {
 			jedis.close();
 		}
 	}
-
-	@Setter
-	@Getter
-	public static class Info {
-		private String host;
-		private int port;
-		private Set<String> flags = Sets.newHashSet();
-		private Map<String, String> slots = Maps.newHashMap();
-		private Map<String, String> migrating = Maps.newHashMap();
-		private Map<String, String> importing = Maps.newHashMap();
-		private boolean replicate = false;
-	}
-
 }

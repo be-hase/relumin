@@ -13,7 +13,7 @@
 	
 	<logger name="com.behase.relumin" level="${log.level:-WARN}" />
 	
-	<root level="ERROR">
+	<root level="WARN">
 		<appender-ref ref="FileAppender" />
 	</root>
 </included>

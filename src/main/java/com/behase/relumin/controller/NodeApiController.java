@@ -27,7 +27,7 @@ public class NodeApiController {
 			@PathVariable String clusterName,
 			@PathVariable String nodeId,
 			@RequestParam(defaultValue = "0") String start,
-			@RequestParam(defaultValue = "-1") String end,
+			@RequestParam(defaultValue = "10") String end,
 			@RequestParam(defaultValue = "") String fields
 			) {
 		long startLong;

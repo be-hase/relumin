@@ -1,0 +1,13 @@
+server:
+  port: 0
+
+redis:
+  host: 192.168.33.11
+  port: 6000
+
+# TEST PROPERTIES
+test:
+  redis:
+    normalCluster: 192.168.33.11:7000
+    emptyCluster: 192.168.33.11:8000
+    emptyStandAlone: 192.168.33.11:9000
