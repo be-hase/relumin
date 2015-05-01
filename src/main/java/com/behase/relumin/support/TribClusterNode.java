@@ -5,9 +5,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -15,6 +17,7 @@ import redis.clients.jedis.Jedis;
 
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.util.JedisUtils;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -58,7 +61,7 @@ public class TribClusterNode implements Closeable {
 		}
 
 		try {
-			jedis = new Jedis(info.getHostAndPort());
+			jedis = JedisUtils.getJedisByHostAndPort(info.getHostAndPort());
 			if (!"PONG".equalsIgnoreCase(jedis.ping())) {
 				log.error("Invalid PONG-message.");
 				throw new RedisTribException("Invalid PONG-message.");
@@ -101,7 +104,7 @@ public class TribClusterNode implements Closeable {
 		nodes.forEach(v -> {
 			if (v.hasFlag("myself")) {
 				info = v;
-			} else {
+			} else if (getFriend) {
 				friends.add(v);
 			}
 		});
@@ -146,6 +149,31 @@ public class TribClusterNode implements Closeable {
 			tmpSlots.clear();
 		}
 		dirty = false;
+	}
+
+	public String getConfigSignature() {
+		List<String> config = Lists.newArrayList();
+
+		String result = jedis.clusterNodes();
+		for (String line : StringUtils.split(result, "\n")) {
+			String[] lineArray = StringUtils.split(line);
+
+			List<String> slots = Lists.newArrayList();
+			for (int i = 8; i < lineArray.length; i++) {
+				slots.add(lineArray[i]);
+			}
+			slots.stream().filter(v -> {
+				return !StringUtils.startsWith(v, "[");
+			}).collect(Collectors.toList());
+
+			if (slots.size() > 0) {
+				Collections.sort(slots);
+				config.add(Joiner.on(":").join(lineArray[0], Joiner.on(",").join(slots)));
+			}
+		}
+
+		Collections.sort(config);
+		return Joiner.on("|").join(config);
 	}
 
 	public ClusterNode getInfo() {

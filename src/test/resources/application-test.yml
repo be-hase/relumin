@@ -5,6 +5,11 @@ redis:
   host: 192.168.33.11
   port: 6000
 
+scheduler:
+  refreshClustersIntervalMillis:0
+  collectStaticsInfoIntervalMillis:0
+  collectStaticsInfoMaxCount:10
+
 # TEST PROPERTIES
 test:
   redis:

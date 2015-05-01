@@ -1,5 +1,8 @@
 package com.behase.relumin.support;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,8 +16,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 import com.behase.relumin.Application;
+import com.google.common.collect.Lists;
 
-//@Slf4j
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
 @WebIntegrationTest
@@ -43,7 +49,7 @@ public class TribClusterNodeTest {
 
 	@Test
 	public void connect() throws Exception {
-		tribClusterNode.connect();
+		tribClusterNode.connect(true);
 	}
 
 	@Test(expected = RedisTribException.class)
@@ -89,5 +95,18 @@ public class TribClusterNodeTest {
 		tribClusterNode = new TribClusterNode(testRedisEmptyStandAlone);
 		tribClusterNode.connect();
 		tribClusterNode.assertEmpty();
+	}
+
+	@Test
+	public void loadInfo() throws RedisTribException {
+		tribClusterNode.loadInfo();
+		log.debug("config signature={}", tribClusterNode.getConfigSignature());
+	}
+
+	@Test
+	public void addSlots() {
+		assertThat(tribClusterNode.isDirty(), is(false));
+		tribClusterNode.addTmpSlots(Lists.newArrayList(1, 2, 3));
+		assertThat(tribClusterNode.isDirty(), is(true));
 	}
 }
