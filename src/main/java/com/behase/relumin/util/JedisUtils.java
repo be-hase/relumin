@@ -8,7 +8,10 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
+import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
+import redis.clients.jedis.JedisPoolConfig;
 import scala.collection.mutable.StringBuilder;
 
 import com.behase.relumin.model.ClusterNode;
@@ -16,6 +19,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class JedisUtils {
 	private JedisUtils() {
 
@@ -29,6 +35,14 @@ public class JedisUtils {
 	public static Jedis getJedisByHostAndPort(String hostAndPort) {
 		String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
 		return new Jedis(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]));
+	}
+
+	public static JedisCluster getJedisClusterByHostAndPort(String hostAndPort) {
+		String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
+		return new JedisCluster(
+			Sets.newHashSet(new HostAndPort(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]))),
+			2000,
+			new JedisPoolConfig());
 	}
 
 	public static Map<String, String> parseInfoResult(String result) {
@@ -76,14 +90,19 @@ public class JedisUtils {
 			clusterNode.setNodeId(resultLineArray[0]);
 
 			String eachHostAndPort = resultLineArray[1];
+			log.debug("eachHostAndPort={}", resultLine);
 			if (StringUtils.isBlank(hostAndPort)) {
 				clusterNode.setHostAndPort(eachHostAndPort);
 			} else {
-				String[] eachHostAndPortArray = StringUtils.split(eachHostAndPort, ":");
-				if ("127.0.0.1".equals(eachHostAndPortArray[0]) || "localhost".equals(eachHostAndPortArray[0])) {
+				if (StringUtils.startsWith(eachHostAndPort, ":")) {
 					clusterNode.setHostAndPort(hostAndPort);
 				} else {
-					clusterNode.setHostAndPort(eachHostAndPort);
+					String[] eachHostAndPortArray = StringUtils.split(eachHostAndPort, ":");
+					if ("127.0.0.1".equals(eachHostAndPortArray[0]) || "localhost".equals(eachHostAndPortArray[0])) {
+						clusterNode.setHostAndPort(hostAndPort);
+					} else {
+						clusterNode.setHostAndPort(eachHostAndPort);
+					}
 				}
 			}
 

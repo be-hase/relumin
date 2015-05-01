@@ -60,7 +60,13 @@ public class ClusterServiceImpl implements ClusterService {
 
 			// nodes
 			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), node.getHostAndPort());
-			nodes.sort((o1, o2) -> o1.getHostAndPort().compareTo(o2.getHostAndPort()));
+			nodes.sort((o1, o2) -> {
+				if (StringUtils.equals(o1.getHost(), o2.getHost())) {
+					return Integer.compare(o1.getPort(), o2.getPort());
+				} else {
+					return o1.getHost().compareTo(o2.getHost());
+				}
+			});
 
 			// slots
 			List<SlotInfo> slots = Lists.newArrayList();

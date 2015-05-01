@@ -3,13 +3,17 @@ package com.behase.relumin.model;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.behase.relumin.util.JedisUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Data
 public class ClusterNode {
 	private String nodeId;
@@ -35,5 +39,16 @@ public class ClusterNode {
 
 	public String getServedSlots() {
 		return JedisUtils.slotsDisplay(servedSlotsSet);
+	}
+
+	@JsonIgnore
+	public String getHost() {
+		log.debug("hoge={}", hostAndPort);
+		return StringUtils.split(hostAndPort, ":")[0];
+	}
+
+	@JsonIgnore
+	public int getPort() {
+		return Integer.valueOf(StringUtils.split(hostAndPort, ":")[1]);
 	}
 }

@@ -23,6 +23,11 @@ import com.google.common.collect.Sets;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Clone of redis-trib.rb
+ * @author Ryosuke Hasebe
+ *
+ */
 @Slf4j
 public class TribClusterNode implements Closeable {
 	private Jedis jedis;
@@ -64,12 +69,12 @@ public class TribClusterNode implements Closeable {
 			jedis = JedisUtils.getJedisByHostAndPort(info.getHostAndPort());
 			if (!"PONG".equalsIgnoreCase(jedis.ping())) {
 				log.error("Invalid PONG-message.");
-				throw new RedisTribException("Invalid PONG-message.");
+				throw new RedisTribException("Invalid PONG-message.", false);
 			}
 		} catch (Exception e) {
 			log.error("Failed to connect to node.");
 			if (abort) {
-				throw new RedisTribException("Failed to connect to node.");
+				throw new RedisTribException("Failed to connect to node.", false);
 			}
 			jedis = null;
 		}
@@ -80,7 +85,7 @@ public class TribClusterNode implements Closeable {
 		log.debug("cluster info={}", infoResult);
 		String clusterEnabled = infoResult.get("cluster_enabled");
 		if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
-			throw new RedisTribException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()));
+			throw new RedisTribException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()), false);
 		}
 	}
 
@@ -89,7 +94,7 @@ public class TribClusterNode implements Closeable {
 		Map<String, String> clusterInfoResult = JedisUtils.parseInfoResult(jedis.clusterInfo());
 		log.debug("cluster info={}", infoResult);
 		if (infoResult.get("db0") != null || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
-			throw new RedisTribException(String.format("%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHostAndPort()));
+			throw new RedisTribException(String.format("%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHostAndPort()), false);
 		}
 	}
 
@@ -100,10 +105,12 @@ public class TribClusterNode implements Closeable {
 	public void loadInfo(boolean getFriend) throws RedisTribException {
 		connect();
 
-		List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), info.getHostAndPort());
+		String hostAndPort = info.getHostAndPort();
+		List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
 		nodes.forEach(v -> {
 			if (v.hasFlag("myself")) {
 				info = v;
+				info.setHostAndPort(hostAndPort);
 			} else if (getFriend) {
 				friends.add(v);
 			}
@@ -193,5 +200,10 @@ public class TribClusterNode implements Closeable {
 		if (jedis != null) {
 			jedis.close();
 		}
+	}
+
+	@Override
+	public String toString() {
+		return info.getHostAndPort();
 	}
 }
