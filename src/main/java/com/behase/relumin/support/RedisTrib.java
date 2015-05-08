@@ -4,6 +4,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -55,8 +57,7 @@ public class RedisTrib implements Closeable {
 	}
 
 	void allocSlots() {
-		int nodesCount = nodes.size();
-		int mastersCount = nodesCount / (replicas + 1);
+		int mastersCount = nodes.size() / (replicas + 1);
 		List<TribClusterNode> masters = Lists.newArrayList();
 
 		// The first step is to split instances by IP. This is useful as
@@ -90,7 +91,7 @@ public class RedisTrib implements Closeable {
 				List<TribClusterNode> hostNodes = e.getValue();
 
 				if (hostNodes.isEmpty()) {
-					if (interleaved.size() == nodesCount) {
+					if (interleaved.size() == nodes.size()) {
 						stop = true;
 						continue;
 					}
@@ -100,9 +101,10 @@ public class RedisTrib implements Closeable {
 			}
 		}
 
-		masters = interleaved.subList(0, mastersCount);
-		interleaved = interleaved.subList(mastersCount, interleaved.size());
-		nodesCount = nodesCount - mastersCount;
+		masters = Lists.newArrayList(interleaved.subList(0, mastersCount));
+		interleaved = Lists.newArrayList(interleaved.subList(mastersCount, interleaved.size()));
+		log.debug("masters={}", masters);
+		log.debug("interleaved={}", interleaved);
 
 		// Alloc slots on masters
 		double slotsPerNode = CLUSTER_HASH_SLOTS / mastersCount;
@@ -122,7 +124,7 @@ public class RedisTrib implements Closeable {
 			for (int j = first; j <= last; j++) {
 				slots.add(j);
 			}
-			log.debug("add slots. first={}, last={}", first, last);
+			log.debug("add slots to {}. first={}, last={}", masters.get(i), first, last);
 			masters.get(i).addTmpSlots(slots);
 			first = last + 1;
 			cursor = cursor + slotsPerNode;
@@ -137,10 +139,78 @@ public class RedisTrib implements Closeable {
 		// remaining instances as extra replicas to masters.  Some masters
 		// may end up with more than their requested number of replicas, but
 		// all nodes will be used.
-		boolean assignmentVerbose = false;
+		log.debug("Select requested replica.");
+		Map<TribClusterNode, List<TribClusterNode>> replicasOfMaster = Maps.newHashMap();
+		for (TribClusterNode master : masters) {
+			replicasOfMaster.put(master, Lists.newArrayList());
+			while (replicasOfMaster.get(master).size() < this.replicas) {
+				if (interleaved.size() == 0) {
+					log.debug("break because node count is 0");
+					break;
+				}
 
-		log.debug("masters={}", masters);
-		log.debug("interleaved={}", interleaved);
+				// Return the first node not matching our current master
+				TribClusterNode replicaNode;
+				Optional<TribClusterNode> replicaNodeOp;
+
+				replicaNodeOp = interleaved.stream().filter(v -> {
+					boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
+					boolean notSameHostAsAlreadyRegisterdReplica = replicasOfMaster.get(master).stream().anyMatch(rpl -> {
+						return !StringUtils.equals(v.getInfo().getHost(), rpl.getInfo().getHost());
+					});
+					return notSameHostAsMaster && notSameHostAsAlreadyRegisterdReplica;
+				}).findFirst();
+				if (replicaNodeOp.isPresent()) {
+					replicaNode = replicaNodeOp.get();
+					interleaved.remove(replicaNode);
+				} else {
+					replicaNodeOp = interleaved.stream().filter(v -> {
+						boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
+						return notSameHostAsMaster;
+					}).findFirst();
+					if (replicaNodeOp.isPresent()) {
+						replicaNode = replicaNodeOp.get();
+						interleaved.remove(replicaNode);
+					} else {
+						replicaNode = interleaved.remove(0);
+					}
+				}
+				log.debug("Select {} as replica of {}", replicaNode, master);
+				replicaNode.setAsReplica(master.getInfo().getNodeId());
+				replicasOfMaster.get(master).add(replicaNode);
+			}
+		}
+
+		log.debug("Select extra replica.");
+		for (TribClusterNode extra : interleaved) {
+			TribClusterNode master;
+			Optional<Entry<TribClusterNode, List<TribClusterNode>>> entrySetNodeOp;
+
+			int sameHostOfMasterCount = (int)masters.stream().filter(v -> {
+				return StringUtils.equals(v.getInfo().getHost(), extra.getInfo().getHost());
+			}).count();
+
+			entrySetNodeOp = replicasOfMaster.entrySet().stream().min((e1, e2) -> {
+				return Integer.compare(e1.getValue().size(), e2.getValue().size());
+			});
+			int minSize = entrySetNodeOp.get().getValue().size();
+			int sameMinCount = (int)replicasOfMaster.entrySet().stream().filter(v -> {
+				return minSize == v.getValue().size();
+			}).count();
+
+			if (sameMinCount > sameHostOfMasterCount) {
+				entrySetNodeOp = replicasOfMaster.entrySet().stream().filter(e -> {
+					return !StringUtils.equals(e.getKey().getInfo().getHost(), extra.getInfo().getHost());
+				}).min((e1, e2) -> {
+					return Integer.compare(e1.getValue().size(), e2.getValue().size());
+				});
+			}
+
+			master = entrySetNodeOp.get().getKey();
+			log.debug("Select {} as replica of {} (extra)", extra, master);
+			extra.setAsReplica(master.getInfo().getNodeId());
+			replicasOfMaster.get(master).add(extra);
+		}
 	}
 
 	@Override

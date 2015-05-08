@@ -43,7 +43,6 @@ public class ClusterNode {
 
 	@JsonIgnore
 	public String getHost() {
-		log.debug("hoge={}", hostAndPort);
 		return StringUtils.split(hostAndPort, ":")[0];
 	}
 

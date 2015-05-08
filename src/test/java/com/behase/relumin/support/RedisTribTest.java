@@ -137,6 +137,26 @@ public class RedisTribTest {
 		redisTrib.allocSlots();
 	}
 
+	@Test
+	public void allocSlots4() throws RedisTribException {
+		redisTrib = new RedisTrib();
+		Whitebox.setInternalState(redisTrib, "replicas", 6);
+		String[] hostAndPorts = {
+			"1.1.1.1:1", "1.1.1.1:2", "1.1.1.1:3", "1.1.1.1:4", "1.1.1.1:5", "1.1.1.1:6",
+			"1.1.1.1:7", "1.1.1.1:8", "1.1.1.1:9", "1.1.1.1:10", "1.1.1.1:11", "1.1.1.1:12",
+			"2.2.2.2:1", "2.2.2.2:2", "2.2.2.2:3", "2.2.2.2:4", "2.2.2.2:5", "2.2.2.2:6",
+			"2.2.2.2:7", "2.2.2.2:8", "2.2.2.2:9", "2.2.2.2:10", "2.2.2.2:11", "2.2.2.2:12",
+			"3.3.3.3:1", "3.3.3.3:2", "3.3.3.3:3", "3.3.3.3:4", "3.3.3.3:5", "3.3.3.3:6",
+			"3.3.3.3:7", "3.3.3.3:8", "3.3.3.3:9", "3.3.3.3:10", "3.3.3.3:11", "3.3.3.3:12",
+		};
+		for (String hostAndPort : hostAndPorts) {
+			TribClusterNode node = new TribClusterNode(hostAndPort);
+			redisTrib.addNodes(node);
+		}
+
+		redisTrib.allocSlots();
+	}
+
 	@Test(expected = RedisTribException.class)
 	public void getAllocSlotsForCreateCluster_redis_is_not_cluster() throws RedisTribException {
 		redisTrib = new RedisTrib();
