@@ -36,6 +36,7 @@ public class TribClusterNode implements Closeable {
 	private boolean dirty = false;
 	private List<ClusterNode> friends = Lists.newArrayList();
 	private Set<Integer> tmpSlots = Sets.newTreeSet();
+	private List<TribClusterNode> replicas = Lists.newArrayList();
 
 	public TribClusterNode(String hostAndPort) {
 		String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
@@ -146,6 +147,7 @@ public class TribClusterNode implements Closeable {
 				i++;
 			}
 			jedis.clusterAddSlots(intArray);
+			info.getServedSlotsSet().addAll(tmpSlots);
 			tmpSlots.clear();
 		} else {
 			log.debug("this node is replica");
@@ -198,6 +200,10 @@ public class TribClusterNode implements Closeable {
 
 	public Jedis getJedis() {
 		return jedis;
+	}
+
+	public List<TribClusterNode> getReplicas() {
+		return replicas;
 	}
 
 	@Override

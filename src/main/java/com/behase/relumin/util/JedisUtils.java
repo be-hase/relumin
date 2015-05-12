@@ -125,10 +125,10 @@ public class JedisUtils {
 					String trimed = StringUtils.substring(resultLineArray[i], 1, -1);
 					if (StringUtils.indexOf(trimed, "->-") != StringUtils.INDEX_NOT_FOUND) {
 						String[] trimedArray = StringUtils.split(trimed, "->-");
-						clusterNode.getMigration().put(trimedArray[0], trimedArray[1]);
+						clusterNode.getMigrating().put(Integer.valueOf(trimedArray[0]), trimedArray[1]);
 					} else if (StringUtils.indexOf(trimed, "-<-") != StringUtils.INDEX_NOT_FOUND) {
 						String[] trimedArray = StringUtils.split(trimed, "-<-");
-						clusterNode.getImporting().put(trimedArray[0], trimedArray[1]);
+						clusterNode.getImporting().put(Integer.valueOf(trimedArray[0]), trimedArray[1]);
 					}
 				} else {
 					slots.add(resultLineArray[i]);

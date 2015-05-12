@@ -54,7 +54,7 @@ public class ValidationUtils {
 		if (slot < 0) {
 			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Slot number must be in range '0 - 16383'.", HttpStatus.BAD_REQUEST);
 		}
-		if (slot > 16383) {
+		if (slot > Constants.ALL_SLOTS_SIZE - 1) {
 			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Slot number must be in range '0 - 16383'.", HttpStatus.BAD_REQUEST);
 		}
 	}
@@ -129,9 +129,9 @@ public class ValidationUtils {
 
 		int minSlot = slots.stream().min(Integer::compare).get();
 		int maxSlot = slots.stream().max(Integer::compare).get();
-		if (minSlot != 0 || maxSlot != 16383 || slots.size() != 16384) {
+		if (minSlot != 0 || maxSlot != (Constants.ALL_SLOTS_SIZE - 1) || slots.size() != Constants.ALL_SLOTS_SIZE) {
 			Set<Integer> allSlots = Sets.newTreeSet();
-			for (int i = 0; i <= 16383; i++) {
+			for (int i = 0; i < Constants.ALL_SLOTS_SIZE; i++) {
 				allSlots.add(i);
 			}
 			allSlots.removeAll(slots);

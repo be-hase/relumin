@@ -22,8 +22,8 @@ public class ClusterNode {
 	private long pongReceived;
 	private long configEpoch;
 	private boolean connect;
-	private Map<String, String> migration = Maps.newLinkedHashMap();
-	private Map<String, String> importing = Maps.newLinkedHashMap();
+	private Map<Integer, String> migrating = Maps.newLinkedHashMap();
+	private Map<Integer, String> importing = Maps.newLinkedHashMap();
 
 	@JsonIgnore
 	private Set<Integer> servedSlotsSet = Sets.newTreeSet();

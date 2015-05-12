@@ -340,6 +340,32 @@ public class RedisTribTest {
 		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
 
 		redisTrib.createCluster(params);
-		//log.debug("hoge={}", redisTrib.buildCreateClusterParam());
+	}
+
+	@Test
+	public void loadClusterInfoFromNode() {
+		redisTrib = new RedisTrib();
+		redisTrib.loadClusterInfoFromNode(testRedisNormalCluster);
+
+		List<TribClusterNode> nodes = redisTrib.getNodes();
+		nodes.sort((o1, o2) -> {
+			return o1.getInfo().getHostAndPort().compareTo(o2.getInfo().getHostAndPort());
+		});
+
+		TribClusterNode node;
+		node = nodes.get(0);
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7000"));
+		assertThat(node.getInfo().getServedSlots(), is("0-5460"));
+		node = nodes.get(1);
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7001"));
+		assertThat(node.getInfo().getServedSlots(), is("5461-10922"));
+		node = nodes.get(4);
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7004"));
+		assertThat(node.getInfo().getServedSlots(), is(""));
+		assertThat(node.getInfo().getMasterNodeId(), is(nodes.get(1).getInfo().getNodeId()));
+		node = nodes.get(5);
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7005"));
+		assertThat(node.getInfo().getServedSlots(), is(""));
+		assertThat(node.getInfo().getMasterNodeId(), is(nodes.get(2).getInfo().getNodeId()));
 	}
 }
