@@ -138,6 +138,17 @@ public class TribClusterNode implements Closeable {
 			return;
 		}
 		if (StringUtils.isBlank(info.getMasterNodeId())) {
+			log.debug("this node is master. {}", getTmpServedSlots());
+			int[] intArray = new int[tmpSlots.size()];
+			int i = 0;
+			for (Integer item : tmpSlots) {
+				intArray[i] = item;
+				i++;
+			}
+			jedis.clusterAddSlots(intArray);
+			tmpSlots.clear();
+		} else {
+			log.debug("this node is replica");
 			try {
 				jedis.clusterReplicate(info.getMasterNodeId());
 			} catch (Exception e) {
@@ -148,15 +159,6 @@ public class TribClusterNode implements Closeable {
 				// config later.
 				return;
 			}
-		} else {
-			int[] intArray = new int[tmpSlots.size()];
-			int i = 0;
-			for (Integer item : tmpSlots) {
-				intArray[i] = item;
-				i++;
-			}
-			jedis.clusterAddSlots(intArray);
-			tmpSlots.clear();
 		}
 		dirty = false;
 	}

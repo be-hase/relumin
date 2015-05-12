@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster.Reset;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 import com.behase.relumin.Application;
@@ -37,17 +38,40 @@ public class TribClusterNodeTest {
 	@Value("${test.redis.emptyClusterAll}")
 	private String testRedisEmptyClusterAll;
 
+	@Value("${test.redis.normalStandAlone}")
+	private String testRedisNormalStandAlone;
+
+	@Value("${test.redis.normalStandAloneAll}")
+	private String testRedisNormalStandAloneAll;
+
 	@Value("${test.redis.emptyStandAlone}")
 	private String testRedisEmptyStandAlone;
+
+	@Value("${test.redis.emptyStandAloneAll}")
+	private String testRedisEmptyStandAloneAll;
 
 	private TribClusterNode tribClusterNode;
 
 	@Before
 	public void before() {
-		// empty
+		// empty (and reset)
 		for (String item : StringUtils.split(testRedisEmptyClusterAll, ",")) {
 			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
+				try {
+					jedis.flushAll();
+				} catch (Exception e) {
+				}
+				try {
+					jedis.clusterReset(Reset.HARD);
+				} catch (Exception e) {
+				}
+			} catch (Exception e) {
+			}
+		}
+		for (String item : StringUtils.split(testRedisEmptyStandAloneAll, ",")) {
+			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
 				jedis.flushAll();
+			} catch (Exception e) {
 			}
 		}
 

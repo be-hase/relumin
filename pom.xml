@@ -109,6 +109,7 @@
 			<version>2.7.2</version>
 		</dependency>
 
+		<!-- Fluentd -->
 		<dependency>
 			<groupId>org.fluentd</groupId>
 			<artifactId>fluent-logger</artifactId>

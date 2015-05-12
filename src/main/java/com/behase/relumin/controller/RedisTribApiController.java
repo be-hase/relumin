@@ -21,7 +21,7 @@ public class RedisTribApiController {
 	@Autowired
 	private RedisTribService service;
 
-	@RequestMapping(value = "/create-parameter", method = RequestMethod.GET)
+	@RequestMapping(value = "/create/params", method = RequestMethod.GET)
 	public List<CreateClusterParam> getCreateParameter(
 			@RequestParam(defaultValue = "") String replicas,
 			@RequestParam(defaultValue = "") String hostAndPorts
@@ -31,6 +31,6 @@ public class RedisTribApiController {
 
 		ValidationUtils.notBlank(hostAndPorts, "hostAndPorts");
 
-		return service.getCreateClusterParam(Integer.valueOf(replicas), Lists.newArrayList(StringUtils.split(hostAndPorts, ",")));
+		return service.getCreateClusterParams(Integer.valueOf(replicas), Lists.newArrayList(StringUtils.split(hostAndPorts, ",")));
 	}
 }

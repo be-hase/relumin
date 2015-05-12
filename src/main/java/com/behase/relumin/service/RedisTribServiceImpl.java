@@ -20,13 +20,13 @@ import lombok.extern.slf4j.Slf4j;
 public class RedisTribServiceImpl implements RedisTribService {
 
 	@Override
-	public List<CreateClusterParam> getCreateClusterParam(int replicas, List<String> hostAndPortRanges)
+	public List<CreateClusterParam> getCreateClusterParams(int replicas, List<String> hostAndPortRanges)
 			throws IOException {
 		ValidationUtils.replicas(replicas);
 		Set<String> hostAndPorts = buildHostAndPorts(hostAndPortRanges);
 
 		try (RedisTrib trib = new RedisTrib()) {
-			return trib.getCreateClusterParam(replicas, hostAndPorts);
+			return trib.getCreateClusterParams(replicas, hostAndPorts);
 		}
 	}
 

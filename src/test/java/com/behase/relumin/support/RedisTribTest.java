@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster.Reset;
 
 import com.behase.relumin.Application;
 import com.behase.relumin.exception.InvalidParameterException;
@@ -42,31 +43,40 @@ public class RedisTribTest {
 	@Value("${test.redis.emptyClusterAll}")
 	private String testRedisEmptyClusterAll;
 
-	@Value("${test.redis.emptyStandAlone}")
-	private String testRedisEmptyStandAlone;
-
-	@Value("${test.redis.emptyStandAloneAll}")
-	private String testRedisEmptyStandAloneAll;
-
 	@Value("${test.redis.normalStandAlone}")
 	private String testRedisNormalStandAlone;
 
 	@Value("${test.redis.normalStandAloneAll}")
 	private String testRedisNormalStandAloneAll;
 
+	@Value("${test.redis.emptyStandAlone}")
+	private String testRedisEmptyStandAlone;
+
+	@Value("${test.redis.emptyStandAloneAll}")
+	private String testRedisEmptyStandAloneAll;
+
 	private RedisTrib redisTrib;
 
 	@Before
 	public void before() {
-		// empty
+		// empty (and reset)
 		for (String item : StringUtils.split(testRedisEmptyClusterAll, ",")) {
 			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
-				jedis.flushAll();
+				try {
+					jedis.flushAll();
+				} catch (Exception e) {
+				}
+				try {
+					jedis.clusterReset(Reset.HARD);
+				} catch (Exception e) {
+				}
+			} catch (Exception e) {
 			}
 		}
-		for (String item : StringUtils.split(testRedisNormalStandAloneAll, ",")) {
+		for (String item : StringUtils.split(testRedisEmptyStandAloneAll, ",")) {
 			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
 				jedis.flushAll();
+			} catch (Exception e) {
 			}
 		}
 	}
@@ -248,30 +258,88 @@ public class RedisTribTest {
 		assertThat(param.getEndSlotNumber(), is("4095"));
 		assertThat(param.getMaster(), is("1.1.1.1:1"));
 		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:3", "1.1.1.1:4", "2.2.2.2:2", "2.2.2.2:3", "2.2.2.2:4", "3.3.3.3:2", "3.3.3.3:3", "3.3.3.3:11")));
+		param = params.get(1);
+		assertThat(param.getStartSlotNumber(), is("4096"));
+		assertThat(param.getEndSlotNumber(), is("8191"));
+		assertThat(param.getMaster(), is("2.2.2.2:1"));
+		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:5", "1.1.1.1:6", "1.1.1.1:12", "2.2.2.2:5", "2.2.2.2:6", "3.3.3.3:4", "3.3.3.3:5", "3.3.3.3:6")));
+		param = params.get(2);
+		assertThat(param.getStartSlotNumber(), is("8192"));
+		assertThat(param.getEndSlotNumber(), is("12287"));
+		assertThat(param.getMaster(), is("3.3.3.3:1"));
+		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:7", "1.1.1.1:8", "1.1.1.1:9", "2.2.2.2:7", "2.2.2.2:8", "2.2.2.2:12", "3.3.3.3:7", "3.3.3.3:8")));
+		param = params.get(3);
+		assertThat(param.getStartSlotNumber(), is("12288"));
+		assertThat(param.getEndSlotNumber(), is("16383"));
+		assertThat(param.getMaster(), is("1.1.1.1:2"));
+		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:10", "1.1.1.1:11", "2.2.2.2:9", "2.2.2.2:10", "2.2.2.2:11", "3.3.3.3:9", "3.3.3.3:10", "3.3.3.3:12")));
 	}
 
 	@Test
 	public void getCreateClusterParam() throws Exception {
 		redisTrib = new RedisTrib();
-		List<CreateClusterParam> result = redisTrib.getCreateClusterParam(1, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyClusterAll, ","))));
+		List<CreateClusterParam> result = redisTrib.getCreateClusterParams(1, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyClusterAll, ","))));
 		log.debug("getRecommendCreateClusterParam result = {}", result);
+		List<CreateClusterParam> params = redisTrib.buildCreateClusterParam();
+
+		CreateClusterParam param;
+		param = params.get(0);
+		assertThat(param.getStartSlotNumber(), is("0"));
+		assertThat(param.getEndSlotNumber(), is("5460"));
+		assertThat(param.getMaster(), is("192.168.33.11:8000"));
+		assertThat(param.getReplicas(), is(Lists.newArrayList("192.168.33.11:8003")));
+		param = params.get(1);
+		assertThat(param.getStartSlotNumber(), is("5461"));
+		assertThat(param.getEndSlotNumber(), is("10921"));
+		assertThat(param.getMaster(), is("192.168.33.11:8001"));
+		assertThat(param.getReplicas(), is(Lists.newArrayList("192.168.33.11:8004")));
+		param = params.get(2);
+		assertThat(param.getStartSlotNumber(), is("10922"));
+		assertThat(param.getEndSlotNumber(), is("16383"));
+		assertThat(param.getMaster(), is("192.168.33.11:8002"));
+		assertThat(param.getReplicas(), is(Lists.newArrayList("192.168.33.11:8005")));
 	}
 
 	@Test(expected = InvalidParameterException.class)
 	public void getCreateClusterParam_redis_is_not_cluster() throws Exception {
 		redisTrib = new RedisTrib();
-		redisTrib.getCreateClusterParam(0, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyStandAloneAll, ","))));
+		redisTrib.getCreateClusterParams(0, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyStandAloneAll, ","))));
 	}
 
 	@Test(expected = InvalidParameterException.class)
 	public void getCreateClusterParam_redis_is_not_empty() throws Exception {
 		redisTrib = new RedisTrib();
-		redisTrib.getCreateClusterParam(0, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisNormalCluster, ","))));
+		redisTrib.getCreateClusterParams(0, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisNormalCluster, ","))));
 	}
 
 	@Test(expected = InvalidParameterException.class)
 	public void getCreateClusterParam_not_enough_master() throws Exception {
 		redisTrib = new RedisTrib();
-		redisTrib.getCreateClusterParam(2, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyClusterAll, ","))));
+		redisTrib.getCreateClusterParams(2, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyClusterAll, ","))));
+	}
+
+	@Test
+	public void createCluster() throws Exception {
+		redisTrib = new RedisTrib();
+
+		CreateClusterParam param1 = new CreateClusterParam();
+		param1.setStartSlotNumber("0");
+		param1.setEndSlotNumber("5460");
+		param1.setMaster("192.168.33.11:8000");
+		param1.setReplicas(Lists.newArrayList("192.168.33.11:8003"));
+		CreateClusterParam param2 = new CreateClusterParam();
+		param2.setStartSlotNumber("5461");
+		param2.setEndSlotNumber("10921");
+		param2.setMaster("192.168.33.11:8001");
+		param2.setReplicas(Lists.newArrayList("192.168.33.11:8004"));
+		CreateClusterParam param3 = new CreateClusterParam();
+		param3.setStartSlotNumber("10922");
+		param3.setEndSlotNumber("16383");
+		param3.setMaster("192.168.33.11:8002");
+		param3.setReplicas(Lists.newArrayList("192.168.33.11:8005"));
+		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+
+		redisTrib.createCluster(params);
+		//log.debug("hoge={}", redisTrib.buildCreateClusterParam());
 	}
 }
