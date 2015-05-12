@@ -17,6 +17,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 import com.behase.relumin.Application;
+import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.util.JedisUtils;
 import com.google.common.collect.Lists;
 
@@ -63,7 +64,7 @@ public class TribClusterNodeTest {
 		tribClusterNode.connect(true);
 	}
 
-	@Test(expected = RedisTribException.class)
+	@Test(expected = InvalidParameterException.class)
 	public void connect_invalid_host_and_port() throws Exception {
 		tribClusterNode = new TribClusterNode("192.168.33.11:80");
 		tribClusterNode.connect(true);
@@ -81,7 +82,7 @@ public class TribClusterNodeTest {
 		tribClusterNode.assertCluster();
 	}
 
-	@Test(expected = RedisTribException.class)
+	@Test(expected = InvalidParameterException.class)
 	public void assertCluster_not_cluster_mode() throws Exception {
 		tribClusterNode = new TribClusterNode(testRedisEmptyStandAlone);
 		tribClusterNode.connect();
@@ -95,7 +96,7 @@ public class TribClusterNodeTest {
 		tribClusterNode.assertEmpty();
 	}
 
-	@Test(expected = RedisTribException.class)
+	@Test(expected = InvalidParameterException.class)
 	public void assertEmpty_already_knows_other_cluster() throws Exception {
 		tribClusterNode.connect();
 		tribClusterNode.assertEmpty();
@@ -109,7 +110,7 @@ public class TribClusterNodeTest {
 	}
 
 	@Test
-	public void loadInfo() throws RedisTribException {
+	public void loadInfo() throws Exception {
 		tribClusterNode.loadInfo();
 		log.debug("config signature={}", tribClusterNode.getConfigSignature());
 	}

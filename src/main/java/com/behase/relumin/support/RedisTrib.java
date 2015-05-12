@@ -6,12 +6,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.behase.relumin.exception.InvalidParameterException;
+import com.behase.relumin.model.param.CreateClusterParam;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +31,7 @@ public class RedisTrib implements Closeable {
 	private int replicas;
 	private List<TribClusterNode> nodes = Lists.newArrayList();
 
-	public void getAllocSlotsForCreateCluster(int replicas, List<String> hostAndPorts) throws RedisTribException {
+	public List<CreateClusterParam> getCreateClusterParam(int replicas, Set<String> hostAndPorts) {
 		log.debug("hostAndPorts={}", hostAndPorts);
 		this.replicas = replicas;
 
@@ -42,13 +46,15 @@ public class RedisTrib implements Closeable {
 
 		checkCreateParameters();
 		allocSlots();
+
+		return buildCreateClusterParam();
 	}
 
-	void checkCreateParameters() throws RedisTribException {
+	void checkCreateParameters() {
 		int masters = nodes.size() / (replicas + 1);
 		log.debug("masters = {}", masters);
 		if (masters < 3) {
-			throw new RedisTribException("Invalid configuration for cluster creation. Redis Cluster requires at least 3 master nodes.", false);
+			throw new InvalidParameterException("Invalid configuration for cluster creation. Redis Cluster requires at least 3 master nodes.");
 		}
 	}
 
@@ -120,12 +126,13 @@ public class RedisTrib implements Closeable {
 				last = first;
 			}
 
-			List<Integer> slots = Lists.newArrayList();
+			Set<Integer> slots = Sets.newTreeSet();
 			for (int j = first; j <= last; j++) {
 				slots.add(j);
 			}
 			log.debug("add slots to {}. first={}, last={}", masters.get(i), first, last);
 			masters.get(i).addTmpSlots(slots);
+
 			first = last + 1;
 			cursor = cursor + slotsPerNode;
 		}
@@ -140,7 +147,7 @@ public class RedisTrib implements Closeable {
 		// may end up with more than their requested number of replicas, but
 		// all nodes will be used.
 		log.debug("Select requested replica.");
-		Map<TribClusterNode, List<TribClusterNode>> replicasOfMaster = Maps.newHashMap();
+		Map<TribClusterNode, List<TribClusterNode>> replicasOfMaster = Maps.newLinkedHashMap();
 		for (TribClusterNode master : masters) {
 			replicasOfMaster.put(master, Lists.newArrayList());
 			while (replicasOfMaster.get(master).size() < this.replicas) {
@@ -155,25 +162,25 @@ public class RedisTrib implements Closeable {
 
 				replicaNodeOp = interleaved.stream().filter(v -> {
 					boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
-					boolean notSameHostAsAlreadyRegisterdReplica = replicasOfMaster.get(master).stream().anyMatch(rpl -> {
-						return !StringUtils.equals(v.getInfo().getHost(), rpl.getInfo().getHost());
+					boolean sameHostAsAlreadyRegisterdReplica = replicasOfMaster.get(master).stream().anyMatch(rpl -> {
+						return StringUtils.equals(v.getInfo().getHost(), rpl.getInfo().getHost());
 					});
-					return notSameHostAsMaster && notSameHostAsAlreadyRegisterdReplica;
+					return notSameHostAsMaster && !sameHostAsAlreadyRegisterdReplica;
 				}).findFirst();
 				if (replicaNodeOp.isPresent()) {
 					replicaNode = replicaNodeOp.get();
 					interleaved.remove(replicaNode);
 				} else {
-					replicaNodeOp = interleaved.stream().filter(v -> {
-						boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
-						return notSameHostAsMaster;
-					}).findFirst();
-					if (replicaNodeOp.isPresent()) {
-						replicaNode = replicaNodeOp.get();
-						interleaved.remove(replicaNode);
-					} else {
-						replicaNode = interleaved.remove(0);
-					}
+					//					replicaNodeOp = interleaved.stream().filter(v -> {
+					//						boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
+					//						return notSameHostAsMaster;
+					//					}).findFirst();
+					//					if (replicaNodeOp.isPresent()) {
+					//						replicaNode = replicaNodeOp.get();
+					//						interleaved.remove(replicaNode);
+					//					} else {
+					replicaNode = interleaved.remove(0);
+					//					}
 				}
 				log.debug("Select {} as replica of {}", replicaNode, master);
 				replicaNode.setAsReplica(master.getInfo().getNodeId());
@@ -181,6 +188,7 @@ public class RedisTrib implements Closeable {
 			}
 		}
 
+		// want to attach different host of master and min size.
 		log.debug("Select extra replica.");
 		for (TribClusterNode extra : interleaved) {
 			TribClusterNode master;
@@ -211,6 +219,48 @@ public class RedisTrib implements Closeable {
 			extra.setAsReplica(master.getInfo().getNodeId());
 			replicasOfMaster.get(master).add(extra);
 		}
+	}
+
+	List<CreateClusterParam> buildCreateClusterParam() {
+		// first loop master
+		List<CreateClusterParam> params = Lists.newArrayList();
+		nodes.stream().filter(node -> {
+			return StringUtils.isBlank(node.getInfo().getMasterNodeId());
+		}).forEach(node -> {
+			int startSlotNumber = node.getTmpServedSlots().stream().min(Integer::compare).get();
+			int endSlotNumber = node.getTmpServedSlots().stream().max(Integer::compare).get();
+
+			CreateClusterParam param = new CreateClusterParam();
+			param.setStartSlotNumber(String.valueOf(startSlotNumber));
+			param.setEndSlotNumber(String.valueOf(endSlotNumber));
+			param.setMaster(node.getInfo().getHostAndPort());
+			param.setMasterNodeId(node.getInfo().getNodeId());
+			params.add(param);
+		});
+
+		// replica loop
+		nodes.stream().filter(node -> {
+			return StringUtils.isNotBlank(node.getInfo().getMasterNodeId());
+		}).forEach(node -> {
+			String masterNodeId = node.getInfo().getMasterNodeId();
+			params.stream().filter(param -> {
+				return StringUtils.equals(param.getMasterNodeId(), masterNodeId);
+			}).forEach(param -> {
+				List<String> replicaList = param.getReplicas();
+				if (param.getReplicas() == null) {
+					replicaList = Lists.newArrayList();
+					param.setReplicas(replicaList);
+				}
+				replicaList.add(node.getInfo().getHostAndPort());
+			});
+		});
+
+		// sort
+		params.sort((v1, v2) -> {
+			return Integer.compare(Integer.valueOf(v1.getStartSlotNumber()), Integer.valueOf(v2.getStartSlotNumber()));
+		});
+
+		return params;
 	}
 
 	@Override

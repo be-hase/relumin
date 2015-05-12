@@ -22,6 +22,7 @@ import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.SlotInfo;
 import com.behase.relumin.util.JedisUtils;
+import com.behase.relumin.util.ValidationUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,8 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class ClusterServiceImpl implements ClusterService {
-	private static final String NAME_REGEX = "^[a-zA-Z0-9_-]{1,20}$";
-
 	@Autowired
 	JedisPool dataStoreJedisPool;
 
@@ -117,8 +116,8 @@ public class ClusterServiceImpl implements ClusterService {
 
 	@Override
 	public void setCluster(String clusterName, String hostAndPort) throws JsonProcessingException {
-		validateClusterName(clusterName);
-		validateNode(hostAndPort);
+		ValidationUtils.clusterName(clusterName);
+		ValidationUtils.hostAndPort(hostAndPort);
 
 		try (
 				Jedis jedis = JedisUtils.getJedisByHostAndPort(hostAndPort);
@@ -199,24 +198,6 @@ public class ClusterServiceImpl implements ClusterService {
 			}
 
 			throw new ApiException(Constants.ERR_CODE_ALL_NODE_DOWN, "All node is down.", HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	private void validateClusterName(String name) {
-		if (!name.matches(NAME_REGEX)) {
-			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Name is invalid.", HttpStatus.BAD_REQUEST);
-		}
-	}
-
-	private void validateNode(String node) {
-		String[] hostAndPortArray = StringUtils.split(node, ":");
-		if (hostAndPortArray.length != 2) {
-			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Node is invalid.", HttpStatus.BAD_REQUEST);
-		}
-		try {
-			Integer.valueOf(hostAndPortArray[1]);
-		} catch (Exception e) {
-			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Node's port is invalid.", HttpStatus.BAD_REQUEST);
 		}
 	}
 }

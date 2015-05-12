@@ -43,6 +43,11 @@ public class ExceptionHandlerAdvice {
 	@ResponseBody
 	public ResponseEntity<Object> apiExceptionHandler(ApiException e, HttpServletRequest request,
 			HttpServletResponse response) {
+		if (e.getHttpStatus().is5xxServerError()) {
+			log.error("apiExceptionHandler.", e);
+		} else {
+			log.warn("apiExceptionHandler.", e);
+		}
 		return new ResponseEntity<Object>(e.getErrorResponse(), e.getHttpStatus());
 	}
 }

@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import redis.clients.jedis.Jedis;
 
+import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.util.JedisUtils;
 import com.google.common.base.Joiner;
@@ -52,15 +53,19 @@ public class TribClusterNode implements Closeable {
 		return info.getServedSlots();
 	}
 
+	public Set<Integer> getTmpServedSlots() {
+		return tmpSlots;
+	}
+
 	public boolean hasFlag(String flag) {
 		return info.getFlags().contains(flag);
 	}
 
-	public void connect() throws RedisTribException {
+	public void connect() {
 		connect(false);
 	}
 
-	public void connect(boolean abort) throws RedisTribException {
+	public void connect(boolean abort) {
 		if (jedis != null) {
 			return;
 		}
@@ -68,41 +73,39 @@ public class TribClusterNode implements Closeable {
 		try {
 			jedis = JedisUtils.getJedisByHostAndPort(info.getHostAndPort());
 			if (!"PONG".equalsIgnoreCase(jedis.ping())) {
-				log.error("Invalid PONG-message.");
-				throw new RedisTribException("Invalid PONG-message.", false);
+				throw new InvalidParameterException(String.format("Invalid PONG-message from Redis(%s).", info.getHostAndPort()));
 			}
 		} catch (Exception e) {
-			log.error("Failed to connect to node.");
 			if (abort) {
-				throw new RedisTribException("Failed to connect to node.", false);
+				throw new InvalidParameterException(String.format("Failed to connect to node(%s).", info.getHostAndPort()));
 			}
 			jedis = null;
 		}
 	}
 
-	public void assertCluster() throws RedisTribException {
+	public void assertCluster() {
 		Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
 		log.debug("cluster info={}", infoResult);
 		String clusterEnabled = infoResult.get("cluster_enabled");
 		if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
-			throw new RedisTribException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()), false);
+			throw new InvalidParameterException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()));
 		}
 	}
 
-	public void assertEmpty() throws RedisTribException {
+	public void assertEmpty() {
 		Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
 		Map<String, String> clusterInfoResult = JedisUtils.parseInfoResult(jedis.clusterInfo());
 		log.debug("cluster info={}", infoResult);
 		if (infoResult.get("db0") != null || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
-			throw new RedisTribException(String.format("%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHostAndPort()), false);
+			throw new InvalidParameterException(String.format("%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHostAndPort()));
 		}
 	}
 
-	public void loadInfo() throws RedisTribException {
+	public void loadInfo() {
 		loadInfo(false);
 	}
 
-	public void loadInfo(boolean getFriend) throws RedisTribException {
+	public void loadInfo(boolean getFriend) {
 		connect();
 
 		String hostAndPort = info.getHostAndPort();
@@ -121,7 +124,7 @@ public class TribClusterNode implements Closeable {
 		if (slots.isEmpty()) {
 			return;
 		}
-		tmpSlots.addAll(tmpSlots);
+		tmpSlots.addAll(slots);
 		dirty = true;
 	}
 

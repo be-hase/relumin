@@ -12,7 +12,6 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPoolConfig;
-import scala.collection.mutable.StringBuilder;
 
 import com.behase.relumin.model.ClusterNode;
 import com.google.common.collect.Lists;

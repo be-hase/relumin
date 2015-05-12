@@ -11,6 +11,7 @@ public class Constants {
 	public static String ERR_CODE_INVALID_PARAMETER = "400_000";
 	public static String ERR_CODE_REDIS_SET_FAILED = "500_000";
 	public static String ERR_CODE_ALL_NODE_DOWN = "500_001";
+	public static String ERR_CODE_UNKNOWN = "500_999";
 
 	public static String getClustersKey() {
 		return Joiner.on(".").join(REDIS_PREFIX, "clusters").toString();
