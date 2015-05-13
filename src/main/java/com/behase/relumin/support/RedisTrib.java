@@ -36,12 +36,16 @@ public class RedisTrib implements Closeable {
 	private boolean fix;
 
 	@Getter
+	private List<String> errors = Lists.newArrayList();
+
+	@Getter
 	private List<TribClusterNode> nodes = Lists.newArrayList();
 
 	public List<CreateClusterParam> getCreateClusterParams(int replicas, Set<String> hostAndPorts) {
 		this.replicas = replicas;
 
 		for (String hostAndPort : hostAndPorts) {
+			hostAndPort = StringUtils.trim(hostAndPort);
 			TribClusterNode node = new TribClusterNode(hostAndPort);
 			node.connect(true);
 			node.assertCluster();
@@ -112,6 +116,91 @@ public class RedisTrib implements Closeable {
 		checkCluster();
 	}
 
+	public void fixCluster(String hostAndPort) {
+		fix = true;
+		loadClusterInfoFromNode(hostAndPort);
+		checkCluster();
+	}
+
+	public void reshardCluster(String hostAndPort, int slotCount, String fromNodeIds, String toNodeId) {
+		ValidationUtils.slotCount(slotCount);
+		ValidationUtils.notBlank(toNodeId, "toNodeId");
+		ValidationUtils.notBlank(fromNodeIds, "fromNodeId");
+
+		loadClusterInfoFromNode(hostAndPort);
+		checkCluster();
+		if (errors.size() > 0) {
+			throw new ApiException(Constants.ERR_CODE_CLUSTER_HAS_ERRORS, "Please fix your cluster problems before resharding.", HttpStatus.BAD_REQUEST);
+		}
+
+		TribClusterNode target = getNodeByNodeId(toNodeId);
+		if (target == null || target.hasFlag("slave")) {
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "The specified node is not known or is not a master, please retry.", HttpStatus.BAD_REQUEST);
+		}
+
+		List<TribClusterNode> sources = Lists.newArrayList();
+		if (StringUtils.equals("ALL", fromNodeIds)) {
+			for (TribClusterNode node : nodes) {
+				if (StringUtils.equals(node.getInfo().getNodeId(), target.getInfo().getNodeId())) {
+					continue;
+				}
+				if (node.hasFlag("slave")) {
+					continue;
+				}
+				sources.add(node);
+			}
+		} else {
+			for (String fromNodeId : StringUtils.split(fromNodeIds, ",")) {
+				TribClusterNode fromNode = getNodeByNodeId(fromNodeId);
+				if (fromNode == null || fromNode.hasFlag("slave")) {
+					throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "The specified node is not known or is not a master, please retry.", HttpStatus.BAD_REQUEST);
+				}
+				sources.add(fromNode);
+			}
+		}
+
+		if (sources.stream().filter(source -> {
+			return StringUtils.equals(source.getInfo().getNodeId(), target.getInfo().getNodeId());
+		}).findAny().isPresent()) {
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Target node is also listed among the source nodes!", HttpStatus.BAD_REQUEST);
+		}
+
+		log.info("Ready to move {} slots.", slotCount);
+		log.info("Source nodes : {}", sources.stream().map(v -> String.format("%s (%s)", v.getInfo().getHostAndPort(), v.getInfo().getNodeId())).toArray());
+		log.info("Destination nodes : {}", String.format("%s (%s)", target.getInfo().getHostAndPort(), target.getInfo().getNodeId()));
+	}
+
+	// Given a list of source nodes return a "resharding plan"
+	// with what slots to move in order to move "numslots" slots to another
+	// instance.
+	void computeReshardTable(List<TribClusterNode> sources, int slotCount) {
+		Map<String, Object> moved = Maps.newHashMap();
+
+		// Sort from bigger to smaller instance, for two reasons:
+		// 1) If we take less slots than instances it is better to start
+		//    getting from the biggest instances.
+		// 2) We take one slot more from the first instance in the case of not
+		//    perfect divisibility. Like we have 3 nodes and need to get 10
+		//    slots, we take 4 from the first, and 3 from the rest. So the
+		//    biggest is always the first.
+		sources.sort((o1, o2) -> {
+			return Integer.compare(o2.getInfo().getServedSlotsSet().size(), o1.getInfo().getServedSlotsSet().size());
+		});
+		int sourceTotalSlot = sources.stream().mapToInt(source -> source.getInfo().getServedSlotsSet().size()).sum();
+
+		int index = 0;
+		for (TribClusterNode source : sources) {
+			// Every node will provide a number of slots proportional to the
+			// slots it has assigned.
+			double n = slotCount / sourceTotalSlot * source.getInfo().getServedSlotsSet().size();
+		}
+	}
+
+	void clusterError(String error) {
+		log.warn(error);
+		errors.add(error);
+	}
+
 	void checkCluster() {
 		checkConfigConsistency();
 		checkOpenSlots();
@@ -122,8 +211,18 @@ public class RedisTrib implements Closeable {
 		if (isConfigConsistent()) {
 			log.info("OK. All nodes agree about slots configuration.");
 		} else {
-			throw new ApiException(Constants.ERR_CODE_CLUSTER_NOT_AGREE_CONFIG, "Nodes don't agree about configuration!", HttpStatus.INTERNAL_SERVER_ERROR);
+			clusterError("Nodes don't agree about configuration!");
 		}
+	}
+
+	boolean isConfigConsistent() {
+		Set<String> signatures = Sets.newHashSet();
+		nodes.forEach(node -> {
+			String signature = node.getConfigSignature();
+			log.debug("signature={}", signature);
+			signatures.add(signature);
+		});
+		return signatures.size() == 1;
 	}
 
 	void checkOpenSlots() {
@@ -131,15 +230,15 @@ public class RedisTrib implements Closeable {
 		Set<Integer> openSlots = Sets.newTreeSet();
 		for (TribClusterNode node : nodes) {
 			if (node.getInfo().getMigrating().size() > 0) {
-				log.warn("Node {} has slots in migrating state ({}).", node.getInfo().getHostAndPort(), StringUtils.join(node.getInfo().getMigrating().keySet(), ","));
+				clusterError(String.format("[Warning] Node %s has slots in migrating state. (%s).", node.getInfo().getHostAndPort(), StringUtils.join(node.getInfo().getMigrating().keySet(), ",")));
 				openSlots.addAll(node.getInfo().getMigrating().keySet());
 			} else if (node.getInfo().getImporting().size() > 0) {
-				log.warn("Node {} has slots in importing state ({}).", node.getInfo().getHostAndPort(), StringUtils.join(node.getInfo().getImporting().keySet(), ","));
+				clusterError(String.format("[Warning] Node %s has slots in importing state (%s).", node.getInfo().getHostAndPort(), StringUtils.join(node.getInfo().getImporting().keySet(), ",")));
 				openSlots.addAll(node.getInfo().getImporting().keySet());
 			}
 		}
 		if (openSlots.size() > 0) {
-			throw new ApiException(Constants.ERR_CODE_CLUSTER_NOT_AGREE_CONFIG, String.format("The following slots are open: %s", StringUtils.join(openSlots, ",")), HttpStatus.INTERNAL_SERVER_ERROR);
+			log.warn("The following slots are open: {}", StringUtils.join(openSlots, ","));
 		}
 		if (fix) {
 			openSlots.forEach(v -> {
@@ -232,7 +331,7 @@ public class RedisTrib implements Closeable {
 					source.getJedis().migrate(target.getInfo().getHost(), target.getInfo().getPort(), key, 0, 15000);
 				} catch (Exception e) {
 					if (fix && StringUtils.contains(e.getMessage(), "BUSYKEY")) {
-						// want to replcate. but jedis not have replace.
+						// TODO: i want to replcate. but jedis not have replace.
 						log.error("Error.", e);
 						throw new ApiException(Constants.ERR_CODE_UNKNOWN, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 					} else {
@@ -256,6 +355,7 @@ public class RedisTrib implements Closeable {
 		}).findFirst().orElse(null);
 	}
 
+	// TODO: 
 	//	void checkSlotsCoverage() {
 	//		log.info("Check slots coverage.");
 	//		Set<Integer> slots = coveredSlots();
@@ -305,6 +405,7 @@ public class RedisTrib implements Closeable {
 		int configEpoch = 1;
 		for (TribClusterNode node : nodes) {
 			try {
+				//TODO: SET CONFIG EPOCH
 			} catch (Exception e) {
 			}
 			configEpoch++;
@@ -320,16 +421,6 @@ public class RedisTrib implements Closeable {
 				node.getJedis().clusterMeet(firstNode.getInfo().getHost(), firstNode.getInfo().getPort());
 			}
 		}
-	}
-
-	boolean isConfigConsistent() {
-		Set<String> signatures = Sets.newHashSet();
-		nodes.forEach(node -> {
-			String signature = node.getConfigSignature();
-			log.debug("signature={}", signature);
-			signatures.add(signature);
-		});
-		return signatures.size() == 1;
 	}
 
 	void waitClusterJoin() throws Exception {

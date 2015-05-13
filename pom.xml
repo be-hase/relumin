@@ -152,6 +152,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-jetty</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>net.wimpi</groupId>
+			<artifactId>telnetd-x</artifactId>
+			<version>2.1.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>

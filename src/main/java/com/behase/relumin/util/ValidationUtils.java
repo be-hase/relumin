@@ -59,6 +59,12 @@ public class ValidationUtils {
 		}
 	}
 
+	public static void slotCount(int slotCount) {
+		if (slotCount <= 0 || Constants.ALL_SLOTS_SIZE < slotCount) {
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Slot count must be in range '1 - 16384'.", HttpStatus.BAD_REQUEST);
+		}
+	}
+
 	public static void hostAndPortRange(String node) {
 		String[] hostAndPortRangeArray = StringUtils.split(node, ":");
 		if (hostAndPortRangeArray.length != 2) {

@@ -15,6 +15,7 @@ public class Constants {
 	public static final String ERR_CODE_ALL_NODE_DOWN = "500_001";
 	public static final String ERR_CODE_CLUSTER_NOT_AGREE_CONFIG = "500_002";
 	public static final String ERR_CODE_CLUSTER_HAS_OPEN_SLOTS = "500_003";
+	public static final String ERR_CODE_CLUSTER_HAS_ERRORS = "500_004";
 	public static final String ERR_CODE_UNKNOWN = "500_999";
 
 	public static String getClustersKey() {
