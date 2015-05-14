@@ -13,6 +13,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPoolConfig;
 
+import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -210,5 +211,31 @@ public class JedisUtils {
 			}
 		}
 		return StringUtils.join(result, ",");
+	}
+
+	public static Set<String> getHostAndPorts(List<String> hostAndPortRanges) {
+		Set<String> hostAndPorts = Sets.newTreeSet();
+
+		hostAndPortRanges.forEach(v -> {
+			ValidationUtils.hostAndPortRange(v);
+			String[] hostAndPortRangeArray = StringUtils.split(v, ":");
+
+			String[] portRangeArray = StringUtils.split(hostAndPortRangeArray[1], "-");
+			int start = Integer.valueOf(portRangeArray[0]);
+			int end;
+			if (portRangeArray.length > 1) {
+				end = Integer.valueOf(portRangeArray[1]);
+			} else {
+				end = start;
+			}
+			if (start > end) {
+				throw new InvalidParameterException(String.format("%s is invalid. start port must be equal or less than end.", v));
+			}
+			for (int i = start; i <= end; i++) {
+				hostAndPorts.add(new StringBuilder().append(hostAndPortRangeArray[0]).append(":").append(i).toString());
+			}
+		});
+
+		return hostAndPorts;
 	}
 }

@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -166,15 +167,20 @@ public class RedisTrib implements Closeable {
 		}
 
 		log.info("Ready to move {} slots.", slotCount);
-		log.info("Source nodes : {}", sources.stream().map(v -> String.format("%s (%s)", v.getInfo().getHostAndPort(), v.getInfo().getNodeId())).toArray());
+		log.info("Source nodes : {}", sources.stream().map(v -> String.format("%s (%s)", v.getInfo().getHostAndPort(), v.getInfo().getNodeId())).collect(Collectors.toList()));
 		log.info("Destination nodes : {}", String.format("%s (%s)", target.getInfo().getHostAndPort(), target.getInfo().getNodeId()));
+		List<ReshardTable> reshardTables = computeReshardTable(sources, slotCount);
+		reshardTables.forEach(reshardTable -> {
+			log.debug("{}, {}", reshardTable.getSource().getInfo().getHostAndPort(), reshardTable.getSlot());
+			moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), false, false);
+		});
 	}
 
 	// Given a list of source nodes return a "resharding plan"
 	// with what slots to move in order to move "numslots" slots to another
 	// instance.
-	void computeReshardTable(List<TribClusterNode> sources, int slotCount) {
-		Map<String, Object> moved = Maps.newHashMap();
+	List<ReshardTable> computeReshardTable(List<TribClusterNode> sources, int slotCount) {
+		List<ReshardTable> moved = Lists.newArrayList();
 
 		// Sort from bigger to smaller instance, for two reasons:
 		// 1) If we take less slots than instances it is better to start
@@ -187,13 +193,33 @@ public class RedisTrib implements Closeable {
 			return Integer.compare(o2.getInfo().getServedSlotsSet().size(), o1.getInfo().getServedSlotsSet().size());
 		});
 		int sourceTotalSlot = sources.stream().mapToInt(source -> source.getInfo().getServedSlotsSet().size()).sum();
+		log.debug("sourceTotalSlot : {}", sourceTotalSlot);
 
-		int index = 0;
+		int i = 0;
 		for (TribClusterNode source : sources) {
 			// Every node will provide a number of slots proportional to the
 			// slots it has assigned.
-			double n = slotCount / sourceTotalSlot * source.getInfo().getServedSlotsSet().size();
+			double n = (double)slotCount / (double)sourceTotalSlot
+				* (double)source.getInfo().getServedSlotsSet().size();
+			if (i == 0) {
+				n = Math.ceil(n);
+			} else {
+				n = Math.floor(n);
+			}
+
+			int j = 0;
+			for (Integer slot : source.getInfo().getServedSlotsSet()) {
+				if (j >= n || moved.size() >= slotCount) {
+					break;
+				}
+				moved.add(new ReshardTable(source, slot));
+				j++;
+			}
+
+			i++;
 		}
+
+		return moved;
 	}
 
 	void clusterError(String error) {
@@ -693,6 +719,12 @@ public class RedisTrib implements Closeable {
 		}).findFirst().orElse(null);
 	}
 
+	TribClusterNode getNodeByHostAndPort(String hostAndPort) {
+		return nodes.stream().filter(node -> {
+			return StringUtils.equalsIgnoreCase(node.getInfo().getHostAndPort(), hostAndPort);
+		}).findFirst().orElse(null);
+	}
+
 	@Override
 	public void close() throws IOException {
 		if (nodes != null) {
@@ -703,6 +735,18 @@ public class RedisTrib implements Closeable {
 					log.error("Failed to close redis connection.");
 				}
 			});
+		}
+	}
+
+	@Getter
+	@Setter
+	public static class ReshardTable {
+		private TribClusterNode source;
+		private int slot;
+
+		public ReshardTable(TribClusterNode source, int slot) {
+			this.source = source;
+			this.slot = slot;
 		}
 	}
 }

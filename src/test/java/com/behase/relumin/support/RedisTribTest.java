@@ -324,16 +324,16 @@ public class RedisTribTest {
 
 		CreateClusterParam param1 = new CreateClusterParam();
 		param1.setStartSlotNumber("0");
-		param1.setEndSlotNumber("0");
+		param1.setEndSlotNumber("5000");
 		param1.setMaster("192.168.33.11:8000");
 		param1.setReplicas(Lists.newArrayList("192.168.33.11:8003"));
 		CreateClusterParam param2 = new CreateClusterParam();
-		param2.setStartSlotNumber("1");
-		param2.setEndSlotNumber("1");
+		param2.setStartSlotNumber("5001");
+		param2.setEndSlotNumber("10000");
 		param2.setMaster("192.168.33.11:8001");
 		param2.setReplicas(Lists.newArrayList("192.168.33.11:8004"));
 		CreateClusterParam param3 = new CreateClusterParam();
-		param3.setStartSlotNumber("2");
+		param3.setStartSlotNumber("10001");
 		param3.setEndSlotNumber("16383");
 		param3.setMaster("192.168.33.11:8002");
 		param3.setReplicas(Lists.newArrayList("192.168.33.11:8005"));
@@ -393,5 +393,33 @@ public class RedisTribTest {
 		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7005"));
 		assertThat(node.getInfo().getServedSlots(), is(""));
 		assertThat(node.getInfo().getMasterNodeId(), is(nodes.get(2).getInfo().getNodeId()));
+	}
+
+	@Test
+	public void reshardCluster() throws Exception {
+		CreateClusterParam param1 = new CreateClusterParam();
+		param1.setStartSlotNumber("0");
+		param1.setEndSlotNumber("5000");
+		param1.setMaster("192.168.33.11:8000");
+		param1.setReplicas(Lists.newArrayList("192.168.33.11:8003"));
+		CreateClusterParam param2 = new CreateClusterParam();
+		param2.setStartSlotNumber("5001");
+		param2.setEndSlotNumber("10000");
+		param2.setMaster("192.168.33.11:8001");
+		param2.setReplicas(Lists.newArrayList("192.168.33.11:8004"));
+		CreateClusterParam param3 = new CreateClusterParam();
+		param3.setStartSlotNumber("10001");
+		param3.setEndSlotNumber("16383");
+		param3.setMaster("192.168.33.11:8002");
+		param3.setReplicas(Lists.newArrayList("192.168.33.11:8005"));
+		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+
+		RedisTrib createTrib = new RedisTrib();
+		createTrib.createCluster(params);
+
+		redisTrib = new RedisTrib();
+		redisTrib.reshardCluster("192.168.33.11:8000", 2000, "ALL", createTrib.getNodeByHostAndPort("192.168.33.11:8000").getInfo().getNodeId());
+
+		createTrib.close();
 	}
 }
