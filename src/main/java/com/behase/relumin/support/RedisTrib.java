@@ -176,6 +176,79 @@ public class RedisTrib implements Closeable {
 		});
 	}
 
+	public void addNodeIntoCluster(String hostAndPort, String newHostAndPort) {
+		ValidationUtils.hostAndPort(hostAndPort);
+		ValidationUtils.hostAndPort(newHostAndPort);
+
+		log.info("Adding node {} to cluster {}", newHostAndPort, hostAndPort);
+		loadClusterInfoFromNode(hostAndPort);
+		checkCluster();
+
+		// Add the new node
+		TribClusterNode newNode = new TribClusterNode(newHostAndPort);
+		newNode.connect(true);
+		newNode.assertCluster();
+		newNode.loadInfo();
+		newNode.assertEmpty();
+		addNodes(newNode);
+
+		// Send CLUSTER MEET command to the new node
+		TribClusterNode first = nodes.get(0);
+		log.info("Send CLUSTER MEET to node {} to make it join the cluster.", newHostAndPort);
+		newNode.getJedis().clusterMeet(first.getInfo().getHost(), first.getInfo().getPort());
+
+		log.info("New node added correctly.");
+	}
+
+	void addNodeIntoClusterAsReplica(String hostAndPort, String newHostAndPort, String materNodeId) throws Exception {
+		ValidationUtils.hostAndPort(hostAndPort);
+		ValidationUtils.hostAndPort(newHostAndPort);
+
+		log.info("Adding node {} to cluster {}", newHostAndPort, hostAndPort);
+		loadClusterInfoFromNode(hostAndPort);
+		checkCluster();
+
+		// If --master-id was specified, try to resolve it now so that we
+		// abort before starting with the node configuration.
+		TribClusterNode master;
+		if (StringUtils.isBlank(materNodeId)) {
+			master = getMasterWithLeastReplicas();
+			log.info("Automatically selected master {} ().", master.getInfo().getHostAndPort(), master.getInfo().getMasterNodeId());
+		} else {
+			master = getNodeByNodeId(materNodeId);
+			if (master == null) {
+				throw new InvalidParameterException(String.format("No such master ID %s", materNodeId));
+			}
+		}
+
+		// Add the new node
+		TribClusterNode newNode = new TribClusterNode(newHostAndPort);
+		newNode.connect(true);
+		newNode.assertCluster();
+		newNode.loadInfo();
+		newNode.assertEmpty();
+		addNodes(newNode);
+
+		// Send CLUSTER MEET command to the new node
+		TribClusterNode first = nodes.get(0);
+		log.info("Send CLUSTER MEET to node {} to make it join the cluster.", newHostAndPort);
+		newNode.getJedis().clusterMeet(first.getInfo().getHost(), first.getInfo().getPort());
+
+		// Additional configuration is needed if the node is added as
+		// a slave.
+		waitClusterJoin();
+		log.info("Configure node as replica of {}.", master.getInfo().getNodeId());
+		newNode.getJedis().clusterReplicate(master.getInfo().getNodeId());
+
+		log.info("New node added correctly.");
+	}
+
+	TribClusterNode getMasterWithLeastReplicas() {
+		List<TribClusterNode> masters = nodes.stream().filter(node -> node.hasFlag("master")).collect(Collectors.toList());
+		masters.sort((o1, o2) -> Integer.compare(o1.getInfo().getServedSlotsSet().size(), o2.getInfo().getServedSlotsSet().size()));
+		return masters.get(0);
+	}
+
 	// Given a list of source nodes return a "resharding plan"
 	// with what slots to move in order to move "numslots" slots to another
 	// instance.
