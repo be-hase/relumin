@@ -231,6 +231,6 @@ public class TribClusterNode implements Closeable {
 		}
 
 		TribClusterNode other = (TribClusterNode)obj;
-		return StringUtils.equals(getInfo().getHostAndPort(), other.getInfo().getHostAndPort());
+		return StringUtils.equalsIgnoreCase(getInfo().getHostAndPort(), other.getInfo().getHostAndPort());
 	}
 }

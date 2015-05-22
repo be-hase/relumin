@@ -10,6 +10,10 @@ public interface ClusterService {
 
 	Cluster getCluster(String clusterName) throws IOException;
 
+	Cluster getClusterByHostAndPort(String hostAndPort) throws IOException;
+
+	boolean existsClusterName(String clusterName);
+
 	void setCluster(String clusterName, String node) throws IOException;
 
 	void deleteCluster(String clusterName);

@@ -49,16 +49,20 @@ public class ClusterServiceImpl implements ClusterService {
 
 	@Override
 	public Cluster getCluster(String clusterName) throws IOException {
+		ClusterNode node = getActiveClusterNode(clusterName);
+		return getClusterByHostAndPort(node.getHostAndPort());
+	}
+
+	@Override
+	public Cluster getClusterByHostAndPort(String hostAndPort) throws IOException {
 		Cluster cluster = new Cluster();
 
-		ClusterNode node = getActiveClusterNode(clusterName);
-
-		try (Jedis jedis = JedisUtils.getJedisByHostAndPort(node.getHostAndPort())) {
+		try (Jedis jedis = JedisUtils.getJedisByHostAndPort(hostAndPort)) {
 			// info
 			Map<String, String> info = JedisUtils.parseClusterInfoResult(jedis.clusterInfo());
 
 			// nodes
-			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), node.getHostAndPort());
+			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
 			nodes.sort((o1, o2) -> {
 				if (StringUtils.equals(o1.getHost(), o2.getHost())) {
 					return Integer.compare(o1.getPort(), o2.getPort());
@@ -111,6 +115,14 @@ public class ClusterServiceImpl implements ClusterService {
 			cluster.setNodes(nodes);
 			cluster.setSlots(slots);
 			return cluster;
+		}
+	}
+
+	@Override
+	public boolean existsClusterName(String clusterName) {
+		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
+			Set<String> clusterNames = dataStoreJedis.smembers(Constants.getClustersKey());
+			return clusterNames.contains(clusterName);
 		}
 	}
 

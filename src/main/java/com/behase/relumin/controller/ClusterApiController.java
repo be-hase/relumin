@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.service.ClusterService;
 import com.google.common.collect.Maps;
@@ -39,6 +40,9 @@ public class ClusterApiController {
 			@PathVariable String clusterName,
 			@RequestParam String hostAndPort
 			) throws IOException {
+		if (clusterService.existsClusterName(clusterName)) {
+			throw new InvalidParameterException(String.format("This clusterName(%s) already exists.", clusterName));
+		}
 		clusterService.setCluster(clusterName, hostAndPort);
 		return clusterService.getCluster(clusterName);
 	}

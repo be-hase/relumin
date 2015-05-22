@@ -422,4 +422,109 @@ public class RedisTribTest {
 
 		createTrib.close();
 	}
+
+	@Test
+	public void addNode() throws Exception {
+		CreateClusterParam param1 = new CreateClusterParam();
+		param1.setStartSlotNumber("0");
+		param1.setEndSlotNumber("5000");
+		param1.setMaster("192.168.33.11:8000");
+		CreateClusterParam param2 = new CreateClusterParam();
+		param2.setStartSlotNumber("5001");
+		param2.setEndSlotNumber("10000");
+		param2.setMaster("192.168.33.11:8001");
+		CreateClusterParam param3 = new CreateClusterParam();
+		param3.setStartSlotNumber("10001");
+		param3.setEndSlotNumber("16383");
+		param3.setMaster("192.168.33.11:8002");
+		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+
+		RedisTrib createTrib = new RedisTrib();
+		createTrib.createCluster(params);
+
+		redisTrib = new RedisTrib();
+		redisTrib.addNodeIntoCluster("192.168.33.11:8000", "192.168.33.11:8003");
+
+		createTrib.close();
+	}
+
+	@Test
+	public void addNodeAsReplicaRandomMaster() throws Exception {
+		CreateClusterParam param1 = new CreateClusterParam();
+		param1.setStartSlotNumber("0");
+		param1.setEndSlotNumber("5000");
+		param1.setMaster("192.168.33.11:8000");
+		CreateClusterParam param2 = new CreateClusterParam();
+		param2.setStartSlotNumber("5001");
+		param2.setEndSlotNumber("10000");
+		param2.setMaster("192.168.33.11:8001");
+		CreateClusterParam param3 = new CreateClusterParam();
+		param3.setStartSlotNumber("10001");
+		param3.setEndSlotNumber("16383");
+		param3.setMaster("192.168.33.11:8002");
+		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+
+		RedisTrib createTrib = new RedisTrib();
+		createTrib.createCluster(params);
+
+		redisTrib = new RedisTrib();
+		redisTrib.addNodeIntoClusterAsReplica("192.168.33.11:8000", "192.168.33.11:8003", null);
+
+		createTrib.close();
+	}
+
+	@Test
+	public void addNodeAsReplicaSpecifyMaster() throws Exception {
+		CreateClusterParam param1 = new CreateClusterParam();
+		param1.setStartSlotNumber("0");
+		param1.setEndSlotNumber("5000");
+		param1.setMaster("192.168.33.11:8000");
+		CreateClusterParam param2 = new CreateClusterParam();
+		param2.setStartSlotNumber("5001");
+		param2.setEndSlotNumber("10000");
+		param2.setMaster("192.168.33.11:8001");
+		CreateClusterParam param3 = new CreateClusterParam();
+		param3.setStartSlotNumber("10001");
+		param3.setEndSlotNumber("16383");
+		param3.setMaster("192.168.33.11:8002");
+		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+
+		RedisTrib createTrib = new RedisTrib();
+		createTrib.createCluster(params);
+
+		redisTrib = new RedisTrib();
+		redisTrib.addNodeIntoClusterAsReplica("192.168.33.11:8000", "192.168.33.11:8003", createTrib.getNodeByHostAndPort("192.168.33.11:8000").getInfo().getNodeId());
+
+		createTrib.close();
+	}
+
+	@Test
+	public void deleteNode() throws Exception {
+		CreateClusterParam param1 = new CreateClusterParam();
+		param1.setStartSlotNumber("0");
+		param1.setEndSlotNumber("5000");
+		param1.setMaster("192.168.33.11:8000");
+		CreateClusterParam param2 = new CreateClusterParam();
+		param2.setStartSlotNumber("5001");
+		param2.setEndSlotNumber("10000");
+		param2.setMaster("192.168.33.11:8001");
+		CreateClusterParam param3 = new CreateClusterParam();
+		param3.setStartSlotNumber("10001");
+		param3.setEndSlotNumber("16383");
+		param3.setMaster("192.168.33.11:8002");
+		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+
+		RedisTrib createTrib = new RedisTrib();
+		createTrib.createCluster(params);
+
+		RedisTrib addRedisTrib = new RedisTrib();
+		addRedisTrib.addNodeIntoCluster("192.168.33.11:8000", "192.168.33.11:8003");
+		addRedisTrib.waitClusterJoin();
+
+		redisTrib = new RedisTrib();
+		redisTrib.deleteNodeOfCluster("192.168.33.11:8000", addRedisTrib.getNodeByHostAndPort("192.168.33.11:8003").getInfo().getNodeId(), false);
+
+		addRedisTrib.close();
+		createTrib.close();
+	}
 }

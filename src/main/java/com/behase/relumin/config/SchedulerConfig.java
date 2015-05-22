@@ -4,7 +4,11 @@ import lombok.Data;
 
 @Data
 public class SchedulerConfig {
-	private long refreshClustersIntervalMillis;
-	private long collectStaticsInfoIntervalMillis;
-	private long collectStaticsInfoMaxCount;
+	public static final String DEFAULT_REFRESH_CLUSTERS_INTERVAL_MILLIS = "120000";
+	public static final String DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS = "120000";
+	public static final String DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT = "1500";
+
+	private String refreshClustersIntervalMillis;
+	private String collectStaticsInfoIntervalMillis;
+	private String collectStaticsInfoMaxCount;
 }

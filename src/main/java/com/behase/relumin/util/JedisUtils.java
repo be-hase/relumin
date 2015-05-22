@@ -82,6 +82,7 @@ public class JedisUtils {
 	}
 
 	public static List<ClusterNode> parseClusterNodesResult(String result, String hostAndPort) {
+		log.debug("--start--");
 		List<ClusterNode> clusterNodes = Lists.newArrayList();
 		for (String resultLine : StringUtils.split(result, "\n")) {
 			ClusterNode clusterNode = new ClusterNode();
@@ -90,7 +91,7 @@ public class JedisUtils {
 			clusterNode.setNodeId(resultLineArray[0]);
 
 			String eachHostAndPort = resultLineArray[1];
-			log.debug("eachHostAndPort={}", resultLine);
+			log.debug("{}", resultLine);
 			if (StringUtils.isBlank(hostAndPort)) {
 				clusterNode.setHostAndPort(eachHostAndPort);
 			} else {
@@ -151,6 +152,7 @@ public class JedisUtils {
 
 			clusterNodes.add(clusterNode);
 		}
+		log.debug("--end--");
 		return clusterNodes;
 	}
 

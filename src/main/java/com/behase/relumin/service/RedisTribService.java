@@ -11,4 +11,13 @@ public interface RedisTribService {
 	void createCluster(List<CreateClusterParam> params) throws Exception;
 
 	void reshardCluster(String hostAndPort, int slotCount, String fromNodeIds, String toNodeId) throws Exception;
+
+	List<String> checkCluster(String hostAndPort) throws Exception;
+
+	void fixCluster(String hostAndPort) throws Exception;
+
+	void addNodeIntoCluster(String hostAndPort, String newHostAndPort, String masterNodeId)
+			throws Exception;
+
+	void deleteNodeFromCluster(String hostAndPort, String nodeId, boolean shutdown) throws Exception;
 }

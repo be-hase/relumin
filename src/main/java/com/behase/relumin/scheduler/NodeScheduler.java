@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import com.behase.relumin.Constants;
+import com.behase.relumin.config.SchedulerConfig;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterNode;
@@ -25,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@Profile(value = "!test")
 public class NodeScheduler {
 	@Autowired
 	ClusterService clusterService;
@@ -38,10 +41,11 @@ public class NodeScheduler {
 	@Autowired
 	ObjectMapper mapper;
 
-	@Value("${scheduler.collectStaticsInfoMaxCount:1500}")
+	@Value("${scheduler.collectStaticsInfoMaxCount:" + SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT + "}")
 	private long collectStaticsInfoMaxCount;
 
-	@Scheduled(fixedDelayString = "${scheduler.collectStaticsInfoIntervalMillis:120000}")
+	@Scheduled(fixedDelayString = "${scheduler.collectStaticsInfoIntervalMillis:"
+		+ SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS + "}")
 	public void collectStaticsInfo() throws ApiException, IOException {
 		log.info("collectStaticsIndo call");
 		Set<String> clusterNames = clusterService.getClusters();
