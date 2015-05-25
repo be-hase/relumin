@@ -203,9 +203,9 @@ public class RedisTrib implements Closeable {
 		addNodes(newNode);
 
 		// Send CLUSTER MEET command to the new node
-		TribClusterNode first = nodes.get(0);
+		TribClusterNode node = getNodeByHostAndPort(hostAndPort);
 		log.info("Send CLUSTER MEET to node {} to make it join the cluster.", newHostAndPort);
-		newNode.getJedis().clusterMeet(first.getInfo().getHost(), first.getInfo().getPort());
+		newNode.getJedis().clusterMeet(node.getInfo().getHost(), node.getInfo().getPort());
 
 		log.info("New node added correctly.");
 
@@ -244,9 +244,9 @@ public class RedisTrib implements Closeable {
 		addNodes(newNode);
 
 		// Send CLUSTER MEET command to the new node
-		TribClusterNode first = nodes.get(0);
+		TribClusterNode node = getNodeByHostAndPort(hostAndPort);
 		log.info("Send CLUSTER MEET to node {} to make it join the cluster.", newHostAndPort);
-		newNode.getJedis().clusterMeet(first.getInfo().getHost(), first.getInfo().getPort());
+		newNode.getJedis().clusterMeet(node.getInfo().getHost(), node.getInfo().getPort());
 
 		// Additional configuration is needed if the node is added as
 		// a slave.
@@ -263,41 +263,76 @@ public class RedisTrib implements Closeable {
 	public void deleteNodeOfCluster(final String hostAndPort, String nodeId, boolean shutdown) throws Exception {
 		ValidationUtils.notBlank(nodeId, "nodeId");
 
-		final String nodeIdLower = nodeId.toLowerCase();
-		log.info("Removing node({}) from cluster({}).", nodeIdLower, hostAndPort);
+		log.info("Removing node({}) from cluster({}).", nodeId, hostAndPort);
 
 		// Load cluster information
 		loadClusterInfoFromNode(hostAndPort);
 
 		// Check if the node exists and is not empty
-		TribClusterNode node = getNodeByNodeId(nodeIdLower);
+		TribClusterNode node = getNodeByNodeId(nodeId);
 		if (node == null) {
-			throw new InvalidParameterException(String.format("No such node ID %s", nodeIdLower));
+			throw new InvalidParameterException(String.format("No such node ID %s", nodeId));
 		}
 		if (node.getInfo().getServedSlotsSet().size() > 0) {
-			throw new InvalidParameterException(String.format("Node %s is not empty! Reshard data away and try again.", nodeIdLower));
+			throw new InvalidParameterException(String.format("Node(%s) is not empty! Reshard data away and try again.", nodeId));
 		}
 
 		// Send CLUSTER FORGET to all the nodes but the node to remove
 		log.info("Sending CLUSTER FORGET messages to the cluster...");
 		nodes.stream().filter(v -> {
-			return !StringUtils.equalsIgnoreCase(v.getInfo().getNodeId(), nodeIdLower);
+			return !StringUtils.equalsIgnoreCase(v.getInfo().getNodeId(), nodeId);
 		}).forEach(v -> {
 			if (StringUtils.isNotBlank(v.getInfo().getMasterNodeId())
-				&& StringUtils.equalsIgnoreCase(v.getInfo().getMasterNodeId(), nodeIdLower)) {
+				&& StringUtils.equalsIgnoreCase(v.getInfo().getMasterNodeId(), nodeId)) {
 				// Reconfigure the slave to replicate with some other node
-				TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeIdLower);
-				log.info("new master={}, old master = {}", master.getInfo().getNodeId(), nodeIdLower);
+				TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
+				log.info("new master={}, old master = {}", master.getInfo().getNodeId(), nodeId);
 				log.info("{} as replica of {}", v.getInfo().getNodeId(), master.getInfo().getNodeId());
 				v.getJedis().clusterReplicate(master.getInfo().getNodeId());
 			}
-			v.getJedis().clusterForget(nodeIdLower);
+			v.getJedis().clusterForget(nodeId);
 		});
 
 		if (shutdown) {
 			log.info("SHUTDOWN the node.");
 			node.getJedis().shutdown();
 		}
+
+		// Give one 3 second for gossip
+		Thread.sleep(3000);
+	}
+
+	public void replicateNode(final String hostAndPort, final String masterNodeId)
+			throws Exception {
+		ValidationUtils.notBlank(masterNodeId, "masterNodeId");
+
+		log.info("Replicate node({}) as slave of {}.", hostAndPort, masterNodeId);
+
+		loadClusterInfoFromNode(hostAndPort);
+		checkCluster();
+
+		TribClusterNode node = getNodeByHostAndPort(hostAndPort);
+		if (node == null) {
+			throw new InvalidParameterException(String.format("Node(%s) does not exists.", hostAndPort));
+		}
+		if (node.hasFlag("slave")) {
+			// OK
+		} else {
+			if (node.getInfo().getServedSlotsSet().size() > 0) {
+				throw new InvalidParameterException(String.format("Node(%s) is not empty! Reshard data away and try again.", hostAndPort));
+			}
+		}
+
+		TribClusterNode master = getNodeByNodeId(masterNodeId);
+		if (master == null) {
+			throw new InvalidParameterException(String.format("Node(%s) does not exists.", masterNodeId));
+		}
+		if (!master.hasFlag("master")) {
+			throw new InvalidParameterException(String.format("Node(%s) is not master.", masterNodeId));
+		}
+
+		log.info("Configure node({}) as replica of {}.", hostAndPort, masterNodeId);
+		node.getJedis().clusterReplicate(masterNodeId);
 
 		// Give one 3 second for gossip
 		Thread.sleep(3000);

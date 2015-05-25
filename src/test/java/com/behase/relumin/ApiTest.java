@@ -139,6 +139,14 @@ public class ApiTest {
 			.andReturn();
 	}
 
+	private Cluster getCluster(String clusterName) throws Exception {
+		MvcResult result = mockMvc.perform(
+			get("/api/cluster/test")
+			)
+			.andReturn();
+		return mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);
+	}
+
 	@Test
 	public void createParams() throws Exception {
 		MvcResult result = mockMvc.perform(
@@ -304,11 +312,7 @@ public class ApiTest {
 		createBasicCluster();
 
 		MvcResult result;
-		result = mockMvc.perform(
-			get("/api/cluster/test")
-			)
-			.andReturn();
-		Cluster cluster = mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);
+		Cluster cluster = getCluster("test");
 
 		// Success
 		ClusterNode toNode = cluster.getNodes().stream().filter(node -> {
@@ -353,11 +357,7 @@ public class ApiTest {
 		Cluster cluster;
 
 		// Add
-		result = mockMvc.perform(
-			get("/api/cluster/test")
-			)
-			.andReturn();
-		cluster = mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);
+		cluster = getCluster("test");
 
 		result = mockMvc.perform(
 			post("/api/trib/add-node")
@@ -380,11 +380,7 @@ public class ApiTest {
 			.andReturn();
 		log.debug(result.getResponse().getContentAsString());
 
-		result = mockMvc.perform(
-			get("/api/cluster/test")
-			)
-			.andReturn();
-		cluster = mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);
+		cluster = getCluster("test");
 		result = mockMvc.perform(
 			post("/api/trib/add-node")
 				.param("hostAndPort", testRedisEmptyCluster)
@@ -397,11 +393,7 @@ public class ApiTest {
 		log.debug(result.getResponse().getContentAsString());
 
 		//Delete 
-		result = mockMvc.perform(
-			get("/api/cluster/test")
-			)
-			.andReturn();
-		cluster = mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);
+		cluster = getCluster("test");
 
 		result = mockMvc.perform(
 			post("/api/trib/delete-node")
@@ -427,6 +419,54 @@ public class ApiTest {
 				.param("nodeId", cluster.getNodes().get(5).getNodeId())
 			)
 			.andExpect(jsonPath("$.nodes[3]").doesNotExist())
+			.andReturn();
+		log.debug(result.getResponse().getContentAsString());
+	}
+
+	@Test
+	public void replicateNode() throws Exception {
+		createBasicCluster();
+
+		MvcResult result;
+		Cluster cluster;
+
+		cluster = getCluster("test");
+		result = mockMvc.perform(
+			post("/api/trib/replicate")
+				.param("hostAndPort", "192.168.33.11:8003")
+				.param("masterNodeId", cluster.getNodeByHostAndPort("192.168.33.11:8002").getNodeId())
+			)
+			.andExpect(jsonPath("$.slots[2].replicas[0].host_and_port").value("192.168.33.11:8003"))
+			.andExpect(jsonPath("$.slots[2].replicas[1]").exists())
+			.andReturn();
+		log.debug(result.getResponse().getContentAsString());
+	}
+
+	@Test
+	public void replicateEmptyMasterNode() throws Exception {
+		createOnlyMasterCluster();
+
+		MvcResult result;
+		Cluster cluster;
+
+		result = mockMvc.perform(
+			post("/api/trib/add-node")
+				.param("hostAndPort", testRedisEmptyCluster)
+				.param("newHostAndPort", "192.168.33.11:8003")
+			)
+			.andExpect(jsonPath("$.nodes[3].flags[0]").value("master"))
+			.andExpect(jsonPath("$.nodes[3].served_slots").value(""))
+			.andReturn();
+		log.debug(result.getResponse().getContentAsString());
+
+		cluster = getCluster("test");
+		result = mockMvc.perform(
+			post("/api/trib/replicate")
+				.param("hostAndPort", "192.168.33.11:8003")
+				.param("masterNodeId", cluster.getNodeByHostAndPort("192.168.33.11:8002").getNodeId())
+			)
+			.andExpect(jsonPath("$.slots[2].replicas[0]").exists())
+			.andExpect(jsonPath("$.slots[2].replicas[0].host_and_port").value("192.168.33.11:8003"))
 			.andReturn();
 		log.debug(result.getResponse().getContentAsString());
 	}

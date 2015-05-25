@@ -20,4 +20,6 @@ public interface RedisTribService {
 			throws Exception;
 
 	void deleteNodeFromCluster(String hostAndPort, String nodeId, boolean shutdown) throws Exception;
+
+	void replicateNode(String hostAndPort, String masterNodeId) throws Exception;
 }

@@ -112,4 +112,13 @@ public class RedisTribApiController {
 		return clusterService.getClusterByHostAndPort(hostAndPort);
 	}
 
+	@RequestMapping(value = "/replicate", method = RequestMethod.POST)
+	public Object replicateNode(
+			@RequestParam(defaultValue = "") String hostAndPort,
+			@RequestParam(defaultValue = "") String masterNodeId
+			) throws Exception {
+		redisTibService.replicateNode(hostAndPort, masterNodeId);
+		return clusterService.getClusterByHostAndPort(hostAndPort);
+	}
+
 }
