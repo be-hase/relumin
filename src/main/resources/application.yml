@@ -1,2 +1,5 @@
+server:
+  session-timeout: 300
+
 management:
   add-application-context-header: false

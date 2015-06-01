@@ -50,7 +50,9 @@ public class ClusterServiceImpl implements ClusterService {
 	@Override
 	public Cluster getCluster(String clusterName) throws IOException {
 		ClusterNode node = getActiveClusterNode(clusterName);
-		return getClusterByHostAndPort(node.getHostAndPort());
+		Cluster cluster = getClusterByHostAndPort(node.getHostAndPort());
+		cluster.setClusterName(clusterName);
+		return cluster;
 	}
 
 	@Override

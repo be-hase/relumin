@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -17,11 +18,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.filter.CharacterEncodingFilter;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
 import redis.clients.jedis.JedisPool;
 
 import com.behase.relumin.config.ReluminConfig;
+import com.behase.relumin.interceptor.AddResponseHeaderInterceptor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
@@ -37,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @ComponentScan
 public class Application extends WebMvcConfigurerAdapter {
 	private static final String CONFIG_LOCATION = "config";
+
+	@Autowired
+	private AddResponseHeaderInterceptor addResponseHeaderInterceptor;
 
 	@Value("${redis.host}")
 	private String redisHost;
@@ -101,5 +107,10 @@ public class Application extends WebMvcConfigurerAdapter {
 		JedisPool pool = new JedisPool(config, redisHost, redisPort);
 
 		return pool;
+	}
+
+	@Override
+	public void addInterceptors(InterceptorRegistry registry) {
+		registry.addInterceptor(addResponseHeaderInterceptor);
 	}
 }

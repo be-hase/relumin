@@ -107,3 +107,4 @@ src/main/resources/application-local.yml
 Icon?
 ehthumbs.db
 Thumbs.db
+*.log

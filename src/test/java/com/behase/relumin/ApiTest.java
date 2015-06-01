@@ -112,9 +112,8 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/create/test")
-				.param("replicas", "1")
+				.param("params", body)
 				.header(HttpHeaders.CONTENT_TYPE, "application/json")
-				.content(body)
 			)
 			.andReturn();
 	}
@@ -132,9 +131,8 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/create/test")
-				.param("replicas", "1")
+				.param("params", body)
 				.header(HttpHeaders.CONTENT_TYPE, "application/json")
-				.content(body)
 			)
 			.andReturn();
 	}
@@ -145,6 +143,36 @@ public class ApiTest {
 			)
 			.andReturn();
 		return mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);
+	}
+
+	@Test
+	public void test_clearCluster() throws Exception {
+		MvcResult result;
+
+		//		result = mockMvc.perform(
+		//			get("/api/trib/create/params")
+		//				.param("replicas", "1")
+		//				.param("hostAndPorts", "192.168.33.11:8000-8005")
+		//			)
+		//			.andReturn();
+		//		String body = result.getResponse().getContentAsString();
+		//
+		//		result = mockMvc.perform(
+		//			post("/api/trib/create")
+		//				.param("params", body)
+		//				.header(HttpHeaders.CONTENT_TYPE, "application/json")
+		//			)
+		//			.andReturn();
+	}
+
+	@Test
+	public void test_createBasicCluster() throws Exception {
+		createBasicCluster();
+	}
+
+	@Test
+	public void test_createOnlyMasterCluster() throws Exception {
+		createOnlyMasterCluster();
 	}
 
 	@Test
@@ -236,9 +264,8 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/create/test")
-				.param("replicas", "1")
+				.param("params", body)
 				.header(HttpHeaders.CONTENT_TYPE, "application/json")
-				.content(body)
 			)
 			.andExpect(jsonPath("$.nodes[0].host_and_port", is(testRedisEmptyCluster)))
 			.andReturn();
@@ -270,9 +297,8 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/create")
-				.param("replicas", "1")
+				.param("params", body)
 				.header(HttpHeaders.CONTENT_TYPE, "application/json")
-				.content(body)
 			)
 			.andExpect(jsonPath("$.nodes[0].host_and_port", is(testRedisEmptyCluster)))
 			.andReturn();

@@ -5,7 +5,6 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,6 +15,8 @@ import com.behase.relumin.model.param.CreateClusterParam;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.RedisTribService;
 import com.behase.relumin.util.ValidationUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
@@ -27,6 +28,9 @@ public class RedisTribApiController {
 
 	@Autowired
 	private ClusterService clusterService;
+
+	@Autowired
+	private ObjectMapper mapper;
 
 	@RequestMapping(value = "/create/params", method = RequestMethod.GET)
 	public List<CreateClusterParam> getCreateParameter(
@@ -42,22 +46,37 @@ public class RedisTribApiController {
 	@RequestMapping(value = "/create/{clusterName}", method = RequestMethod.POST)
 	public Object createCluster(
 			@PathVariable String clusterName,
-			@RequestBody List<CreateClusterParam> params
+			@RequestParam(defaultValue = "") String params
 			) throws Exception {
 		if (clusterService.existsClusterName(clusterName)) {
 			throw new InvalidParameterException(String.format("This clusterName(%s) already exists.", clusterName));
 		}
-		redisTibService.createCluster(params);
-		clusterService.setCluster(clusterName, params.get(0).getMaster());
+
+		List<CreateClusterParam> paramsList;
+		try {
+			paramsList = mapper.readValue(params, new TypeReference<List<CreateClusterParam>>() {
+			});
+		} catch (Exception e) {
+			throw new InvalidParameterException("params is not JSON.");
+		}
+		redisTibService.createCluster(paramsList);
+		clusterService.setCluster(clusterName, paramsList.get(0).getMaster());
 		return clusterService.getCluster(clusterName);
 	}
 
 	@RequestMapping(value = "/create", method = RequestMethod.POST)
 	public Object createCluster(
-			@RequestBody List<CreateClusterParam> params
+			@RequestParam(defaultValue = "") String params
 			) throws Exception {
-		redisTibService.createCluster(params);
-		return clusterService.getClusterByHostAndPort(params.get(0).getMaster());
+		List<CreateClusterParam> paramsList;
+		try {
+			paramsList = mapper.readValue(params, new TypeReference<List<CreateClusterParam>>() {
+			});
+		} catch (Exception e) {
+			throw new InvalidParameterException("params is not JSON.");
+		}
+		redisTibService.createCluster(paramsList);
+		return clusterService.getClusterByHostAndPort(paramsList.get(0).getMaster());
 	}
 
 	@RequestMapping(value = "/check", method = RequestMethod.GET)
