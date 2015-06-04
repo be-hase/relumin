@@ -522,7 +522,7 @@ public class RedisTribTest {
 		addRedisTrib.waitClusterJoin();
 
 		redisTrib = new RedisTrib();
-		redisTrib.deleteNodeOfCluster("192.168.33.11:8000", addRedisTrib.getNodeByHostAndPort("192.168.33.11:8003").getInfo().getNodeId(), false);
+		redisTrib.deleteNodeOfCluster("192.168.33.11:8000", addRedisTrib.getNodeByHostAndPort("192.168.33.11:8003").getInfo().getNodeId(), null, false);
 
 		addRedisTrib.close();
 		createTrib.close();

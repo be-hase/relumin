@@ -64,9 +64,10 @@ public class RedisTribServiceImpl implements RedisTribService {
 	}
 
 	@Override
-	public void deleteNodeFromCluster(String hostAndPort, String nodeId, boolean shutdown) throws Exception {
+	public void deleteNodeFromCluster(String hostAndPort, String nodeId, String reset, boolean shutdown)
+			throws Exception {
 		try (RedisTrib trib = new RedisTrib()) {
-			trib.deleteNodeOfCluster(hostAndPort, nodeId, shutdown);
+			trib.deleteNodeOfCluster(hostAndPort, nodeId, reset, shutdown);
 		}
 	}
 
@@ -74,6 +75,13 @@ public class RedisTribServiceImpl implements RedisTribService {
 	public void replicateNode(String hostAndPort, String masterNodeId) throws Exception {
 		try (RedisTrib trib = new RedisTrib()) {
 			trib.replicateNode(hostAndPort, masterNodeId);
+		}
+	}
+
+	@Override
+	public void failoverNode(String hostAndPort) throws Exception {
+		try (RedisTrib trib = new RedisTrib()) {
+			trib.failoverNode(hostAndPort);
 		}
 	}
 }

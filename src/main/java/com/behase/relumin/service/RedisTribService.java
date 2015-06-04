@@ -19,7 +19,9 @@ public interface RedisTribService {
 	void addNodeIntoCluster(String hostAndPort, String newHostAndPort, String masterNodeId)
 			throws Exception;
 
-	void deleteNodeFromCluster(String hostAndPort, String nodeId, boolean shutdown) throws Exception;
+	void deleteNodeFromCluster(String hostAndPort, String nodeId, String reset, boolean shutdown) throws Exception;
 
 	void replicateNode(String hostAndPort, String masterNodeId) throws Exception;
+
+	void failoverNode(String hostAndPort) throws Exception;
 }

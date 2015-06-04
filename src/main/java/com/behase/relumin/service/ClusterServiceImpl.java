@@ -116,6 +116,7 @@ public class ClusterServiceImpl implements ClusterService {
 			cluster.setInfo(info);
 			cluster.setNodes(nodes);
 			cluster.setSlots(slots);
+
 			return cluster;
 		}
 	}

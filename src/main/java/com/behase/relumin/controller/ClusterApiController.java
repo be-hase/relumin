@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.service.ClusterService;
+import com.behase.relumin.service.NodeService;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -26,8 +28,13 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping(value = "/api")
 public class ClusterApiController {
+	private static final int OFFSET = 9999;
+
 	@Autowired
 	ClusterService clusterService;
+
+	@Autowired
+	NodeService nodeService;
 
 	@RequestMapping(value = "/clusters", method = RequestMethod.GET)
 	public Object getClusterList(
@@ -80,5 +87,77 @@ public class ClusterApiController {
 		Map<String, Boolean> result = Maps.newHashMap();
 		result.put("isSuccess", true);
 		return result;
+	}
+
+	@RequestMapping(value = "/cluster/{clusterName}/metrics", method = {RequestMethod.GET, RequestMethod.POST})
+	public Object getMetrics(
+			@PathVariable String clusterName,
+			@RequestParam(defaultValue = "") String nodes,
+			@RequestParam(defaultValue = "") String fields,
+			@RequestParam(defaultValue = "") String start,
+			@RequestParam(defaultValue = "") String end
+			) {
+		Map<String, Object> response = Maps.newLinkedHashMap();
+
+		long startLong;
+		long endLong;
+		try {
+			startLong = Long.valueOf(start);
+		} catch (Exception e) {
+			throw new InvalidParameterException("'start' is must be number.");
+		}
+		try {
+			endLong = Long.valueOf(end);
+		} catch (Exception e) {
+			throw new InvalidParameterException("'end' is must be number.");
+		}
+
+		List<String> nodesList = Lists.newArrayList();
+		if (StringUtils.isNotBlank(nodes)) {
+			nodesList.addAll(Splitter.on(",").splitToList(nodes));
+		}
+		if (nodesList.isEmpty()) {
+			throw new InvalidParameterException("'nodes' is empty.");
+		}
+
+		List<String> fieldsList = Lists.newArrayList();
+		if (StringUtils.isNotBlank(fields)) {
+			fieldsList.addAll(Splitter.on(",").splitToList(fields));
+		}
+
+		for (String nodeId : nodesList) {
+			log.debug("node loop : {}", nodeId);
+			List<Map<String, String>> metricsByNode = Lists.newArrayList();
+			int startIndex = 0;
+			int endIndex = OFFSET;
+			boolean validStart = true;
+			boolean validEnd = true;
+
+			while (true && (validStart || validEnd)) {
+				log.debug("metrics loop. startIndex : {}", startIndex);
+				List<Map<String, String>> staticsList = nodeService.getStaticsInfoHistory(clusterName, nodeId, startIndex, endIndex, fieldsList);
+				if (staticsList == null || staticsList.isEmpty()) {
+					break;
+				}
+				for (Map<String, String> statics : staticsList) {
+					Long timestamp = Long.valueOf(statics.get("_timestamp"));
+					if (timestamp > endLong) {
+						validEnd = false;
+					} else if (timestamp < startLong) {
+						validStart = false;
+					} else {
+						metricsByNode.add(statics);
+					}
+				}
+				startIndex += OFFSET + 1;
+				endIndex += OFFSET + 1;
+			}
+
+			if (!metricsByNode.isEmpty()) {
+				response.put(nodeId, metricsByNode);
+			}
+		}
+
+		return response;
 	}
 }

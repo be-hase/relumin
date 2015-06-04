@@ -119,6 +119,7 @@ public class RedisTribApiController {
 	public Object deleteNode(
 			@RequestParam(defaultValue = "") String hostAndPort,
 			@RequestParam(defaultValue = "") String nodeId,
+			@RequestParam(defaultValue = "") String reset,
 			@RequestParam(defaultValue = "") String shutdown
 			) throws Exception {
 		boolean shutdownBool = false;
@@ -127,7 +128,7 @@ public class RedisTribApiController {
 		} catch (Exception e) {
 		}
 
-		redisTibService.deleteNodeFromCluster(hostAndPort, nodeId, shutdownBool);
+		redisTibService.deleteNodeFromCluster(hostAndPort, nodeId, reset, shutdownBool);
 		return clusterService.getClusterByHostAndPort(hostAndPort);
 	}
 
@@ -137,6 +138,14 @@ public class RedisTribApiController {
 			@RequestParam(defaultValue = "") String masterNodeId
 			) throws Exception {
 		redisTibService.replicateNode(hostAndPort, masterNodeId);
+		return clusterService.getClusterByHostAndPort(hostAndPort);
+	}
+
+	@RequestMapping(value = "/failover", method = RequestMethod.POST)
+	public Object failoverNode(
+			@RequestParam(defaultValue = "") String hostAndPort
+			) throws Exception {
+		redisTibService.failoverNode(hostAndPort);
 		return clusterService.getClusterByHostAndPort(hostAndPort);
 	}
 

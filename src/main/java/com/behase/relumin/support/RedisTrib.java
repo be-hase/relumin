@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 
+import redis.clients.jedis.JedisCluster.Reset;
+
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
@@ -157,13 +159,19 @@ public class RedisTrib implements Closeable {
 				if (node.hasFlag("slave")) {
 					continue;
 				}
+				if (node.getInfo().getServedSlotsSet().size() == 0) {
+					continue;
+				}
 				sources.add(node);
 			}
 		} else {
 			for (String fromNodeId : StringUtils.split(fromNodeIds, ",")) {
 				TribClusterNode fromNode = getNodeByNodeId(fromNodeId);
 				if (fromNode == null || fromNode.hasFlag("slave")) {
-					throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "The specified node is not known or is not a master, please retry.", HttpStatus.BAD_REQUEST);
+					throw new InvalidParameterException(String.format("The specified node(%s) is not known or is not a master, please retry.", fromNodeId));
+				}
+				if (fromNode.getInfo().getServedSlotsSet().size() == 0) {
+					throw new InvalidParameterException(String.format("The specified node(%s) does not have slots, please retry.", fromNodeId));
 				}
 				sources.add(fromNode);
 			}
@@ -260,7 +268,8 @@ public class RedisTrib implements Closeable {
 		Thread.sleep(3000);
 	}
 
-	public void deleteNodeOfCluster(final String hostAndPort, String nodeId, boolean shutdown) throws Exception {
+	public void deleteNodeOfCluster(final String hostAndPort, String nodeId, String reset, boolean shutdown)
+			throws Exception {
 		ValidationUtils.notBlank(nodeId, "nodeId");
 
 		log.info("Removing node({}) from cluster({}).", nodeId, hostAndPort);
@@ -293,6 +302,15 @@ public class RedisTrib implements Closeable {
 			v.getJedis().clusterForget(nodeId);
 		});
 
+		if (StringUtils.isNoneBlank(reset)) {
+			if (StringUtils.equalsIgnoreCase(reset, "soft")) {
+				log.info("SOFT RESET the node.");
+				node.getJedis().clusterReset(Reset.SOFT);
+			} else if (StringUtils.equalsIgnoreCase(reset, "hard")) {
+				log.info("HARD RESET the node.");
+				node.getJedis().clusterReset(Reset.HARD);
+			}
+		}
 		if (shutdown) {
 			log.info("SHUTDOWN the node.");
 			node.getJedis().shutdown();
@@ -338,6 +356,29 @@ public class RedisTrib implements Closeable {
 		Thread.sleep(3000);
 	}
 
+	public void failoverNode(final String hostAndPort)
+			throws Exception {
+		log.info("Failover node({}).", hostAndPort);
+
+		loadClusterInfoFromNode(hostAndPort);
+		checkCluster();
+
+		TribClusterNode node = getNodeByHostAndPort(hostAndPort);
+		if (node == null) {
+			throw new InvalidParameterException(String.format("Node(%s) does not exists.", hostAndPort));
+		}
+		if (node.hasFlag("slave")) {
+			// OK
+		} else {
+			throw new InvalidParameterException(String.format("Node(%s) is not slave.", hostAndPort));
+		}
+
+		node.getJedis().clusterFailover();
+
+		// Give one 3 second for gossip
+		Thread.sleep(3000);
+	}
+
 	TribClusterNode getMasterWithLeastReplicas() {
 		List<TribClusterNode> masters = nodes.stream().filter(node -> node.hasFlag("master")).collect(Collectors.toList());
 		masters.sort((o1, o2) -> Integer.compare(o1.getInfo().getServedSlotsSet().size(), o2.getInfo().getServedSlotsSet().size()));
@@ -367,6 +408,9 @@ public class RedisTrib implements Closeable {
 			return Integer.compare(o2.getInfo().getServedSlotsSet().size(), o1.getInfo().getServedSlotsSet().size());
 		});
 		int sourceTotalSlot = sources.stream().mapToInt(source -> source.getInfo().getServedSlotsSet().size()).sum();
+		if (sourceTotalSlot < slotCount) {
+			throw new InvalidParameterException(String.format("Total slot count which is sum of from nodes is not enough. Slot count is %s, But total slot count is %s.", slotCount, sourceTotalSlot));
+		}
 
 		int i = 0;
 		for (TribClusterNode source : sources) {
