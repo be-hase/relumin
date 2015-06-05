@@ -147,7 +147,7 @@ public class ApiTest {
 
 	@Test
 	public void test_clearCluster() throws Exception {
-		MvcResult result;
+		//MvcResult result;
 
 		//		result = mockMvc.perform(
 		//			get("/api/trib/create/params")
