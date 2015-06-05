@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.behase.relumin.exception.InvalidParameterException;
+import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.param.CreateClusterParam;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.RedisTribService;
@@ -20,6 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping(value = "/api/trib")
 public class RedisTribApiController {
@@ -81,43 +85,58 @@ public class RedisTribApiController {
 
 	@RequestMapping(value = "/check", method = RequestMethod.GET)
 	public Object checkCluster(
-			@RequestParam(defaultValue = "") String hostAndPort
+			@RequestParam(defaultValue = "") String clusterName
 			) throws Exception {
-		return ImmutableMap.of("errors", redisTibService.checkCluster(hostAndPort));
+		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
+		return ImmutableMap.of("errors", redisTibService.checkCluster(node.getHostAndPort()));
 	}
 
 	@RequestMapping(value = "/fix", method = RequestMethod.GET)
 	public Object fixCluster(
-			@RequestParam(defaultValue = "") String hostAndPort
+			@RequestParam(defaultValue = "") String clusterName
 			) throws Exception {
-		redisTibService.fixCluster(hostAndPort);
-		return ImmutableMap.of("errors", redisTibService.checkCluster(hostAndPort));
+		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
+		redisTibService.fixCluster(node.getHostAndPort());
+		return ImmutableMap.of("errors", redisTibService.checkCluster(node.getHostAndPort()));
 	}
 
 	@RequestMapping(value = "/reshard", method = RequestMethod.POST)
 	public Object reshardCluster(
-			@RequestParam(defaultValue = "") String hostAndPort,
+			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String slotCount,
 			@RequestParam(defaultValue = "") String fromNodeIds,
 			@RequestParam(defaultValue = "") String toNodeId
 			) throws Exception {
-		redisTibService.reshardCluster(hostAndPort, Integer.valueOf(slotCount), fromNodeIds, toNodeId);
-		return clusterService.getClusterByHostAndPort(hostAndPort);
+		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
+		redisTibService.reshardCluster(node.getHostAndPort(), Integer.valueOf(slotCount), fromNodeIds, toNodeId);
+		return clusterService.getClusterByHostAndPort(node.getHostAndPort());
+	}
+
+	@RequestMapping(value = "/reshard-by-slots", method = RequestMethod.POST)
+	public Object reshardClusterBySlots(
+			@RequestParam(defaultValue = "") String clusterName,
+			@RequestParam(defaultValue = "") String slots,
+			@RequestParam(defaultValue = "") String toNodeId
+			) throws Exception {
+		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
+		redisTibService.reshardClusterBySlots(node.getHostAndPort(), Lists.newArrayList(StringUtils.split(slots, ",")), toNodeId);
+		return clusterService.getClusterByHostAndPort(node.getHostAndPort());
 	}
 
 	@RequestMapping(value = "/add-node", method = RequestMethod.POST)
 	public Object addNode(
+			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String hostAndPort,
-			@RequestParam(defaultValue = "") String newHostAndPort,
 			@RequestParam(defaultValue = "") String masterNodeId
 			) throws Exception {
-		redisTibService.addNodeIntoCluster(hostAndPort, newHostAndPort, masterNodeId);
+		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
+		redisTibService.addNodeIntoCluster(node.getHostAndPort(), hostAndPort, masterNodeId);
 		return clusterService.getClusterByHostAndPort(hostAndPort);
 	}
 
 	@RequestMapping(value = "/delete-node", method = RequestMethod.POST)
 	public Object deleteNode(
-			@RequestParam(defaultValue = "") String hostAndPort,
+			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String nodeId,
 			@RequestParam(defaultValue = "") String reset,
 			@RequestParam(defaultValue = "") String shutdown
@@ -128,8 +147,10 @@ public class RedisTribApiController {
 		} catch (Exception e) {
 		}
 
-		redisTibService.deleteNodeFromCluster(hostAndPort, nodeId, reset, shutdownBool);
-		return clusterService.getClusterByHostAndPort(hostAndPort);
+		ClusterNode node = clusterService.getActiveClusterNodeWithExcludeNodeId(clusterName, nodeId);
+		redisTibService.deleteNodeFromCluster(node.getHostAndPort(), nodeId, reset, shutdownBool);
+		clusterService.setCluster(clusterName, node.getHostAndPort());
+		return clusterService.getClusterByHostAndPort(node.getHostAndPort());
 	}
 
 	@RequestMapping(value = "/replicate", method = RequestMethod.POST)

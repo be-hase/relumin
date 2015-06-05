@@ -42,6 +42,7 @@ public class ReluminConfig {
 		prop.setProperty("management.port", StringUtils.defaultString(server.getMonitorPort(), ServerConfig.DEFAULT_MONITOR_PORT));
 
 		// redis
+		prop.setProperty("redis.prefixKey", StringUtils.defaultString(redis.getPrefixKey(), RedisConfig.DEFAULT_PREFIX_KEY));
 		prop.setProperty("redis.host", redis.getHost());
 		prop.setProperty("redis.port", redis.getPort());
 

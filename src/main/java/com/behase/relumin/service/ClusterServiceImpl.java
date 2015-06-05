@@ -5,15 +5,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.Transaction;
 import redis.clients.jedis.exceptions.JedisException;
 
 import com.behase.relumin.Constants;
@@ -40,10 +41,13 @@ public class ClusterServiceImpl implements ClusterService {
 	@Autowired
 	ObjectMapper mapper;
 
+	@Value("${redis.prefixKey}")
+	private String redisPrefixKey;
+
 	@Override
 	public Set<String> getClusters() {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			return dataStoreJedis.smembers(Constants.getClustersKey());
+			return dataStoreJedis.smembers(Constants.getClustersKey(redisPrefixKey));
 		}
 	}
 
@@ -124,7 +128,7 @@ public class ClusterServiceImpl implements ClusterService {
 	@Override
 	public boolean existsClusterName(String clusterName) {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			Set<String> clusterNames = dataStoreJedis.smembers(Constants.getClustersKey());
+			Set<String> clusterNames = dataStoreJedis.smembers(Constants.getClustersKey(redisPrefixKey));
 			return clusterNames.contains(clusterName);
 		}
 	}
@@ -153,46 +157,86 @@ public class ClusterServiceImpl implements ClusterService {
 
 			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
 
-			dataStoreJedis.watch(Constants.getClustersKey(), Constants.getClusterKey(clusterName));
-			Transaction t = dataStoreJedis.multi();
-			t.sadd(Constants.getClustersKey(), clusterName);
-			t.set(Constants.getClusterKey(clusterName), mapper.writeValueAsString(nodes));
-			t.exec();
+			dataStoreJedis.sadd(Constants.getClustersKey(redisPrefixKey), clusterName);
+			dataStoreJedis.set(Constants.getClusterKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
 		}
 	}
 
 	@Override
 	public void deleteCluster(String clusterName) {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			Set<String> keys = dataStoreJedis.keys(Constants.getClusterKey(clusterName) + ".*");
+			Set<String> keys = dataStoreJedis.keys(Constants.getClusterKey(redisPrefixKey, clusterName) + ".*");
 
-			dataStoreJedis.watch(Constants.getClustersKey(), Constants.getClusterKey(clusterName));
-			Transaction t = dataStoreJedis.multi();
-			t.srem(Constants.getClustersKey(), clusterName);
-			t.del(Constants.getClusterKey(clusterName));
+			dataStoreJedis.srem(Constants.getClustersKey(redisPrefixKey), clusterName);
+			dataStoreJedis.del(Constants.getClusterKey(redisPrefixKey, clusterName));
 			if (keys.size() > 0) {
-				t.del(keys.toArray(new String[keys.size()]));
+				dataStoreJedis.del(keys.toArray(new String[keys.size()]));
 			}
-			t.exec();
 		}
 	}
 
 	@Override
 	public void refreshClusters() {
+		log.debug("refresh start");
 		Set<String> clusters = getClusters();
 		for (String clusterName : clusters) {
+			log.debug("refresh cluster. clusterName : {}", clusterName);
 			try {
 				ClusterNode clusterNode = getActiveClusterNode(clusterName);
-				setCluster(clusterName, clusterNode.getHostAndPort());
+
+				try (
+						Jedis jedis = JedisUtils.getJedisByHostAndPort(clusterNode.getHostAndPort());
+						Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
+
+					// GET
+					List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), clusterNode.getHostAndPort());
+
+					// update
+					dataStoreJedis.sadd(Constants.getClustersKey(redisPrefixKey), clusterName);
+					dataStoreJedis.set(Constants.getClusterKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
+
+					// remove deleted statics
+					Set<String> keys = dataStoreJedis.keys(Constants.getClusterKey(redisPrefixKey, clusterName)
+						+ ".*.staticsInfo");
+					Set<String> existOnRedisNodeIds = keys.stream().map(key -> {
+						String nodeId = StringUtils.removeStart(key, Constants.getClusterKey(redisPrefixKey, clusterName)
+							+ ".node.");
+						nodeId = StringUtils.removeEnd(nodeId, ".staticsInfo");
+						return nodeId;
+					}).collect(Collectors.toSet());
+					log.debug("existOnRedisNodeIds : {}", existOnRedisNodeIds);
+
+					Set<String> realNodeIds = nodes.stream().map(node -> {
+						return node.getNodeId();
+					}).collect(Collectors.toSet());
+					log.debug("realNodeIds : {}", realNodeIds);
+
+					existOnRedisNodeIds.removeAll(realNodeIds);
+					log.debug("extra NodeIds : {}", existOnRedisNodeIds);
+					if (!existOnRedisNodeIds.isEmpty()) {
+						for (String nodeId : existOnRedisNodeIds) {
+							String key = Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, nodeId);
+							log.info("delete extra data node. key : {}", key);
+							dataStoreJedis.del(key);
+						}
+					}
+				}
 			} catch (Exception e) {
 				log.error("refresh fail. {}", clusterName, e);
 			}
 		}
+		log.debug("refresh end");
 	}
 
-	private ClusterNode getActiveClusterNode(String clusterName) throws IOException {
+	@Override
+	public ClusterNode getActiveClusterNode(String clusterName) throws IOException {
+		return getActiveClusterNodeWithExcludeNodeId(clusterName, null);
+	}
+
+	@Override
+	public ClusterNode getActiveClusterNodeWithExcludeNodeId(String clusterName, String nodeId) throws IOException {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			String result = dataStoreJedis.get(Constants.getClusterKey(clusterName));
+			String result = dataStoreJedis.get(Constants.getClusterKey(redisPrefixKey, clusterName));
 			if (StringUtils.isBlank(result)) {
 				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
 			}
@@ -202,6 +246,9 @@ public class ClusterServiceImpl implements ClusterService {
 			Collections.shuffle(existCluterNodes);
 
 			for (ClusterNode clusterNode : existCluterNodes) {
+				if (nodeId != null && StringUtils.equalsIgnoreCase(clusterNode.getNodeId(), nodeId)) {
+					continue;
+				}
 				String[] hostAndPortArray = StringUtils.split(clusterNode.getHostAndPort(), ":");
 				try (Jedis jedis = new Jedis(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]), 200)) {
 					if ("PONG".equalsIgnoreCase(jedis.ping())) {

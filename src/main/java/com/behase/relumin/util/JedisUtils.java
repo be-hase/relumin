@@ -219,6 +219,7 @@ public class JedisUtils {
 		Set<String> hostAndPorts = Sets.newTreeSet();
 
 		hostAndPortRanges.forEach(v -> {
+			v = StringUtils.trim(v);
 			ValidationUtils.hostAndPortRange(v);
 			String[] hostAndPortRangeArray = StringUtils.split(v, ":");
 
@@ -231,7 +232,7 @@ public class JedisUtils {
 				end = start;
 			}
 			if (start > end) {
-				throw new InvalidParameterException(String.format("%s is invalid. start port must be equal or less than end.", v));
+				throw new InvalidParameterException(String.format("%s is invalid. start port must be equal or less than end port.", v));
 			}
 			for (int i = start; i <= end; i++) {
 				hostAndPorts.add(new StringBuilder().append(hostAndPortRangeArray[0]).append(":").append(i).toString());
@@ -239,5 +240,32 @@ public class JedisUtils {
 		});
 
 		return hostAndPorts;
+	}
+
+	public static Set<Integer> getSlots(List<String> slotsStr) {
+		Set<Integer> slots = Sets.newTreeSet();
+
+		slotsStr.forEach(v -> {
+			v = StringUtils.trim(v);
+
+			String[] slotArray = StringUtils.split(v, "-");
+			ValidationUtils.numeric(slotArray[0], "Slot");
+			int start = Integer.valueOf(slotArray[0]);
+			int end;
+			if (slotArray.length > 1) {
+				ValidationUtils.numeric(slotArray[1], "Slot");
+				end = Integer.valueOf(slotArray[1]);
+			} else {
+				end = start;
+			}
+			if (start > end) {
+				throw new InvalidParameterException(String.format("%s is invalid. start slot must be equal or less than end slot.", v));
+			}
+			for (int i = start; i <= end; i++) {
+				slots.add(i);
+			}
+		});
+
+		return slots;
 	}
 }

@@ -39,6 +39,15 @@ public class RedisTribServiceImpl implements RedisTribService {
 	}
 
 	@Override
+	public void reshardClusterBySlots(String hostAndPort, List<String> slotsStr, String toNodeId) throws Exception {
+		Set<Integer> slots = JedisUtils.getSlots(slotsStr);
+
+		try (RedisTrib trib = new RedisTrib()) {
+			trib.reshardClusterBySlots(hostAndPort, slots, toNodeId);
+		}
+	}
+
+	@Override
 	public List<String> checkCluster(String hostAndPort) throws Exception {
 		try (RedisTrib trib = new RedisTrib()) {
 			return trib.checkCluster(hostAndPort);

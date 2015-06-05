@@ -39,6 +39,10 @@ public class ClusterNode {
 		return JedisUtils.slotsDisplay(servedSlotsSet);
 	}
 
+	public int getSlotCount() {
+		return servedSlotsSet.size();
+	}
+
 	@JsonIgnore
 	public String getHost() {
 		return StringUtils.split(hostAndPort, ":")[0];

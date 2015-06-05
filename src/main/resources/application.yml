@@ -1,5 +1,5 @@
 server:
-  session-timeout: 300
+  session-timeout: 600
 
 management:
   add-application-context-header: false

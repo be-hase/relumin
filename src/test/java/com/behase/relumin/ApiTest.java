@@ -312,7 +312,7 @@ public class ApiTest {
 		MvcResult result;
 		result = mockMvc.perform(
 			get("/api/trib/check")
-				.param("hostAndPort", testRedisEmptyCluster)
+				.param("clusterName", "test")
 			)
 			.andExpect(jsonPath("$.errors").isArray())
 			.andReturn();
@@ -326,7 +326,7 @@ public class ApiTest {
 		MvcResult result;
 		result = mockMvc.perform(
 			get("/api/trib/check")
-				.param("hostAndPort", testRedisEmptyCluster)
+				.param("clusterName", "test")
 			)
 			.andExpect(jsonPath("$.errors").isArray())
 			.andReturn();
@@ -347,7 +347,7 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/reshard")
-				.param("hostAndPort", testRedisEmptyCluster)
+				.param("clusterName", "test")
 				.param("slotCount", "100")
 				.param("fromNodeIds", "ALL")
 				.param("toNodeId", toNode.getNodeId())
@@ -363,7 +363,7 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/reshard")
-				.param("hostAndPort", testRedisEmptyCluster)
+				.param("clusterName", "test")
 				.param("slotCount", "100")
 				.param("fromNodeIds", "ALL")
 				.param("toNodeId", toNode.getNodeId())
@@ -387,21 +387,21 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/add-node")
-				.param("hostAndPort", testRedisEmptyCluster)
-				.param("newHostAndPort", "192.168.33.11:8003")
+				.param("clusterName", "test")
+				.param("hostAndPort", "192.168.33.11:8003")
 			)
-			.andExpect(jsonPath("$.nodes[3].flags[0]").value("master"))
+			.andExpect(jsonPath("$.nodes[3].flags[1]").value("master"))
 			.andExpect(jsonPath("$.nodes[3].served_slots").value(""))
 			.andReturn();
 		log.debug(result.getResponse().getContentAsString());
 
 		result = mockMvc.perform(
 			post("/api/trib/add-node")
-				.param("hostAndPort", testRedisEmptyCluster)
-				.param("newHostAndPort", "192.168.33.11:8004")
+				.param("clusterName", "test")
+				.param("hostAndPort", "192.168.33.11:8004")
 				.param("masterNodeId", cluster.getNodes().get(0).getNodeId())
 			)
-			.andExpect(jsonPath("$.nodes[4].flags[0]").value("slave"))
+			.andExpect(jsonPath("$.nodes[4].flags[1]").value("slave"))
 			.andExpect(jsonPath("$.nodes[4].master_node_id").value(cluster.getNodes().get(0).getNodeId()))
 			.andReturn();
 		log.debug(result.getResponse().getContentAsString());
@@ -409,11 +409,11 @@ public class ApiTest {
 		cluster = getCluster("test");
 		result = mockMvc.perform(
 			post("/api/trib/add-node")
-				.param("hostAndPort", testRedisEmptyCluster)
-				.param("newHostAndPort", "192.168.33.11:8005")
+				.param("clusterName", "test")
+				.param("hostAndPort", "192.168.33.11:8005")
 				.param("masterNodeId", cluster.getNodes().get(3).getNodeId())
 			)
-			.andExpect(jsonPath("$.nodes[5].flags[0]").value("slave"))
+			.andExpect(jsonPath("$.nodes[5].flags[1]").value("slave"))
 			.andExpect(jsonPath("$.nodes[5].master_node_id").value(cluster.getNodes().get(3).getNodeId()))
 			.andReturn();
 		log.debug(result.getResponse().getContentAsString());
@@ -423,7 +423,7 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/delete-node")
-				.param("hostAndPort", testRedisEmptyCluster)
+				.param("clusterName", "test")
 				.param("nodeId", cluster.getNodes().get(3).getNodeId())
 			)
 			.andExpect(jsonPath("$.nodes[3].host_and_port").value("192.168.33.11:8004"))
@@ -432,7 +432,7 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/delete-node")
-				.param("hostAndPort", testRedisEmptyCluster)
+				.param("clusterName", "test")
 				.param("nodeId", cluster.getNodes().get(4).getNodeId())
 			)
 			.andExpect(jsonPath("$.nodes[3].host_and_port").value("192.168.33.11:8005"))
@@ -441,7 +441,7 @@ public class ApiTest {
 
 		result = mockMvc.perform(
 			post("/api/trib/delete-node")
-				.param("hostAndPort", testRedisEmptyCluster)
+				.param("clusterName", "test")
 				.param("nodeId", cluster.getNodes().get(5).getNodeId())
 			)
 			.andExpect(jsonPath("$.nodes[3]").doesNotExist())

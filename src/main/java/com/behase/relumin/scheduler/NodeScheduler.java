@@ -44,6 +44,9 @@ public class NodeScheduler {
 	@Value("${scheduler.collectStaticsInfoMaxCount:" + SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT + "}")
 	private long collectStaticsInfoMaxCount;
 
+	@Value("${redis.prefixKey}")
+	private String redisPrefixKey;
+
 	@Scheduled(fixedDelayString = "${scheduler.collectStaticsInfoIntervalMillis:"
 		+ SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS + "}")
 	public void collectStaticsInfo() throws ApiException, IOException {
@@ -60,7 +63,7 @@ public class NodeScheduler {
 						log.info("staticsInfo : {}", staticsInfo);
 
 						try (Jedis jedis = datastoreJedisPool.getResource()) {
-							String key = Constants.getNodeStaticsInfoKey(clusterName, clusterNode.getNodeId());
+							String key = Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
 							jedis.lpush(key, mapper.writeValueAsString(staticsInfo));
 							jedis.ltrim(key, 0, collectStaticsInfoMaxCount - 1);
 						}

@@ -195,6 +195,49 @@ public class RedisTrib implements Closeable {
 		Thread.sleep(3000);
 	}
 
+	public void reshardClusterBySlots(String hostAndPort, Set<Integer> slots, String toNodeId) throws Exception {
+		ValidationUtils.notBlank(toNodeId, "toNodeId");
+
+		loadClusterInfoFromNode(hostAndPort);
+		checkCluster();
+		if (errors.size() > 0) {
+			throw new ApiException(Constants.ERR_CODE_CLUSTER_HAS_ERRORS, "Please fix your cluster problems before resharding.", HttpStatus.BAD_REQUEST);
+		}
+
+		TribClusterNode target = getNodeByNodeId(toNodeId);
+		if (target == null || target.hasFlag("slave")) {
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "The specified node is not known or is not a master, please retry.", HttpStatus.BAD_REQUEST);
+		}
+
+		List<ReshardTable> reshardTables = Lists.newArrayList();
+		for (Integer slot : slots) {
+			if (target.getInfo().getServedSlotsSet().contains(slot)) {
+				continue;
+			}
+			for (TribClusterNode node : nodes) {
+				if (StringUtils.equals(node.getInfo().getNodeId(), target.getInfo().getNodeId())) {
+					continue;
+				}
+				if (node.hasFlag("slave")) {
+					continue;
+				}
+				if (node.getInfo().getServedSlotsSet().size() == 0) {
+					continue;
+				}
+				if (node.getInfo().getServedSlotsSet().contains(slot)) {
+					reshardTables.add(new ReshardTable(node, slot));
+				}
+			}
+		}
+
+		reshardTables.forEach(reshardTable -> {
+			moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), false, false);
+		});
+
+		// Give one 3 second for gossip
+		Thread.sleep(3000);
+	}
+
 	public void addNodeIntoCluster(final String hostAndPort, final String newHostAndPort) throws Exception {
 		ValidationUtils.hostAndPort(newHostAndPort);
 
@@ -283,7 +326,7 @@ public class RedisTrib implements Closeable {
 			throw new InvalidParameterException(String.format("No such node ID %s", nodeId));
 		}
 		if (node.getInfo().getServedSlotsSet().size() > 0) {
-			throw new InvalidParameterException(String.format("Node(%s) is not empty! Reshard data away and try again.", nodeId));
+			throw new InvalidParameterException(String.format("Node(%s) is not empty! Reshard data away and try again.", node.getInfo().getHostAndPort()));
 		}
 
 		// Send CLUSTER FORGET to all the nodes but the node to remove

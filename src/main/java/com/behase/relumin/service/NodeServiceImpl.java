@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import redis.clients.jedis.Jedis;
@@ -30,6 +31,9 @@ public class NodeServiceImpl implements NodeService {
 	@Autowired
 	ObjectMapper mapper;
 
+	@Value("${redis.prefixKey}")
+	private String redisPrefixKey;
+
 	@Override
 	public Map<String, String> getStaticsInfo(ClusterNode clusterNode) {
 		try (Jedis jedis = JedisUtils.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
@@ -53,7 +57,7 @@ public class NodeServiceImpl implements NodeService {
 			boolean isTimeAsc) {
 		List<Map<String, String>> result = Lists.newArrayList();
 		try (Jedis jedis = dataStoreJedisPool.getResource()) {
-			List<String> rawResult = jedis.lrange(Constants.getNodeStaticsInfoKey(clusterName, nodeId), start, end);
+			List<String> rawResult = jedis.lrange(Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, nodeId), start, end);
 			rawResult.forEach(v -> {
 				try {
 					Map<String, String> map = mapper.readValue(v, new TypeReference<Map<String, Object>>() {
