@@ -19,6 +19,7 @@ import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.param.CreateClusterParam;
+import com.behase.relumin.util.JedisUtils;
 import com.behase.relumin.util.ValidationUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -210,7 +211,10 @@ public class RedisTrib implements Closeable {
 		}
 
 		List<ReshardTable> reshardTables = Lists.newArrayList();
+		Set<Integer> notFoundSlot = Sets.newHashSet();
 		for (Integer slot : slots) {
+			boolean found = false;
+
 			if (target.getInfo().getServedSlotsSet().contains(slot)) {
 				continue;
 			}
@@ -225,9 +229,19 @@ public class RedisTrib implements Closeable {
 					continue;
 				}
 				if (node.getInfo().getServedSlotsSet().contains(slot)) {
+					found = true;
 					reshardTables.add(new ReshardTable(node, slot));
+					break;
 				}
 			}
+
+			if (!found) {
+				notFoundSlot.add(slot);
+			}
+		}
+
+		if (!notFoundSlot.isEmpty()) {
+			throw new InvalidParameterException(String.format("Cannot find the nodes which has slots(%s).", JedisUtils.slotsDisplay(notFoundSlot)));
 		}
 
 		reshardTables.forEach(reshardTable -> {

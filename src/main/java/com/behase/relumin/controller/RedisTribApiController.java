@@ -14,6 +14,7 @@ import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.param.CreateClusterParam;
 import com.behase.relumin.service.ClusterService;
+import com.behase.relumin.service.NodeService;
 import com.behase.relumin.service.RedisTribService;
 import com.behase.relumin.util.ValidationUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -29,6 +30,9 @@ public class RedisTribApiController {
 
 	@Autowired
 	private ClusterService clusterService;
+
+	@Autowired
+	private NodeService nodeService;
 
 	@Autowired
 	private ObjectMapper mapper;
@@ -167,4 +171,13 @@ public class RedisTribApiController {
 		return clusterService.getClusterByHostAndPort(hostAndPort);
 	}
 
+	@RequestMapping(value = "/shutdown", method = RequestMethod.POST)
+	public Object shutdown(
+			@RequestParam(defaultValue = "") String clusterName,
+			@RequestParam(defaultValue = "") String hostAndPort
+			) throws Exception {
+		ClusterNode node = clusterService.getActiveClusterNodeWithExcludeHostAndPort(clusterName, hostAndPort);
+		nodeService.shutdown(hostAndPort);
+		return clusterService.getClusterByHostAndPort(node.getHostAndPort());
+	}
 }

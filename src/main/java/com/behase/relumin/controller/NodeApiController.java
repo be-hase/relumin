@@ -26,9 +26,9 @@ public class NodeApiController {
 	public Object getClusterList(
 			@PathVariable String clusterName,
 			@PathVariable String nodeId,
-			@RequestParam(defaultValue = "0") String start,
-			@RequestParam(defaultValue = "10") String end,
-			@RequestParam(defaultValue = "") String fields
+			@RequestParam(defaultValue = "") String fields,
+			@RequestParam(defaultValue = "") String start,
+			@RequestParam(defaultValue = "") String end
 			) {
 		long startLong;
 		long endLong;
@@ -47,6 +47,7 @@ public class NodeApiController {
 		if (StringUtils.isNotBlank(fields)) {
 			fieldsList.addAll(Splitter.on(",").splitToList(fields));
 		}
-		return nodeService.getStaticsInfoHistory(clusterName, nodeId, startLong, endLong, fieldsList);
+
+		return nodeService.getStaticsInfoHistory(clusterName, nodeId, fieldsList, startLong, endLong);
 	}
 }

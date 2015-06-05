@@ -28,8 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping(value = "/api")
 public class ClusterApiController {
-	private static final int OFFSET = 9999;
-
 	@Autowired
 	ClusterService clusterService;
 
@@ -97,8 +95,6 @@ public class ClusterApiController {
 			@RequestParam(defaultValue = "") String start,
 			@RequestParam(defaultValue = "") String end
 			) {
-		Map<String, Object> response = Maps.newLinkedHashMap();
-
 		long startLong;
 		long endLong;
 		try {
@@ -125,39 +121,6 @@ public class ClusterApiController {
 			fieldsList.addAll(Splitter.on(",").splitToList(fields));
 		}
 
-		for (String nodeId : nodesList) {
-			log.debug("node loop : {}", nodeId);
-			List<Map<String, String>> metricsByNode = Lists.newArrayList();
-			int startIndex = 0;
-			int endIndex = OFFSET;
-			boolean validStart = true;
-			boolean validEnd = true;
-
-			while (true && (validStart || validEnd)) {
-				log.debug("metrics loop. startIndex : {}", startIndex);
-				List<Map<String, String>> staticsList = nodeService.getStaticsInfoHistory(clusterName, nodeId, startIndex, endIndex, fieldsList);
-				if (staticsList == null || staticsList.isEmpty()) {
-					break;
-				}
-				for (Map<String, String> statics : staticsList) {
-					Long timestamp = Long.valueOf(statics.get("_timestamp"));
-					if (timestamp > endLong) {
-						validEnd = false;
-					} else if (timestamp < startLong) {
-						validStart = false;
-					} else {
-						metricsByNode.add(statics);
-					}
-				}
-				startIndex += OFFSET + 1;
-				endIndex += OFFSET + 1;
-			}
-
-			if (!metricsByNode.isEmpty()) {
-				response.put(nodeId, metricsByNode);
-			}
-		}
-
-		return response;
+		return clusterService.getClusterStaticsInfoHistory(clusterName, nodesList, fieldsList, startLong, endLong);
 	}
 }

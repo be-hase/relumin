@@ -41,6 +41,9 @@ public class ClusterServiceImpl implements ClusterService {
 	@Autowired
 	ObjectMapper mapper;
 
+	@Autowired
+	NodeService nodeService;
+
 	@Value("${redis.prefixKey}")
 	private String redisPrefixKey;
 
@@ -261,5 +264,52 @@ public class ClusterServiceImpl implements ClusterService {
 
 			throw new ApiException(Constants.ERR_CODE_ALL_NODE_DOWN, "All node is down.", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
+	}
+
+	@Override
+	public ClusterNode getActiveClusterNodeWithExcludeHostAndPort(String clusterName, String hostAndPort)
+			throws IOException {
+		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
+			String result = dataStoreJedis.get(Constants.getClusterKey(redisPrefixKey, clusterName));
+			if (StringUtils.isBlank(result)) {
+				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
+			}
+
+			List<ClusterNode> existCluterNodes = mapper.readValue(result, new TypeReference<List<ClusterNode>>() {
+			});
+			Collections.shuffle(existCluterNodes);
+
+			for (ClusterNode clusterNode : existCluterNodes) {
+				if (hostAndPort != null && StringUtils.equalsIgnoreCase(clusterNode.getHostAndPort(), hostAndPort)) {
+					continue;
+				}
+				String[] hostAndPortArray = StringUtils.split(clusterNode.getHostAndPort(), ":");
+				try (Jedis jedis = new Jedis(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]), 200)) {
+					if ("PONG".equalsIgnoreCase(jedis.ping())) {
+						return clusterNode;
+					}
+				} catch (JedisException e) {
+					log.warn("There is unconnect redis. The hostAndPort is {}", clusterNode.getHostAndPort());
+				}
+			}
+
+			throw new ApiException(Constants.ERR_CODE_ALL_NODE_DOWN, "All node is down.", HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	@Override
+	public Map<String, List<Map<String, String>>> getClusterStaticsInfoHistory(String clusterName, List<String> nodes,
+			List<String> fields, long start, long end) {
+		Map<String, List<Map<String, String>>> result = Maps.newLinkedHashMap();
+
+		for (String nodeId : nodes) {
+			log.debug("node loop : {}", nodeId);
+			List<Map<String, String>> staticsInfoHistory = nodeService.getStaticsInfoHistory(clusterName, nodeId, fields, start, end);
+			if (!staticsInfoHistory.isEmpty()) {
+				result.put(nodeId, staticsInfoHistory);
+			}
+		}
+
+		return result;
 	}
 }

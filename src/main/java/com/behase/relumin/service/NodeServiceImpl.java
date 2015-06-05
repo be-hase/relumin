@@ -7,12 +7,14 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 import com.behase.relumin.Constants;
+import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.util.JedisUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,6 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class NodeServiceImpl implements NodeService {
+	private static final int OFFSET = 9999;
+
 	@Autowired
 	JedisPool dataStoreJedisPool;
 
@@ -39,25 +43,72 @@ public class NodeServiceImpl implements NodeService {
 		try (Jedis jedis = JedisUtils.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
 			Map<String, String> result = JedisUtils.parseInfoResult(jedis.info());
 
-			// and add maxmemory for monitoring
-			List<String> configResult = jedis.configGet("maxmemory");
-			result.put("maxmemory", configResult.get(1));
-
 			return result;
 		}
 	}
 
 	@Override
-	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, long start, long end) {
-		return getStaticsInfoHistory(clusterName, nodeId, start, end, true);
+	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
+			long start, long end) {
+		List<Map<String, String>> result = Lists.newArrayList();
+
+		int startIndex = 0;
+		int endIndex = OFFSET;
+		boolean validStart = true;
+		boolean validEnd = true;
+
+		while (true && (validStart || validEnd)) {
+			log.debug("statics loop. startIndex : {}", startIndex);
+			List<Map<String, String>> staticsList = getStaticsInfoHistoryFromRedis(clusterName, nodeId, fields, startIndex, endIndex);
+			if (staticsList == null || staticsList.isEmpty()) {
+				break;
+			}
+			for (Map<String, String> statics : staticsList) {
+				Long timestamp = Long.valueOf(statics.get("_timestamp"));
+				if (timestamp > end) {
+					validEnd = false;
+				} else if (timestamp < start) {
+					validStart = false;
+				} else {
+					result.add(statics);
+				}
+			}
+			startIndex += OFFSET + 1;
+			endIndex += OFFSET + 1;
+		}
+
+		return result;
 	}
 
 	@Override
-	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, long start, long end,
-			boolean isTimeAsc) {
+	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
+			long start, long end, boolean isTimeAsc) {
+		List<Map<String, String>> result = getStaticsInfoHistory(clusterName, nodeId, fields, start, end);
+		if (!isTimeAsc) {
+			Collections.reverse(result);
+		}
+		return result;
+	}
+
+	@Override
+	public void shutdown(String hostAndPort) {
+		try (Jedis jedis = JedisUtils.getJedisByHostAndPort(hostAndPort)) {
+			try {
+				jedis.ping();
+			} catch (Exception e) {
+				log.warn("redis error.", e);
+				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("Failed to connect to Redis Cluster(%s). Please confirm.", hostAndPort), HttpStatus.BAD_REQUEST);
+			}
+			jedis.shutdown();
+		}
+	}
+
+	private List<Map<String, String>> getStaticsInfoHistoryFromRedis(String clusterName, String nodeId,
+			List<String> fields, long startIndex, long endIndex) {
 		List<Map<String, String>> result = Lists.newArrayList();
+
 		try (Jedis jedis = dataStoreJedisPool.getResource()) {
-			List<String> rawResult = jedis.lrange(Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, nodeId), start, end);
+			List<String> rawResult = jedis.lrange(Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, nodeId), startIndex, endIndex);
 			rawResult.forEach(v -> {
 				try {
 					Map<String, String> map = mapper.readValue(v, new TypeReference<Map<String, Object>>() {
@@ -69,25 +120,7 @@ public class NodeServiceImpl implements NodeService {
 			});
 		}
 
-		if (!isTimeAsc) {
-			Collections.reverse(result);
-		}
-
-		return result;
-	}
-
-	@Override
-	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, long start, long end,
-			List<String> fields) {
-		List<Map<String, String>> staticsInfos = getStaticsInfoHistory(clusterName, nodeId, start, end);
-		return filterGetStaticsInfoHistory(staticsInfos, fields);
-	}
-
-	@Override
-	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, long start, long end,
-			List<String> fields, boolean isTimeAsc) {
-		List<Map<String, String>> staticsInfos = getStaticsInfoHistory(clusterName, nodeId, start, end, isTimeAsc);
-		return filterGetStaticsInfoHistory(staticsInfos, fields);
+		return filterGetStaticsInfoHistory(result, fields);
 	}
 
 	private List<Map<String, String>> filterGetStaticsInfoHistory(List<Map<String, String>> staticsInfos,
