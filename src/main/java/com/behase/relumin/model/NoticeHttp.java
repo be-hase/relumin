@@ -1,4 +1,4 @@
-package com.behase.relumin.config;
+package com.behase.relumin.model;
 
 import lombok.Data;
 

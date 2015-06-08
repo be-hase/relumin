@@ -139,9 +139,22 @@ public class RedisTribApiController {
 	public Object deleteNode(
 			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String nodeId,
+			@RequestParam(defaultValue = "") String isFail,
 			@RequestParam(defaultValue = "") String reset,
 			@RequestParam(defaultValue = "") String shutdown
 			) throws Exception {
+		boolean isFailBool = false;
+		try {
+			isFailBool = Boolean.valueOf(isFail);
+		} catch (Exception e) {
+		}
+		if (isFailBool) {
+			ClusterNode node = clusterService.getActiveClusterNodeWithExcludeNodeId(clusterName, nodeId);
+			redisTibService.deleteFailNodeFromCluster(node.getHostAndPort(), nodeId);
+			clusterService.setCluster(clusterName, node.getHostAndPort());
+			return clusterService.getClusterByHostAndPort(node.getHostAndPort());
+		}
+
 		boolean shutdownBool = false;
 		try {
 			shutdownBool = Boolean.valueOf(shutdown);

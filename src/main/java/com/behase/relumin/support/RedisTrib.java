@@ -377,6 +377,35 @@ public class RedisTrib implements Closeable {
 		Thread.sleep(3000);
 	}
 
+	public void deleteFailNodeOfCluster(final String hostAndPort, String nodeId)
+			throws Exception {
+		ValidationUtils.notBlank(nodeId, "nodeId");
+
+		log.info("Removing node({}) from cluster({}).", nodeId, hostAndPort);
+
+		// Load cluster information
+		loadClusterInfoFromNode(hostAndPort);
+
+		// Send CLUSTER FORGET to all the nodes but the node to remove
+		log.info("Sending CLUSTER FORGET messages to the cluster...");
+		nodes.stream().filter(v -> {
+			return !StringUtils.equalsIgnoreCase(v.getInfo().getNodeId(), nodeId);
+		}).forEach(v -> {
+			if (StringUtils.isNotBlank(v.getInfo().getMasterNodeId())
+				&& StringUtils.equalsIgnoreCase(v.getInfo().getMasterNodeId(), nodeId)) {
+				// Reconfigure the slave to replicate with some other node
+				TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
+				log.info("new master={}, old master = {}", master.getInfo().getNodeId(), nodeId);
+				log.info("{} as replica of {}", v.getInfo().getNodeId(), master.getInfo().getNodeId());
+				v.getJedis().clusterReplicate(master.getInfo().getNodeId());
+			}
+			v.getJedis().clusterForget(nodeId);
+		});
+
+		// Give one 3 second for gossip
+		Thread.sleep(3000);
+	}
+
 	public void replicateNode(final String hostAndPort, final String masterNodeId)
 			throws Exception {
 		ValidationUtils.notBlank(masterNodeId, "masterNodeId");

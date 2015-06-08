@@ -23,6 +23,8 @@ public interface RedisTribService {
 
 	void deleteNodeFromCluster(String hostAndPort, String nodeId, String reset, boolean shutdown) throws Exception;
 
+	void deleteFailNodeFromCluster(String hostAndPort, String nodeId) throws Exception;
+
 	void replicateNode(String hostAndPort, String masterNodeId) throws Exception;
 
 	void failoverNode(String hostAndPort) throws Exception;

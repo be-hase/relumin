@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.Cluster;
+import com.behase.relumin.model.Notice;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.NodeService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -33,6 +35,9 @@ public class ClusterApiController {
 
 	@Autowired
 	NodeService nodeService;
+
+	@Autowired
+	ObjectMapper mapper;
 
 	@RequestMapping(value = "/clusters", method = RequestMethod.GET)
 	public Object getClusterList(
@@ -122,5 +127,36 @@ public class ClusterApiController {
 		}
 
 		return clusterService.getClusterStaticsInfoHistory(clusterName, nodesList, fieldsList, startLong, endLong);
+	}
+
+	@RequestMapping(value = "/cluster/{clusterName}/notice", method = RequestMethod.GET)
+	public Object getClusterNotice(
+			@PathVariable String clusterName
+			) throws IOException {
+		Notice notice = clusterService.getClusterNotice(clusterName);
+		if (notice == null) {
+			return Maps.newHashMap();
+		}
+		return notice;
+	}
+
+	@RequestMapping(value = "/cluster/{clusterName}/notice", method = RequestMethod.POST)
+	public Object setClusterNotice(
+			@PathVariable String clusterName,
+			@RequestParam(defaultValue = "") String notice
+			) throws IOException {
+		if (StringUtils.isBlank(notice)) {
+			throw new InvalidParameterException("'notice' is blank.");
+		}
+
+		Notice noticeObj;
+		try {
+			noticeObj = mapper.readValue(notice, Notice.class);
+		} catch (Exception e) {
+			throw new InvalidParameterException("'notice' is invalid format.");
+		}
+
+		clusterService.setClusterNotice(clusterName, noticeObj);
+		return clusterService.getClusterNotice(clusterName);
 	}
 }

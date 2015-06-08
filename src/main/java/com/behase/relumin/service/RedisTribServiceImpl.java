@@ -81,6 +81,14 @@ public class RedisTribServiceImpl implements RedisTribService {
 	}
 
 	@Override
+	public void deleteFailNodeFromCluster(String hostAndPort, String nodeId)
+			throws Exception {
+		try (RedisTrib trib = new RedisTrib()) {
+			trib.deleteFailNodeOfCluster(hostAndPort, nodeId);
+		}
+	}
+
+	@Override
 	public void replicateNode(String hostAndPort, String masterNodeId) throws Exception {
 		try (RedisTrib trib = new RedisTrib()) {
 			trib.replicateNode(hostAndPort, masterNodeId);

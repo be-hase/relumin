@@ -24,6 +24,10 @@ public class Constants {
 		return Joiner.on(".").join(prefixKey, "cluster", clusterName).toString();
 	}
 
+	public static String getClusterNoticeKey(String prefixKey, String clusterName) {
+		return Joiner.on(".").join(prefixKey, "cluster", clusterName, "notice").toString();
+	}
+
 	public static String getNodeKey(String prefixKey, String clusterName, String nodeId) {
 		return Joiner.on(".").join(prefixKey, "cluster", clusterName, "node", nodeId).toString();
 	}

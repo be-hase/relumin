@@ -7,6 +7,7 @@ import java.util.Set;
 
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterNode;
+import com.behase.relumin.model.Notice;
 
 public interface ClusterService {
 	Set<String> getClusters();
@@ -18,6 +19,10 @@ public interface ClusterService {
 	boolean existsClusterName(String clusterName);
 
 	void setCluster(String clusterName, String node) throws IOException;
+
+	Notice getClusterNotice(String clusterName) throws IOException;
+
+	void setClusterNotice(String clusterName, Notice notice) throws IOException;
 
 	void deleteCluster(String clusterName);
 

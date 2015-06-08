@@ -21,6 +21,7 @@ import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterNode;
+import com.behase.relumin.model.Notice;
 import com.behase.relumin.model.SlotInfo;
 import com.behase.relumin.util.JedisUtils;
 import com.behase.relumin.util.ValidationUtils;
@@ -166,12 +167,32 @@ public class ClusterServiceImpl implements ClusterService {
 	}
 
 	@Override
+	public Notice getClusterNotice(String clusterName) throws IOException {
+		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
+			String result = dataStoreJedis.get(Constants.getClusterNoticeKey(redisPrefixKey, clusterName));
+			if (StringUtils.isBlank(result)) {
+				return null;
+			}
+			return mapper.readValue(result, Notice.class);
+		}
+	}
+
+	@Override
+	public void setClusterNotice(String clusterName, Notice notice) throws IOException {
+		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
+			String json = mapper.writeValueAsString(notice);
+			dataStoreJedis.set(Constants.getClusterNoticeKey(redisPrefixKey, clusterName), json);
+		}
+	}
+
+	@Override
 	public void deleteCluster(String clusterName) {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
 			Set<String> keys = dataStoreJedis.keys(Constants.getClusterKey(redisPrefixKey, clusterName) + ".*");
 
 			dataStoreJedis.srem(Constants.getClustersKey(redisPrefixKey), clusterName);
 			dataStoreJedis.del(Constants.getClusterKey(redisPrefixKey, clusterName));
+			dataStoreJedis.del(Constants.getClusterNoticeKey(redisPrefixKey, clusterName));
 			if (keys.size() > 0) {
 				dataStoreJedis.del(keys.toArray(new String[keys.size()]));
 			}
