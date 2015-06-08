@@ -1,6 +1,7 @@
 package com.behase.relumin.config;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
 
@@ -27,9 +28,14 @@ public class ReluminConfig {
 
 	public static ReluminConfig create(String configLocation) throws JsonParseException, JsonMappingException,
 			IOException {
-		ClassPathResource configResource = new ClassPathResource(configLocation);
-		ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-		return mapper.readValue(configResource.getInputStream(), ReluminConfig.class);
+		if (Paths.get(configLocation).toFile().exists()) {
+			ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+			return mapper.readValue(Paths.get(configLocation).toFile(), ReluminConfig.class);
+		} else {
+			ClassPathResource configResource = new ClassPathResource(configLocation);
+			ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+			return mapper.readValue(configResource.getInputStream(), ReluminConfig.class);
+		}
 	}
 
 	public Properties getProperties() {
