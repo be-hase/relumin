@@ -3,3 +3,7 @@ server:
 
 management:
   add-application-context-header: false
+
+spring:
+  freemarker:
+    charset: UTF-8
