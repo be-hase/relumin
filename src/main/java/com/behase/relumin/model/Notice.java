@@ -8,7 +8,8 @@ import lombok.Data;
 
 @Data
 public class Notice {
-	private NoticeMailConfig mail;
-	private NoticeHttp http;
+	private NoticeMail mail = new NoticeMail();
+	private NoticeHttp http = new NoticeHttp();
+	private String invalidEndTime;
 	private List<NoticeItem> items = Lists.newArrayList();
 }

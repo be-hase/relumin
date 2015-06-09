@@ -5,20 +5,22 @@ import java.util.Arrays;
 import org.apache.commons.lang.StringUtils;
 
 import lombok.Data;
+import lombok.Getter;
 
 @Data
 public class NoticeItem {
 	private String type;
-	private String filed;
+	private String field;
 	private String operator;
 	private String valueType;
 	private String value;
 
 	public static enum NoticeType {
 		CLUSTER_INFO("cluster_info"),
-		NODE_STATICS("node_metrics");
+		NODE_STATICS("node_info");
 
-		public String value;
+		@Getter
+		private String value;
 
 		private NoticeType(String value) {
 			this.value = value;
@@ -35,7 +37,8 @@ public class NoticeItem {
 		NUMBER("number"),
 		STRING("string");
 
-		public String value;
+		@Getter
+		private String value;
 
 		private NoticeValueType(String value) {
 			this.value = value;
@@ -49,17 +52,21 @@ public class NoticeItem {
 	}
 
 	public static enum NoticeOperator {
-		EQ("eq"),
-		NE("ne"),
-		GT("gt"),
-		GE("ge"),
-		LT("lt"),
-		LE("le");
+		EQ("eq", " == "),
+		NE("ne", " != "),
+		GT("gt", " > "),
+		GE("ge", " >= "),
+		LT("lt", " < "),
+		LE("le", " <= ");
 
-		public String value;
+		@Getter
+		private String value;
+		@Getter
+		private String label;
 
-		private NoticeOperator(String value) {
+		private NoticeOperator(String value, String label) {
 			this.value = value;
+			this.label = label;
 		}
 
 		public NoticeOperator getNoticeOperator(String value) {

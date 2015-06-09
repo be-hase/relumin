@@ -8,7 +8,6 @@ import java.util.Properties;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.ClassPathResource;
 
-import com.behase.relumin.model.Notice;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,7 +22,7 @@ public class ReluminConfig {
 	private ServerConfig server = new ServerConfig();
 	private RedisConfig redis = new RedisConfig();
 	private SchedulerConfig scheduler = new SchedulerConfig();
-	private Notice notice = new Notice();
+	private NoticeConfig notice = new NoticeConfig();
 
 	private List<String> errors = Lists.newArrayList();
 
@@ -64,6 +63,21 @@ public class ReluminConfig {
 			"scheduler.collectStaticsInfoMaxCount",
 			StringUtils.defaultString(scheduler.getCollectStaticsInfoMaxCount(), SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT));
 
+		// notice email
+		if (notice.getMail().getHost() != null) {
+			prop.setProperty("notice.mail.host", notice.getMail().getHost());
+		}
+		if (notice.getMail().getPort() != null) {
+			prop.setProperty("notice.mail.port", notice.getMail().getPort());
+		}
+		if (notice.getMail().getUser() != null) {
+			prop.setProperty("notice.mail.user", notice.getMail().getUser());
+		}
+		if (notice.getMail().getPassword() != null) {
+			prop.setProperty("notice.mail.password", notice.getMail().getPassword());
+		}
+		prop.setProperty("notice.mail.charset", StringUtils.defaultString(notice.getMail().getCharset(), NoticeMailConfig.DEFAULT_CHARSET));
+
 		return prop;
 	}
 
@@ -92,6 +106,12 @@ public class ReluminConfig {
 		}
 		if (scheduler.getCollectStaticsInfoMaxCount() != null) {
 			check(isNumber(scheduler.getCollectStaticsInfoMaxCount()), "'scheduler.collectStaticsInfoMaxCount' must be numeric.");
+		}
+
+		// notice
+		// notice email
+		if (notice.getMail().getPort() != null) {
+			check(isNumber(notice.getMail().getPort()), "'notice.email.port' must be numeric.");
 		}
 
 		if (errors.size() > 0) {

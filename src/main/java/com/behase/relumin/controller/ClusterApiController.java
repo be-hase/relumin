@@ -135,7 +135,7 @@ public class ClusterApiController {
 			) throws IOException {
 		Notice notice = clusterService.getClusterNotice(clusterName);
 		if (notice == null) {
-			return Maps.newHashMap();
+			return new Notice();
 		}
 		return notice;
 	}

@@ -4,6 +4,5 @@ import lombok.Data;
 
 @Data
 public class NoticeHttp {
-	private String host;
-	private String port;
+	private String url;
 }

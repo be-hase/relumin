@@ -1,4 +1,4 @@
-package com.behase.relumin.model;
+package com.behase.relumin.config;
 
 import lombok.Data;
 
@@ -11,4 +11,6 @@ public class NoticeMailConfig {
 	private String user;
 	private String password;
 	private String charset;
+
+	private String from;
 }
