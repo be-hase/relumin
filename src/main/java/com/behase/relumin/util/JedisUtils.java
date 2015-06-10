@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -15,6 +16,7 @@ import redis.clients.jedis.JedisPoolConfig;
 
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -43,6 +45,14 @@ public class JedisUtils {
 			Sets.newHashSet(new HostAndPort(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]))),
 			2000,
 			new JedisPoolConfig());
+	}
+
+	public static JedisCluster getJedisClusterByHostAndPorts(String hostAndPorts) {
+		Set<HostAndPort> hostAndPortSet = getHostAndPorts(Splitter.on(",").splitToList(hostAndPorts)).stream().map(v -> {
+			String[] hostAndPortArray = StringUtils.split(v, ":");
+			return new HostAndPort(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]));
+		}).collect(Collectors.toSet());
+		return new JedisCluster(hostAndPortSet, 2000, new JedisPoolConfig());
 	}
 
 	public static Map<String, String> parseInfoResult(String result) {

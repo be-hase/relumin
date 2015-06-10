@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisCluster.Reset;
 
 import com.behase.relumin.Application;
@@ -59,7 +60,13 @@ public class RedisTribTest {
 
 	@Before
 	public void before() {
-		// empty (and reset)
+		// normal cluster
+		try (JedisCluster jedisCluster = JedisUtils.getJedisClusterByHostAndPort(testRedisNormalCluster)) {
+			jedisCluster.set("hoge", "hoge");
+		} catch (Exception e) {
+		}
+
+		// empty cluster (and reset)
 		for (String item : StringUtils.split(testRedisEmptyClusterAll, ",")) {
 			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
 				try {
@@ -73,6 +80,7 @@ public class RedisTribTest {
 			} catch (Exception e) {
 			}
 		}
+
 		for (String item : StringUtils.split(testRedisEmptyStandAloneAll, ",")) {
 			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
 				jedis.flushAll();
@@ -339,39 +347,15 @@ public class RedisTribTest {
 		param3.setReplicas(Lists.newArrayList("192.168.33.11:8005"));
 		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
 
-		//		CreateClusterParam param1 = new CreateClusterParam();
-		//		param1.setStartSlotNumber("0");
-		//		param1.setEndSlotNumber("5460");
-		//		param1.setMaster("192.168.33.11:8000");
-		//		CreateClusterParam param2 = new CreateClusterParam();
-		//		param2.setStartSlotNumber("5461");
-		//		param2.setEndSlotNumber("10921");
-		//		param2.setMaster("192.168.33.11:8001");
-		//		CreateClusterParam param3 = new CreateClusterParam();
-		//		param3.setStartSlotNumber("10922");
-		//		param3.setEndSlotNumber("16380");
-		//		param3.setMaster("192.168.33.11:8002");
-		//		CreateClusterParam param4 = new CreateClusterParam();
-		//		param4.setStartSlotNumber("16381");
-		//		param4.setEndSlotNumber("16381");
-		//		param4.setMaster("192.168.33.11:8003");
-		//		CreateClusterParam param5 = new CreateClusterParam();
-		//		param5.setStartSlotNumber("16382");
-		//		param5.setEndSlotNumber("16382");
-		//		param5.setMaster("192.168.33.11:8004");
-		//		CreateClusterParam param6 = new CreateClusterParam();
-		//		param6.setStartSlotNumber("16383");
-		//		param6.setEndSlotNumber("16383");
-		//		param6.setMaster("192.168.33.11:8005");
-		//		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3, param4, param5, param6);
-
 		redisTrib.createCluster(params);
 	}
 
 	@Test
-	public void loadClusterInfoFromNode() {
+	public void loadClusterInfoFromNode() throws Exception {
+		createCluster();
+
 		redisTrib = new RedisTrib();
-		redisTrib.loadClusterInfoFromNode(testRedisNormalCluster);
+		redisTrib.loadClusterInfoFromNode(testRedisEmptyCluster);
 
 		List<TribClusterNode> nodes = redisTrib.getNodes();
 		nodes.sort((o1, o2) -> {
@@ -380,17 +364,17 @@ public class RedisTribTest {
 
 		TribClusterNode node;
 		node = nodes.get(0);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7000"));
-		assertThat(node.getInfo().getServedSlots(), is("0-5460"));
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8000"));
+		assertThat(node.getInfo().getServedSlots(), is("0-5000"));
 		node = nodes.get(1);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7001"));
-		assertThat(node.getInfo().getServedSlots(), is("5461-10922"));
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8001"));
+		assertThat(node.getInfo().getServedSlots(), is("5001-10000"));
 		node = nodes.get(4);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7004"));
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8004"));
 		assertThat(node.getInfo().getServedSlots(), is(""));
 		assertThat(node.getInfo().getMasterNodeId(), is(nodes.get(1).getInfo().getNodeId()));
 		node = nodes.get(5);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:7005"));
+		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8005"));
 		assertThat(node.getInfo().getServedSlots(), is(""));
 		assertThat(node.getInfo().getMasterNodeId(), is(nodes.get(2).getInfo().getNodeId()));
 	}
