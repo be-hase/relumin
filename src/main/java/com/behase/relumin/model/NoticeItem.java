@@ -2,7 +2,7 @@ package com.behase.relumin.model;
 
 import java.util.Arrays;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import lombok.Data;
 import lombok.Getter;
@@ -17,7 +17,7 @@ public class NoticeItem {
 
 	public static enum NoticeType {
 		CLUSTER_INFO("cluster_info"),
-		NODE_STATICS("node_info");
+		NODE_INFO("node_info");
 
 		@Getter
 		private String value;
@@ -26,10 +26,10 @@ public class NoticeItem {
 			this.value = value;
 		}
 
-		public NoticeType getNoticeType(String value) {
+		public static NoticeType getNoticeType(String value) {
 			return Arrays.stream(values()).filter(v -> {
 				return StringUtils.equalsIgnoreCase(v.value, value);
-			}).findFirst().orElseThrow(() -> new IllegalArgumentException("Invalid type"));
+			}).findFirst().orElse(null);
 		}
 	}
 
@@ -44,10 +44,10 @@ public class NoticeItem {
 			this.value = value;
 		}
 
-		public NoticeValueType getNoticeValueType(String value) {
+		public static NoticeValueType getNoticeValueType(String value) {
 			return Arrays.stream(values()).filter(v -> {
 				return StringUtils.equalsIgnoreCase(v.value, value);
-			}).findFirst().orElseThrow(() -> new IllegalArgumentException("Invalid value type"));
+			}).findFirst().orElse(null);
 		}
 	}
 
@@ -69,10 +69,10 @@ public class NoticeItem {
 			this.label = label;
 		}
 
-		public NoticeOperator getNoticeOperator(String value) {
+		public static NoticeOperator getNoticeOperator(String value) {
 			return Arrays.stream(values()).filter(v -> {
 				return StringUtils.equalsIgnoreCase(v.value, value);
-			}).findFirst().orElseThrow(() -> new IllegalArgumentException("Invalid operator"));
+			}).findFirst().orElse(null);
 		}
 	}
 }

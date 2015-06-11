@@ -52,4 +52,20 @@ public class ClusterNode {
 	public int getPort() {
 		return Integer.valueOf(StringUtils.split(hostAndPort, ":")[1]);
 	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+
+		ClusterNode other = (ClusterNode)obj;
+		return StringUtils.equalsIgnoreCase(nodeId, other.nodeId);
+	}
 }

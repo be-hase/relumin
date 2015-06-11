@@ -1,10 +1,13 @@
 package com.behase.relumin.scheduler;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -19,9 +22,18 @@ import com.behase.relumin.config.SchedulerConfig;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterNode;
+import com.behase.relumin.model.Notice;
+import com.behase.relumin.model.NoticeItem;
+import com.behase.relumin.model.NoticeItem.NoticeOperator;
+import com.behase.relumin.model.NoticeItem.NoticeType;
+import com.behase.relumin.model.NoticeItem.NoticeValueType;
+import com.behase.relumin.model.NoticeJob;
+import com.behase.relumin.model.NoticeJob.ResultValue;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.NodeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,6 +59,15 @@ public class NodeScheduler {
 	@Value("${redis.prefixKey}")
 	private String redisPrefixKey;
 
+	@Value("${notice.mail.host:}")
+	private String noticeMailHost;
+
+	@Value("${notice.mail.port:0}")
+	private int noticeMailPort;
+
+	@Value("${notice.mail.from:}")
+	private String noticeMailFrom;
+
 	@Scheduled(fixedDelayString = "${scheduler.collectStaticsInfoIntervalMillis:"
 		+ SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS + "}")
 	public void collectStaticsInfo() throws ApiException, IOException {
@@ -54,13 +75,17 @@ public class NodeScheduler {
 		Set<String> clusterNames = clusterService.getClusters();
 		for (String clusterName : clusterNames) {
 			try {
+				Notice notice = clusterService.getClusterNotice(clusterName);
 				Cluster cluster = clusterService.getCluster(clusterName);
 				List<ClusterNode> clusterNodes = cluster.getNodes();
+				Map<ClusterNode, Map<String, String>> staticsInfos = Maps.newLinkedHashMap();
 
 				for (ClusterNode clusterNode : clusterNodes) {
 					try {
 						Map<String, String> staticsInfo = nodeService.getStaticsInfo(clusterNode);
 						log.info("staticsInfo : {}", staticsInfo);
+
+						staticsInfos.put(clusterNode, staticsInfo);
 
 						try (Jedis jedis = datastoreJedisPool.getResource()) {
 							String key = Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
@@ -71,10 +96,125 @@ public class NodeScheduler {
 						log.error("collectStaticsIndo fail. {}, {}", clusterName, clusterNode.getHostAndPort(), e);
 					}
 				}
+
+				checkThresholdAndPublishNotify(notice, cluster, staticsInfos);
 			} catch (Exception e) {
 				log.error("collectStaticsIndo fail. {}", clusterName, e);
 			}
 		}
 		log.info("collectStaticsIndo finish");
+	}
+
+	public void checkThresholdAndPublishNotify(Notice notice, Cluster cluster,
+			Map<ClusterNode, Map<String, String>> staticsInfos) {
+		log.debug("checkThresholdAndPublishNotify call. notice={}, cluster={}", notice, cluster);
+		if (StringUtils.isNotBlank(notice.getInvalidEndTime())) {
+			try {
+				Long time = Long.valueOf(notice.getInvalidEndTime());
+				if (System.currentTimeMillis() < time) {
+					log.debug("NOW ignore to notify.");
+					return;
+				}
+			} catch (Exception e) {
+			}
+		}
+		String from = StringUtils.defaultString(notice.getMail().getFrom(), noticeMailFrom);
+		boolean notNotifyByMail = StringUtils.isBlank(noticeMailHost) || noticeMailPort == 0
+			|| StringUtils.isBlank(from);
+		boolean notNotifyByHttp = StringUtils.isBlank(notice.getHttp().getUrl());
+		log.debug("{} {}", notNotifyByMail, notNotifyByHttp);
+		if (notNotifyByMail && notNotifyByHttp) {
+			if (notice.getItems().size() > 0) {
+				log.warn("You set notification threshold, But mail or http is not set.");
+			}
+			return;
+		}
+
+		List<NoticeJob> noticeJobs = Lists.newArrayList();
+		for (NoticeItem item : notice.getItems()) {
+			switch (NoticeType.getNoticeType(item.getType())) {
+				case CLUSTER_INFO:
+					String targetClusterInfoVal;
+					if ("cluster_state".equals(item.getField())) {
+						targetClusterInfoVal = cluster.getStatus();
+					} else {
+						targetClusterInfoVal = cluster.getInfo().get(item.getField());
+					}
+
+					if (isNotify(item.getValueType(), item.getOperator(), targetClusterInfoVal, item.getValue())) {
+						ResultValue result = new ResultValue("", "", targetClusterInfoVal);
+						noticeJobs.add(new NoticeJob(item, Lists.newArrayList(result)));
+					}
+					break;
+				case NODE_INFO:
+					List<ResultValue> resultValues = Lists.newArrayList();
+					for (Entry<ClusterNode, Map<String, String>> e : staticsInfos.entrySet()) {
+						ClusterNode node = e.getKey();
+						Map<String, String> staticsInfo = e.getValue();
+						String targetNodeInfoVal = staticsInfo.get(item.getField());
+
+						if (isNotify(item.getValueType(), item.getOperator(), targetNodeInfoVal, item.getValue())) {
+							resultValues.add(new ResultValue(node.getNodeId(), node.getHostAndPort(), targetNodeInfoVal));
+						}
+					}
+					noticeJobs.add(new NoticeJob(item, resultValues));
+					break;
+				default:
+					break;
+			}
+		}
+
+		// publish redis
+		log.debug("NOTIFY !! {}", noticeJobs);
+		log.debug("checkThresholdAndPublishNotify finish");
+	}
+
+	public boolean isNotify(String valueType, String operator, String value, String threshold) {
+		boolean isNotify = false;
+
+		switch (NoticeValueType.getNoticeValueType(valueType)) {
+			case STRING:
+				switch (NoticeOperator.getNoticeOperator(operator)) {
+					case EQ:
+						isNotify = StringUtils.equalsIgnoreCase(value, threshold);
+						break;
+					case NE:
+						isNotify = !StringUtils.equalsIgnoreCase(value, threshold);
+						break;
+					default:
+						break;
+				}
+				break;
+			case NUMBER:
+				BigDecimal targetValNumber = new BigDecimal(value);
+				int compareResult = targetValNumber.compareTo(new BigDecimal(threshold));
+				switch (NoticeOperator.getNoticeOperator(operator)) {
+					case EQ:
+						isNotify = compareResult == 0;
+						break;
+					case NE:
+						isNotify = compareResult != 0;
+						break;
+					case GT:
+						isNotify = compareResult == 1;
+						break;
+					case GE:
+						isNotify = compareResult == 1 || compareResult == 0;
+						break;
+					case LT:
+						isNotify = compareResult == -1;
+						break;
+					case LE:
+						isNotify = compareResult == -1 || compareResult == 0;
+						break;
+					default:
+						break;
+				}
+				break;
+			default:
+				break;
+		}
+
+		return isNotify;
 	}
 }

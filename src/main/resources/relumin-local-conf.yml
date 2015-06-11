@@ -5,3 +5,9 @@ server:
 redis:
   host: 192.168.33.11
   port: 6000
+
+notice:
+  mail:
+    host: alpha-smtp.linegame.jp
+    port: 25
+    from: ryosuke.hasebe@linecorp.com
