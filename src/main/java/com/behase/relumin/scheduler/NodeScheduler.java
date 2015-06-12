@@ -75,7 +75,7 @@ public class NodeScheduler {
 	@Scheduled(fixedDelayString = "${scheduler.collectStaticsInfoIntervalMillis:"
 		+ SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS + "}")
 	public void collectStaticsInfo() throws ApiException, IOException {
-		log.info("collectStaticsIndo call");
+		log.info("collectStaticsInfo call");
 		Set<String> clusterNames = clusterService.getClusters();
 		for (String clusterName : clusterNames) {
 			try {
@@ -106,7 +106,7 @@ public class NodeScheduler {
 				log.error("collectStaticsIndo fail. {}", clusterName, e);
 			}
 		}
-		log.info("collectStaticsIndo finish");
+		log.info("collectStaticsInfo finish");
 	}
 
 	public void checkThresholdAndPublishNotify(Notice notice, Cluster cluster,
@@ -169,7 +169,7 @@ public class NodeScheduler {
 		}
 
 		if (!noticeJobs.isEmpty()) {
-			log.debug("NOTIFY !! {}", noticeJobs);
+			log.info("NOTIFY !! {}", noticeJobs);
 			notifyService.notify(cluster, notice, noticeJobs);
 		}
 
