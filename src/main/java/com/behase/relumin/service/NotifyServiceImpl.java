@@ -101,7 +101,8 @@ public class NotifyServiceImpl implements NotifyService {
 					text.append(String.format("%s", lineSeparator));
 				}
 
-				String from = StringUtils.defaultString(notice.getMail().getFrom(), noticeMailFrom);
+				String from = StringUtils.isNotBlank(notice.getMail().getFrom()) ? notice.getMail().getFrom()
+					: noticeMailFrom;
 				SimpleMailMessage message = new SimpleMailMessage();
 				message.setFrom(StringUtils.trim(from));
 				message.setTo(Splitter.on(",").splitToList(notice.getMail().getTo()).stream().map(v -> {

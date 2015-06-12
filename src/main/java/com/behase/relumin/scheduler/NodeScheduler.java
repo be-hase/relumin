@@ -122,7 +122,7 @@ public class NodeScheduler {
 			} catch (Exception e) {
 			}
 		}
-		String from = StringUtils.defaultString(notice.getMail().getFrom(), noticeMailFrom);
+		String from = StringUtils.isNotBlank(notice.getMail().getFrom()) ? notice.getMail().getFrom() : noticeMailFrom;
 		boolean notNotifyByMail = StringUtils.isBlank(noticeMailHost) || noticeMailPort == 0
 			|| StringUtils.isBlank(from);
 		boolean notNotifyByHttp = StringUtils.isBlank(notice.getHttp().getUrl());

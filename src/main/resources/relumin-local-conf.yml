@@ -12,4 +12,4 @@ notice:
   mail:
     host: alpha-smtp.linegame.jp
     port: 25
-    from: 
+    from: ryosuke.hasebe@linecorp.com
