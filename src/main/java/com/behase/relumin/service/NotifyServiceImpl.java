@@ -50,7 +50,8 @@ public class NotifyServiceImpl implements NotifyService {
 		senderService.execute(new Runnable() {
 			@Override
 			public void run() {
-				String from = StringUtils.defaultString(notice.getMail().getFrom(), noticeMailFrom);
+				String from = StringUtils.isNotBlank(notice.getMail().getFrom()) ? notice.getMail().getFrom()
+					: noticeMailFrom;
 				if (mailSender != null && StringUtils.isNotBlank(from)) {
 					try {
 						notifyByMail(cluster, notice, jobs);
