@@ -19,6 +19,7 @@ import lombok.Data;
 
 @Data
 public class ReluminConfig {
+	private String host;
 	private ServerConfig server = new ServerConfig();
 	private RedisConfig redis = new RedisConfig();
 	private SchedulerConfig scheduler = new SchedulerConfig();
@@ -42,6 +43,9 @@ public class ReluminConfig {
 		validate();
 
 		Properties prop = new Properties();
+
+		//relumin
+		prop.setProperty("relumin.host", StringUtils.defaultString(host, ""));
 
 		// server
 		prop.setProperty("server.port", StringUtils.defaultString(server.getPort(), ServerConfig.DEFAULT_PORT));

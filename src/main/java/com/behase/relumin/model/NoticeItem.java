@@ -9,8 +9,8 @@ import lombok.Getter;
 
 @Data
 public class NoticeItem {
-	private String type;
-	private String field;
+	private String metricsType;
+	private String metricsName;
 	private String operator;
 	private String valueType;
 	private String value;

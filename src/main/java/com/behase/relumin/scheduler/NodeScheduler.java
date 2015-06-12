@@ -31,6 +31,7 @@ import com.behase.relumin.model.NoticeJob;
 import com.behase.relumin.model.NoticeJob.ResultValue;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.NodeService;
+import com.behase.relumin.service.NotifyService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -49,6 +50,9 @@ public class NodeScheduler {
 
 	@Autowired
 	JedisPool datastoreJedisPool;
+
+	@Autowired
+	NotifyService notifyService;
 
 	@Autowired
 	ObjectMapper mapper;
@@ -132,13 +136,13 @@ public class NodeScheduler {
 
 		List<NoticeJob> noticeJobs = Lists.newArrayList();
 		for (NoticeItem item : notice.getItems()) {
-			switch (NoticeType.getNoticeType(item.getType())) {
+			switch (NoticeType.getNoticeType(item.getMetricsType())) {
 				case CLUSTER_INFO:
 					String targetClusterInfoVal;
-					if ("cluster_state".equals(item.getField())) {
+					if ("cluster_state".equals(item.getMetricsName())) {
 						targetClusterInfoVal = cluster.getStatus();
 					} else {
-						targetClusterInfoVal = cluster.getInfo().get(item.getField());
+						targetClusterInfoVal = cluster.getInfo().get(item.getMetricsName());
 					}
 
 					if (isNotify(item.getValueType(), item.getOperator(), targetClusterInfoVal, item.getValue())) {
@@ -151,7 +155,7 @@ public class NodeScheduler {
 					for (Entry<ClusterNode, Map<String, String>> e : staticsInfos.entrySet()) {
 						ClusterNode node = e.getKey();
 						Map<String, String> staticsInfo = e.getValue();
-						String targetNodeInfoVal = staticsInfo.get(item.getField());
+						String targetNodeInfoVal = staticsInfo.get(item.getMetricsName());
 
 						if (isNotify(item.getValueType(), item.getOperator(), targetNodeInfoVal, item.getValue())) {
 							resultValues.add(new ResultValue(node.getNodeId(), node.getHostAndPort(), targetNodeInfoVal));
@@ -164,8 +168,11 @@ public class NodeScheduler {
 			}
 		}
 
-		// publish redis
-		log.debug("NOTIFY !! {}", noticeJobs);
+		if (!noticeJobs.isEmpty()) {
+			log.debug("NOTIFY !! {}", noticeJobs);
+			notifyService.notify(cluster, notice, noticeJobs);
+		}
+
 		log.debug("checkThresholdAndPublishNotify finish");
 	}
 
