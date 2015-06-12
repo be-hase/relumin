@@ -80,6 +80,9 @@ public class ReluminConfig {
 		if (notice.getMail().getPassword() != null) {
 			prop.setProperty("notice.mail.password", notice.getMail().getPassword());
 		}
+		if (notice.getMail().getFrom() != null) {
+			prop.setProperty("notice.mail.from", notice.getMail().getFrom());
+		}
 		prop.setProperty("notice.mail.charset", StringUtils.defaultString(notice.getMail().getCharset(), NoticeMailConfig.DEFAULT_CHARSET));
 
 		return prop;
