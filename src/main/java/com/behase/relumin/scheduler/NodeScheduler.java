@@ -161,7 +161,9 @@ public class NodeScheduler {
 							resultValues.add(new ResultValue(node.getNodeId(), node.getHostAndPort(), targetNodeInfoVal));
 						}
 					}
-					noticeJobs.add(new NoticeJob(item, resultValues));
+					if (resultValues.size() > 0) {
+						noticeJobs.add(new NoticeJob(item, resultValues));
+					}
 					break;
 				default:
 					break;
