@@ -110,6 +110,8 @@ public class NotifyServiceImpl implements NotifyService {
 				}).toArray(size -> new String[size]));
 				message.setSubject(String.format("[Relumin] Notification of \"%s\". Please check.", cluster.getClusterName()));
 				message.setText(text.toString());
+
+				log.info("Send mail. from={}, to={}", message.getFrom(), message.getTo());
 				mailSender.send(message);
 			}
 
