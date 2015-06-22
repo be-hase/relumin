@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <included>
 	<appender name="FileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>${log.dir:-logs}/relumin.log</file>
+		<file>${log.dir:-logs}/${log.name:-relumin}.log</file>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${log.dir:-logs}/relumin.%d{yyyy-MM-dd}.log</fileNamePattern>
-			<maxHistory>30</maxHistory>
+			<fileNamePattern>${log.dir:-logs}/${log.name:-relumin}.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxHistory>${log.history:-30}</maxHistory>
 		</rollingPolicy>
 		<encoder>
 			<Pattern>%date %t %X{req.remoteAddr} %-5level %logger{20}[%file:%method:%line] - %msg%n</Pattern>

@@ -11,6 +11,10 @@ scheduler:
   collectStaticsInfoIntervalMillis:0
   collectStaticsInfoMaxCount:10
 
+outputMetrics:
+  fluentd:
+    enabled: false
+
 # TEST PROPERTIES
 test:
   redis:
@@ -22,3 +26,4 @@ test:
     normalStandAloneAll: 192.168.33.11:9000,192.168.33.11:9001,192.168.33.11:9002
     emptyStandAlone: 192.168.33.11:9003
     emptyStandAloneAll: 192.168.33.11:9003,192.168.33.11:9004,192.168.33.11:9005
+

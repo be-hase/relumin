@@ -151,10 +151,22 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-context-support</artifactId>
 		</dependency>
+
+		<!-- flunetd -->
+		<dependency>
+			<groupId>org.fluentd</groupId>
+			<artifactId>fluent-logger</artifactId>
+			<version>0.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>2.10.4</version>
+		</dependency>
 		<dependency>
 			<groupId>org.neo4j</groupId>
-			<artifactId>neo4j-cypher-compiler-1.9</artifactId>
-			<version>2.0.3</version>
+			<artifactId>neo4j-cypher-compiler-2.1</artifactId>
+			<version>2.1.5</version>
 		</dependency>
 	</dependencies>
 

@@ -8,6 +8,7 @@ import java.util.TimeZone;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.fluentd.logger.FluentLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -26,7 +27,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 import redis.clients.jedis.JedisPool;
 
-import com.behase.relumin.config.NoticeMailConfig;
+import com.behase.relumin.config.NoticeConfig.NoticeMailConfig;
 import com.behase.relumin.config.ReluminConfig;
 import com.behase.relumin.interceptor.AddResponseHeaderInterceptor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -60,10 +61,7 @@ public class Application extends WebMvcConfigurerAdapter {
 	@Value("${notice.mail.port:0}")
 	private int noticeMailPort;
 
-	@Value("${notice.mail.from:}")
-	private String noticeMailFrom;
-
-	@Value("${notice.mail.charset:}")
+	@Value("${notice.mail.charset}")
 	private String noticeMailCharset;
 
 	@Value("${notice.mail.user:}")
@@ -71,6 +69,24 @@ public class Application extends WebMvcConfigurerAdapter {
 
 	@Value("${notice.mail.password:}")
 	private String noticeMailPassword;
+
+	@Value("${outputMetrics.fluentd.enabled}")
+	private boolean outputMetricsFluentdEnabled;
+
+	@Value("${outputMetrics.fluentd.host:}")
+	private String outputMetricsFluentdHost;
+
+	@Value("${outputMetrics.fluentd.port:0}")
+	private int outputMetricsFluentdPort;
+
+	@Value("${outputMetrics.fluentd.timeout}")
+	private int outputMetricsFluentdTimeout;
+
+	@Value("${outputMetrics.fluentd.bufferCapacity}")
+	private int outputMetricsFluentdBufferCapacity;
+
+	@Value("${outputMetrics.fluentd.tag}")
+	private String outputMetricsFluentdTag;
 
 	public static void main(String[] args) throws IOException {
 		String configLocation = System.getProperty(CONFIG_LOCATION, "relumin-local-conf.yml");
@@ -147,6 +163,19 @@ public class Application extends WebMvcConfigurerAdapter {
 			mailSender.setPassword(noticeMailPassword);
 		}
 		return mailSender;
+	}
+
+	@Bean(destroyMethod = "close")
+	public FluentLogger clusterFluentLogger() {
+		if (!outputMetricsFluentdEnabled || StringUtils.isBlank(outputMetricsFluentdHost)
+			|| outputMetricsFluentdPort == 0) {
+			return null;
+		}
+
+		return FluentLogger.getLogger(
+			outputMetricsFluentdTag, outputMetricsFluentdHost,
+			outputMetricsFluentdPort, outputMetricsFluentdTimeout,
+			outputMetricsFluentdBufferCapacity);
 	}
 
 	@Override

@@ -8,6 +8,8 @@ import java.util.Properties;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.ClassPathResource;
 
+import com.behase.relumin.config.NoticeConfig.NoticeMailConfig;
+import com.behase.relumin.config.OutputMetricsConfig.OutputMetricsFluentdConfig;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +26,7 @@ public class ReluminConfig {
 	private RedisConfig redis = new RedisConfig();
 	private SchedulerConfig scheduler = new SchedulerConfig();
 	private NoticeConfig notice = new NoticeConfig();
+	private OutputMetricsConfig outputMetrics = new OutputMetricsConfig();
 
 	private List<String> errors = Lists.newArrayList();
 
@@ -45,45 +48,147 @@ public class ReluminConfig {
 		Properties prop = new Properties();
 
 		//relumin
-		prop.setProperty("relumin.host", StringUtils.defaultString(host, ""));
+		prop.setProperty(
+			"relumin.host",
+			StringUtils.defaultString(host));
 
 		// server
-		prop.setProperty("server.port", StringUtils.defaultString(server.getPort(), ServerConfig.DEFAULT_PORT));
-		prop.setProperty("management.port", StringUtils.defaultString(server.getMonitorPort(), ServerConfig.DEFAULT_MONITOR_PORT));
+		prop.setProperty(
+			"server.port",
+			StringUtils.defaultIfBlank(
+				server.getPort(),
+				ServerConfig.DEFAULT_PORT));
+		prop.setProperty(
+			"management.port",
+			StringUtils.defaultIfBlank(
+				server.getMonitorPort(),
+				ServerConfig.DEFAULT_MONITOR_PORT));
 
 		// redis
-		prop.setProperty("redis.prefixKey", StringUtils.defaultString(redis.getPrefixKey(), RedisConfig.DEFAULT_PREFIX_KEY));
-		prop.setProperty("redis.host", redis.getHost());
-		prop.setProperty("redis.port", redis.getPort());
+		prop.setProperty(
+			"redis.prefixKey",
+			StringUtils.defaultIfBlank(
+				redis.getPrefixKey(),
+				RedisConfig.DEFAULT_PREFIX_KEY));
+		prop.setProperty(
+			"redis.host",
+			redis.getHost());
+		prop.setProperty(
+			"redis.port",
+			redis.getPort());
 
 		// scheduler
 		prop.setProperty(
 			"scheduler.refreshClustersIntervalMillis",
-			StringUtils.defaultString(scheduler.getRefreshClustersIntervalMillis(), SchedulerConfig.DEFAULT_REFRESH_CLUSTERS_INTERVAL_MILLIS));
+			StringUtils.defaultIfBlank(
+				scheduler.getRefreshClustersIntervalMillis(),
+				SchedulerConfig.DEFAULT_REFRESH_CLUSTERS_INTERVAL_MILLIS));
 		prop.setProperty(
 			"scheduler.collectStaticsInfoIntervalMillis",
-			StringUtils.defaultString(scheduler.getCollectStaticsInfoIntervalMillis(), SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS));
+			StringUtils.defaultIfBlank(
+				scheduler.getCollectStaticsInfoIntervalMillis(),
+				SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS));
 		prop.setProperty(
 			"scheduler.collectStaticsInfoMaxCount",
-			StringUtils.defaultString(scheduler.getCollectStaticsInfoMaxCount(), SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT));
+			StringUtils.defaultIfBlank(
+				scheduler.getCollectStaticsInfoMaxCount(),
+				SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT));
 
 		// notice email
 		if (notice.getMail().getHost() != null) {
-			prop.setProperty("notice.mail.host", notice.getMail().getHost());
+			prop.setProperty(
+				"notice.mail.host",
+				notice.getMail().getHost());
 		}
 		if (notice.getMail().getPort() != null) {
-			prop.setProperty("notice.mail.port", notice.getMail().getPort());
+			prop.setProperty(
+				"notice.mail.port",
+				notice.getMail().getPort());
 		}
 		if (notice.getMail().getUser() != null) {
-			prop.setProperty("notice.mail.user", notice.getMail().getUser());
+			prop.setProperty(
+				"notice.mail.user",
+				notice.getMail().getUser());
 		}
 		if (notice.getMail().getPassword() != null) {
-			prop.setProperty("notice.mail.password", notice.getMail().getPassword());
+			prop.setProperty(
+				"notice.mail.password",
+				notice.getMail().getPassword());
 		}
 		if (notice.getMail().getFrom() != null) {
-			prop.setProperty("notice.mail.from", notice.getMail().getFrom());
+			prop.setProperty(
+				"notice.mail.from",
+				notice.getMail().getFrom());
 		}
-		prop.setProperty("notice.mail.charset", StringUtils.defaultString(notice.getMail().getCharset(), NoticeMailConfig.DEFAULT_CHARSET));
+		prop.setProperty(
+			"notice.mail.charset",
+			StringUtils.defaultIfBlank(
+				notice.getMail().getCharset(),
+				NoticeMailConfig.DEFAULT_CHARSET));
+
+		// output metrics
+		// file
+		//		prop.setProperty(
+		//			"outputMetrics.file.enabled",
+		//			StringUtils.defaultIfBlank(
+		//				outputMetrics.getFile().getEnabled(),
+		//				OutputMetricsFileConfig.DEFAULT_ENABLED));
+		//		prop.setProperty(
+		//			"outputMetrics.file.name",
+		//			StringUtils.defaultIfBlank(
+		//				outputMetrics.getFile().getName(),
+		//				OutputMetricsFileConfig.DEFAULT_NAME));
+		//		prop.setProperty(
+		//			"outputMetrics.file.dir",
+		//			StringUtils.defaultIfBlank(
+		//				outputMetrics.getFile().getDir(),
+		//				OutputMetricsFileConfig.DEFAULT_DIR));
+		//		prop.setProperty(
+		//			"outputMetrics.file.maxSize",
+		//			StringUtils.defaultIfBlank(
+		//				outputMetrics.getFile().getMaxSize(),
+		//				OutputMetricsFileConfig.DEFAULT_MAX_SIZE));
+		//		prop.setProperty(
+		//			"outputMetrics.file.count",
+		//			StringUtils.defaultIfBlank(
+		//				outputMetrics.getFile().getCount(),
+		//				OutputMetricsFileConfig.DEFAULT_COUNT));
+		// fluentd
+		prop.setProperty(
+			"outputMetrics.fluentd.enabled",
+			StringUtils.defaultIfBlank(
+				outputMetrics.getFluentd().getEnabled(),
+				OutputMetricsFluentdConfig.DEFAULT_ENABLED));
+		if (outputMetrics.getFluentd().getHost() != null) {
+			prop.setProperty(
+				"outputMetrics.fluentd.host",
+				outputMetrics.getFluentd().getHost());
+		}
+		if (outputMetrics.getFluentd().getPort() != null) {
+			prop.setProperty(
+				"outputMetrics.fluentd.port",
+				outputMetrics.getFluentd().getPort());
+		}
+		prop.setProperty(
+			"outputMetrics.fluentd.timeout",
+			StringUtils.defaultIfBlank(
+				outputMetrics.getFluentd().getTimeout(),
+				OutputMetricsFluentdConfig.DEFAULT_TIMEOUT));
+		prop.setProperty(
+			"outputMetrics.fluentd.bufferCapacity",
+			StringUtils.defaultIfBlank(
+				outputMetrics.getFluentd().getBufferCapacity(),
+				OutputMetricsFluentdConfig.DEFAULT_BUFFER_CAPACITY));
+		prop.setProperty(
+			"outputMetrics.fluentd.tag",
+			StringUtils.defaultIfBlank(
+				outputMetrics.getFluentd().getTag(),
+				OutputMetricsFluentdConfig.DEFAULT_TAG));
+		prop.setProperty(
+			"outputMetrics.fluentd.nodeTag",
+			StringUtils.defaultIfBlank(
+				outputMetrics.getFluentd().getNodeTag(),
+				OutputMetricsFluentdConfig.DEFAULT_NODE_TAG));
 
 		return prop;
 	}
@@ -93,32 +198,45 @@ public class ReluminConfig {
 
 		// server
 		if (server.getPort() != null) {
-			check(isNumber(server.getPort()), "'server.port' must be numeric.");
+			check(isNumeric(server.getPort()), "'server.port' must be numeric.");
 		}
 		if (server.getMonitorPort() != null) {
-			check(isNumber(server.getMonitorPort()), "'server.monitorPort' must be numeric.");
+			check(isNumeric(server.getMonitorPort()), "'server.monitorPort' must be numeric.");
 		}
 
 		// redis
 		check(StringUtils.isNotBlank(redis.getHost()), "'redis.host' is blank.");
 		check(StringUtils.isNotBlank(redis.getPort()), "'redis.port' is blank.");
-		check(isNumber(redis.getPort()), "'redis.port' must be numeric.");
+		check(isNumeric(redis.getPort()), "'redis.port' must be numeric.");
 
 		// scheduler
 		if (scheduler.getRefreshClustersIntervalMillis() != null) {
-			check(isNumber(scheduler.getRefreshClustersIntervalMillis()), "'scheduler.refreshClustersIntervalMillis' must be numeric.");
+			check(isInteger(scheduler.getRefreshClustersIntervalMillis()), "'scheduler.refreshClustersIntervalMillis' must be integer.");
 		}
 		if (scheduler.getCollectStaticsInfoIntervalMillis() != null) {
-			check(isNumber(scheduler.getCollectStaticsInfoIntervalMillis()), "'scheduler.collectStaticsInfoIntervalMillis' must be numeric.");
+			check(isInteger(scheduler.getCollectStaticsInfoIntervalMillis()), "'scheduler.collectStaticsInfoIntervalMillis' must be integer.");
 		}
 		if (scheduler.getCollectStaticsInfoMaxCount() != null) {
-			check(isNumber(scheduler.getCollectStaticsInfoMaxCount()), "'scheduler.collectStaticsInfoMaxCount' must be numeric.");
+			check(isInteger(scheduler.getCollectStaticsInfoMaxCount()), "'scheduler.collectStaticsInfoMaxCount' must be numeric.");
 		}
 
 		// notice
 		// notice email
 		if (notice.getMail().getPort() != null) {
-			check(isNumber(notice.getMail().getPort()), "'notice.email.port' must be numeric.");
+			check(isNumeric(notice.getMail().getPort()), "'notice.email.port' must be numeric.");
+		}
+
+		// output metrics
+		// file
+		//		if (outputMetrics.getFile().getCount() != null) {
+		//			check(isNumeric(outputMetrics.getFile().getCount()), "'outputMetcis.file.count' must be numeric.");
+		//		}
+		// fluentd
+		if (outputMetrics.getFluentd().getTimeout() != null) {
+			check(isInteger(outputMetrics.getFluentd().getTimeout()), "'outputMetcis.fluentd.timeout' must be integer.");
+		}
+		if (outputMetrics.getFluentd().getBufferCapacity() != null) {
+			check(isInteger(outputMetrics.getFluentd().getBufferCapacity()), "'outputMetcis.fluentd.bufferCapacity' must be integer.");
 		}
 
 		if (errors.size() > 0) {
@@ -132,12 +250,16 @@ public class ReluminConfig {
 		}
 	}
 
-	private boolean isNumber(String str) {
+	private boolean isInteger(String str) {
 		try {
 			Integer.valueOf(str);
 			return true;
 		} catch (Exception e) {
 			return false;
 		}
+	}
+
+	private boolean isNumeric(String str) {
+		return StringUtils.isNumeric(str);
 	}
 }

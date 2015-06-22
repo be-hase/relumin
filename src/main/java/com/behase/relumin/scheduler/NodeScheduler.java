@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.fluentd.logger.FluentLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -57,6 +58,9 @@ public class NodeScheduler {
 	@Autowired
 	ObjectMapper mapper;
 
+	@Autowired
+	FluentLogger fluentLogger;
+
 	@Value("${scheduler.collectStaticsInfoMaxCount:" + SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT + "}")
 	private long collectStaticsInfoMaxCount;
 
@@ -71,6 +75,9 @@ public class NodeScheduler {
 
 	@Value("${notice.mail.from:}")
 	private String noticeMailFrom;
+
+	@Value("${outputMetrics.fluentd.nodeTag}")
+	private String outputMetricsFluentdNodeTag;
 
 	@Scheduled(fixedDelayString = "${scheduler.collectStaticsInfoIntervalMillis:"
 		+ SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS + "}")
@@ -101,12 +108,34 @@ public class NodeScheduler {
 					}
 				}
 
-				checkThresholdAndPublishNotify(notice, cluster, staticsInfos);
+				outputMetrics(cluster, staticsInfos);
+
+				if (notice != null) {
+					checkThresholdAndPublishNotify(notice, cluster, staticsInfos);
+				}
 			} catch (Exception e) {
 				log.error("collectStaticsIndo fail. {}", clusterName, e);
 			}
 		}
 		log.info("collectStaticsInfo finish");
+	}
+
+	public void outputMetrics(Cluster cluster, Map<ClusterNode, Map<String, String>> staticsInfos) {
+		if (fluentLogger != null) {
+			// node metrics
+			staticsInfos.forEach((clusterNode, statics) -> {
+				Map<String, Object> staticsObj = Maps.newHashMap();
+				statics.forEach((k, v) -> {
+					staticsObj.put(k, v);
+				});
+				staticsObj.put("node_id", clusterNode.getNodeId());
+				staticsObj.put("host_and_port", clusterNode.getHostAndPort());
+				log.info("Logging on fluentd.");
+				fluentLogger.log(
+					String.format("%s", outputMetricsFluentdNodeTag, clusterNode.getNodeId()),
+					staticsObj);
+			});
+		}
 	}
 
 	public void checkThresholdAndPublishNotify(Notice notice, Cluster cluster,
