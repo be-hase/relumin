@@ -93,9 +93,8 @@ public class NodeScheduler {
 
 				for (ClusterNode clusterNode : clusterNodes) {
 					try {
+						log.info("collectStaticsInfo clusterName={}, hostAndPort={}", clusterName, clusterNode.getHostAndPort());
 						Map<String, String> staticsInfo = nodeService.getStaticsInfo(clusterNode);
-						log.info("staticsInfo : {}", staticsInfo);
-
 						staticsInfos.put(clusterNode, staticsInfo);
 
 						try (Jedis jedis = datastoreJedisPool.getResource()) {
@@ -104,7 +103,7 @@ public class NodeScheduler {
 							jedis.ltrim(key, 0, collectStaticsInfoMaxCount - 1);
 						}
 					} catch (Exception e) {
-						log.error("collectStaticsIndo fail. {}, {}", clusterName, clusterNode.getHostAndPort(), e);
+						log.error("collectStaticsIndo fail. clusterName={}, hostAndPort={}", clusterName, clusterNode.getHostAndPort(), e);
 					}
 				}
 
