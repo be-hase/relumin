@@ -8,11 +8,8 @@ import com.behase.relumin.model.ClusterNode;
 public interface NodeService {
 	Map<String, String> getStaticsInfo(ClusterNode clusterNode);
 
-	List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
+	Map<String, List<List<Object>>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
 			long start, long end);
-
-	List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
-			long start, long end, boolean isTimeAsc);
 
 	void shutdown(String hostAndPort);
 }

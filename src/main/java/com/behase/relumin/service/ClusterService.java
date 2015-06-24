@@ -34,6 +34,6 @@ public interface ClusterService {
 
 	ClusterNode getActiveClusterNodeWithExcludeHostAndPort(String clusterName, String hostAndPort) throws IOException;
 
-	Map<String, List<Map<String, String>>> getClusterStaticsInfoHistory(String clusterName, List<String> nodes,
+	Map<String, Map<String, List<List<Object>>>> getClusterStaticsInfoHistory(String clusterName, List<String> nodes,
 			List<String> fields, long start, long end);
 }

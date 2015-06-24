@@ -7,3 +7,6 @@ management:
 spring:
   freemarker:
     charset: UTF-8
+
+build:
+  number: 1

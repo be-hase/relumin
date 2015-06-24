@@ -1,5 +1,7 @@
 package com.behase.relumin.service;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,7 @@ import redis.clients.jedis.JedisPool;
 
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
+import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.util.JedisUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -47,16 +50,20 @@ public class NodeServiceImpl implements NodeService {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
+	public Map<String, List<List<Object>>> getStaticsInfoHistory(String clusterName, String nodeId,
+			List<String> fields,
 			long start, long end) {
-		List<Map<String, String>> result = Lists.newArrayList();
+		if (end < start) {
+			throw new InvalidParameterException("End time must be larger than start time.");
+		}
 
+		List<Map<String, String>> rangeResult = Lists.newArrayList();
 		int startIndex = 0;
 		int endIndex = OFFSET;
 		boolean validStart = true;
 		boolean validEnd = true;
-
 		while (true && (validStart || validEnd)) {
 			log.debug("statics loop. startIndex : {}", startIndex);
 			List<Map<String, String>> staticsList = getStaticsInfoHistoryFromRedis(clusterName, nodeId, fields, startIndex, endIndex);
@@ -64,30 +71,113 @@ public class NodeServiceImpl implements NodeService {
 				break;
 			}
 			for (Map<String, String> statics : staticsList) {
-				Long timestamp = Long.valueOf(statics.get("_timestamp"));
+				long timestamp = Long.valueOf(statics.get("_timestamp"));
 				if (timestamp > end) {
 					validEnd = false;
 				} else if (timestamp < start) {
 					validStart = false;
 				} else {
-					result.add(statics);
+					rangeResult.add(statics);
 				}
 			}
 			startIndex += OFFSET + 1;
 			endIndex += OFFSET + 1;
 		}
+		Collections.reverse(rangeResult);
 
-		return result;
-	}
-
-	@Override
-	public List<Map<String, String>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
-			long start, long end, boolean isTimeAsc) {
-		List<Map<String, String>> result = getStaticsInfoHistory(clusterName, nodeId, fields, start, end);
-		if (!isTimeAsc) {
-			Collections.reverse(result);
+		long durationMillis = end - start;
+		long thresholdMillis;
+		if (durationMillis <= (long)1 * 24 * 60 * 60 * 1000) { // 1day
+			thresholdMillis = Long.MIN_VALUE;
+		} else if (durationMillis <= (long)7 * 24 * 60 * 60 * 1000) { // 7days
+			thresholdMillis = 5 * 60 * 1000;
+		} else if (durationMillis <= (long)30 * 24 * 60 * 60 * 1000) { // 30 days
+			thresholdMillis = 30 * 60 * 1000;
+		} else if (durationMillis <= (long)60 * 24 * 60 * 60 * 1000) { // 60 days
+			thresholdMillis = 1 * 60 * 60 * 1000;
+		} else if (durationMillis <= (long)120 * 24 * 60 * 60 * 1000) { // 120 days
+			thresholdMillis = 2 * 60 * 60 * 1000;
+		} else if (durationMillis <= (long)120 * 24 * 60 * 60 * 1000) { // 180 days
+			thresholdMillis = 6 * 60 * 60 * 1000;
+		} else if (durationMillis <= (long)365 * 24 * 60 * 60 * 1000) { // 1 years
+			thresholdMillis = 12 * 60 * 60 * 1000;
+		} else {
+			thresholdMillis = 24 * 60 * 60 * 1000;
 		}
-		return result;
+
+		Map<String, List<List<Object>>> averageResult = Maps.newHashMap();
+		fields.parallelStream().forEach(field -> {
+			List<List<Object>> fieldAverageResult = Lists.newArrayList();
+			long preTimestamp = 0;
+			BigDecimal sum = new BigDecimal(0);
+			long sumTs = 0;
+			int count = 0;
+
+			for (Map<String, String> val : rangeResult) {
+				long timestamp = Long.valueOf(val.get("_timestamp"));
+				BigDecimal value;
+				try {
+					value = new BigDecimal(val.get(field));
+				} catch (Exception e) {
+					break;
+				}
+
+				if (preTimestamp > timestamp) {
+					continue;
+				}
+
+				if (preTimestamp == 0) {
+					preTimestamp = timestamp;
+					sum = value;
+					sumTs = timestamp;
+					count = 1;
+					continue;
+				}
+
+				long curDurationMillis = timestamp - preTimestamp;
+				if (curDurationMillis < thresholdMillis) {
+					log.debug("Within threshold. value={}, curDurationSecs={}, thresholdSecs={}", value, curDurationMillis / 1000, thresholdMillis);
+					sum = sum.add(value);
+					sumTs += timestamp;
+					count++;
+				} else {
+					BigDecimal averageValue = new BigDecimal(0);
+					if (count != 0) {
+						averageValue = sum.divide(new BigDecimal(count), 4, BigDecimal.ROUND_HALF_UP);
+					}
+					long averageTs = 0;
+					if (count != 0) {
+						averageTs = sumTs / count;
+					}
+					log.debug("ESCAPE threshold. averageValue={}, averageTs={}, sum={}, sumTs={}, sumCount={}", averageValue, averageTs, sum, sumTs, count);
+					fieldAverageResult.add(Lists.newArrayList(averageTs, averageValue.doubleValue()));
+
+					preTimestamp = 0;
+					sum = new BigDecimal(0);
+					sumTs = 0;
+					count = 0;
+				}
+			}
+
+			if (preTimestamp != 0) {
+				BigDecimal averageValue = new BigDecimal(0);
+				if (count != 0) {
+					averageValue = sum.divide(new BigDecimal(count), 4, BigDecimal.ROUND_HALF_UP);
+				}
+				long averageTs = 0;
+				if (count != 0) {
+					averageTs = sumTs / count;
+				}
+				log.debug("ESCAPE threshold. averageValue={}, averageTs={}, sum={}, sumTs={}, sumCount={}", averageValue, averageTs, sum, sumTs, count);
+				fieldAverageResult.add(Lists.newArrayList(averageTs, averageValue.doubleValue()));
+			}
+
+			log.debug("fieldAverageResult : {}", fieldAverageResult);
+
+			averageResult.put(field, fieldAverageResult);
+		});
+
+		return averageResult;
 	}
 
 	@Override
@@ -125,14 +215,12 @@ public class NodeServiceImpl implements NodeService {
 
 	private List<Map<String, String>> filterGetStaticsInfoHistory(List<Map<String, String>> staticsInfos,
 			List<String> fields) {
-		if (fields.isEmpty()) {
-			return staticsInfos;
-		}
-		fields.add("_timestamp");
+		List<String> copyedFields = new ArrayList<String>(fields);
+		copyedFields.add("_timestamp");
 
 		return staticsInfos.stream().map(v -> {
 			Map<String, String> item = Maps.newHashMap();
-			fields.forEach(field -> {
+			copyedFields.forEach(field -> {
 				item.put(field, v.get(field));
 			});
 			return item;

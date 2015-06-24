@@ -6,12 +6,26 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import org.junit.Before;
 import org.junit.Test;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class NodeSchedulerTest {
 	private NodeScheduler nodeScheduler;
 
 	@Before
 	public void setUp() {
 		nodeScheduler = new NodeScheduler();
+	}
+
+	@Test
+	public void test() throws InterruptedException {
+		int i = 0;
+		long sum = 0;
+		while (true) {
+			log.debug("i={}, sum={}", i, sum);
+			sum += System.currentTimeMillis();
+			i++;
+		}
 	}
 
 	@Test

@@ -11,13 +11,15 @@
         <link href="/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet">
         <link href="/vendor/bootstrap-dark/css/theme.css" rel="stylesheet">
         <link href="/vendor/react-select/css/default.css" rel="stylesheet">
-        <link href="/css/app.css" rel="stylesheet">
+        <link href="/css/app.css?${buildNumber}" rel="stylesheet">
     </head>
     <body>
         <div id="app">
         </div>
-        <script src="/js/app.js"></script>
+        <script src="/js/app.js?${buildNumber}"></script>
         <script>
+            var COLLECT_METRICS_INTERVAL_MILLS = '${collectStaticsInfoIntervalMillis?js_string}';
+            
             Highcharts.setOptions({
                 global: {
                     useUTC: false
@@ -51,6 +53,7 @@
                     gridLineColor: '#707073',
                     labels: {
                         style: {
+                            fontSize: '10px',
                             color: '#E0E0E3'
                         }
                     },
@@ -59,6 +62,7 @@
                     tickColor: '#707073',
                     title: {
                         style: {
+                            fontSize: '10px',
                             color: '#A0A0A3'
                         }
                     }
@@ -67,6 +71,7 @@
                     gridLineColor: '#707073',
                     labels: {
                         style: {
+                            fontSize: '10px',
                             color: '#E0E0E3'
                         }
                     },
@@ -76,6 +81,7 @@
                     tickWidth: 1,
                     title: {
                         style: {
+                            fontSize: '10px',
                             color: '#A0A0A3'
                         }
                     },
@@ -119,6 +125,7 @@
                 },
                 legend: {
                     itemStyle: {
+                        fontSize: '11px',
                         color: '#E0E0E3'
                     },
                     itemHoverStyle: {

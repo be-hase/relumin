@@ -136,6 +136,9 @@ public class ClusterApiController {
 		if (StringUtils.isNotBlank(fields)) {
 			fieldsList.addAll(Splitter.on(",").splitToList(fields));
 		}
+		if (fieldsList.isEmpty()) {
+			throw new InvalidParameterException("'fields' is empty.");
+		}
 
 		return clusterService.getClusterStaticsInfoHistory(clusterName, nodesList, fieldsList, startLong, endLong);
 	}

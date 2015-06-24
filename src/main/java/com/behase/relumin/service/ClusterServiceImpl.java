@@ -19,6 +19,7 @@ import redis.clients.jedis.exceptions.JedisException;
 
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
+import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.Notice;
@@ -319,13 +320,18 @@ public class ClusterServiceImpl implements ClusterService {
 	}
 
 	@Override
-	public Map<String, List<Map<String, String>>> getClusterStaticsInfoHistory(String clusterName, List<String> nodes,
+	public Map<String, Map<String, List<List<Object>>>> getClusterStaticsInfoHistory(String clusterName,
+			List<String> nodes,
 			List<String> fields, long start, long end) {
-		Map<String, List<Map<String, String>>> result = Maps.newLinkedHashMap();
+		if (end < start) {
+			throw new InvalidParameterException("End time must be larger than start time.");
+		}
+
+		Map<String, Map<String, List<List<Object>>>> result = Maps.newLinkedHashMap();
 
 		for (String nodeId : nodes) {
 			log.debug("node loop : {}", nodeId);
-			List<Map<String, String>> staticsInfoHistory = nodeService.getStaticsInfoHistory(clusterName, nodeId, fields, start, end);
+			Map<String, List<List<Object>>> staticsInfoHistory = nodeService.getStaticsInfoHistory(clusterName, nodeId, fields, start, end);
 			if (!staticsInfoHistory.isEmpty()) {
 				result.put(nodeId, staticsInfoHistory);
 			}
