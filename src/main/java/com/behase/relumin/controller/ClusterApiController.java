@@ -92,17 +92,6 @@ public class ClusterApiController {
 		return result;
 	}
 
-	@RequestMapping(value = "/cluster/{clusterName}", method = RequestMethod.DELETE)
-	public Map<String, Boolean> deleteCluster(
-			@PathVariable String clusterName
-			) {
-		clusterService.deleteCluster(clusterName);
-
-		Map<String, Boolean> result = Maps.newHashMap();
-		result.put("isSuccess", true);
-		return result;
-	}
-
 	@RequestMapping(value = "/cluster/{clusterName}/metrics", method = {RequestMethod.GET, RequestMethod.POST})
 	public Object getMetrics(
 			@PathVariable String clusterName,

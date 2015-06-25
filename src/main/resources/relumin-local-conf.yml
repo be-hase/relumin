@@ -1,5 +1,8 @@
 host: localhost
 
+auth:
+  enabled: false
+
 server:
   port: 8080
   monitorPort: 20080

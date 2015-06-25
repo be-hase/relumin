@@ -22,6 +22,7 @@ import lombok.Data;
 @Data
 public class ReluminConfig {
 	private String host;
+	private AuthConfig auth = new AuthConfig();
 	private ServerConfig server = new ServerConfig();
 	private RedisConfig redis = new RedisConfig();
 	private SchedulerConfig scheduler = new SchedulerConfig();
@@ -51,6 +52,18 @@ public class ReluminConfig {
 		prop.setProperty(
 			"relumin.host",
 			StringUtils.defaultString(host));
+
+		// auth
+		prop.setProperty(
+			"auth.enabled",
+			StringUtils.defaultIfBlank(
+				auth.getEnabled(),
+				AuthConfig.DEFAULT_ENABLED));
+		prop.setProperty(
+			"auth.loggingOperation",
+			StringUtils.defaultIfBlank(
+				auth.getLoggingOperation(),
+				AuthConfig.DEFAULT_LOGGING_OPERATION));
 
 		// server
 		prop.setProperty(
@@ -203,6 +216,8 @@ public class ReluminConfig {
 		if (server.getMonitorPort() != null) {
 			check(isNumeric(server.getMonitorPort()), "'server.monitorPort' must be numeric.");
 		}
+
+		// auth
 
 		// redis
 		check(StringUtils.isNotBlank(redis.getHost()), "'redis.host' is blank.");

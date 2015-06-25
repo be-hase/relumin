@@ -19,6 +19,16 @@
         <script src="/js/app.js?${buildNumber}"></script>
         <script>
             var COLLECT_METRICS_INTERVAL_MILLS = '${collectStaticsInfoIntervalMillis?js_string}';
+            var AUTH_ENABLED = ${authEnabled?string?js_string};
+            var USER = {
+            <#if authEnabled>
+                username: '${loginUser.username?js_string}',
+                role: '${loginUser.role?js_string}'
+            <#else>
+                username: '',
+                role: ''
+            </#if>
+            };
             
             Highcharts.setOptions({
                 global: {

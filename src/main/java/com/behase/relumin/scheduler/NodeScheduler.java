@@ -98,7 +98,7 @@ public class NodeScheduler {
 						staticsInfos.put(clusterNode, staticsInfo);
 
 						try (Jedis jedis = datastoreJedisPool.getResource()) {
-							String key = Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
+							String key = Constants.getNodeStaticsInfoRedisKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
 							jedis.lpush(key, mapper.writeValueAsString(staticsInfo));
 							jedis.ltrim(key, 0, collectStaticsInfoMaxCount - 1);
 						}

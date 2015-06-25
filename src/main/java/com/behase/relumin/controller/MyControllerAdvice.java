@@ -19,8 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ControllerAdvice
 @Configuration
-public class ExceptionHandlerAdvice {
-
+public class MyControllerAdvice {
 	@ExceptionHandler(Exception.class)
 	@ResponseBody
 	public ResponseEntity<ErrorResponse> allExceptionHandler(Exception e, HttpServletRequest request,

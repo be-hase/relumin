@@ -92,7 +92,7 @@ public class RedisTribApiController {
 		return ImmutableMap.of("errors", redisTibService.checkCluster(node.getHostAndPort()));
 	}
 
-	@RequestMapping(value = "/fix", method = RequestMethod.GET)
+	@RequestMapping(value = "/fix", method = RequestMethod.POST)
 	public Object fixCluster(
 			@RequestParam(defaultValue = "") String clusterName
 			) throws Exception {

@@ -325,7 +325,7 @@ public class ApiTest {
 
 		MvcResult result;
 		result = mockMvc.perform(
-			get("/api/trib/check")
+			post("/api/trib/check")
 				.param("clusterName", "test")
 			)
 			.andExpect(jsonPath("$.errors").isArray())
