@@ -22,9 +22,11 @@
             var AUTH_ENABLED = ${authEnabled?string?js_string};
             var USER = {
             <#if authEnabled>
+                login: true,
                 username: '${loginUser.username?js_string}',
                 role: '${loginUser.role?js_string}'
             <#else>
+                login: false,
                 username: '',
                 role: ''
             </#if>
