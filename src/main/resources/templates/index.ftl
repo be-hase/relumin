@@ -20,16 +20,10 @@
         <script>
             var COLLECT_METRICS_INTERVAL_MILLS = '${collectStaticsInfoIntervalMillis?js_string}';
             var AUTH_ENABLED = ${authEnabled?string?js_string};
+            var AUTH_ALLOW_ANONYMOUS = ${authAllowAnonymous?string?js_string};
             var USER = {
-            <#if authEnabled>
-                login: true,
-                username: '${loginUser.username?js_string}',
-                role: '${loginUser.role?js_string}'
-            <#else>
-                login: false,
-                username: '',
-                role: ''
-            </#if>
+                login: ${login?string?js_string},
+                username: '${loginUsername?js_string}'
             };
             
             Highcharts.setOptions({

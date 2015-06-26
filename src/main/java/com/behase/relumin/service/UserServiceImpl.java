@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.StandardPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import redis.clients.jedis.Jedis;
@@ -15,6 +16,7 @@ import redis.clients.jedis.JedisPool;
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.LoginUser;
+import com.behase.relumin.model.Role;
 import com.behase.relumin.util.ValidationUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,15 +73,17 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public void addUser(String username, String password, String role) throws Exception {
-		ValidationUtils.notBlank(username, "username");
-		if (username.length() > 255) {
-			throw new InvalidParameterException("username must be less than 256.");
+	public void addUser(String username, String displayName, String password, String role) throws Exception {
+		ValidationUtils.username(username);
+
+		ValidationUtils.notBlank(displayName, "displayName");
+		if (displayName.length() > 255) {
+			throw new InvalidParameterException("displayName must be less than 256.");
 		}
 
 		ValidationUtils.notBlank(password, "password");
 		if (password.length() < 8) {
-			throw new InvalidParameterException("username must be more than 8.");
+			throw new InvalidParameterException("username must be more than or equal to 8.");
 		}
 		if (password.length() > 255) {
 			throw new InvalidParameterException("username must be less than 256.");
@@ -96,7 +100,7 @@ public class UserServiceImpl implements UserService {
 		if (users == null) {
 			users = Lists.newArrayList();
 		}
-		users.add(new LoginUser(username, password, role));
+		users.add(new LoginUser(username, displayName, password, role));
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
 			String key = Constants.getUsersRedisKey(redisPrefixKey);
 			String json = mapper.writeValueAsString(users);
@@ -105,13 +109,22 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public void changePassword(String username, String password) throws Exception {
+	public void changePassword(String username, String oldPassword, String password) throws Exception {
+		ValidationUtils.notBlank(password, "password");
+		if (password.length() < 8) {
+			throw new InvalidParameterException("username must be more than 8.");
+		}
+		if (password.length() > 255) {
+			throw new InvalidParameterException("username must be less than 256.");
+		}
+
 		List<LoginUser> users = getUsers();
-		LoginUser user = users.stream().filter(v -> {
-			return StringUtils.equalsIgnoreCase(username, v.getUsername());
-		}).findFirst().orElseThrow(() -> {
-			throw new InvalidParameterException(String.format("'%s does not exist.'", username));
-		});
+		LoginUser user = getUser(users, username);
+
+		StandardPasswordEncoder encoder = new StandardPasswordEncoder();
+		if (!encoder.matches(oldPassword, user.getPassword())) {
+			throw new InvalidParameterException(String.format("Old password does not match."));
+		}
 
 		user.setRawPassword(password);
 
@@ -125,11 +138,7 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public void deleteUser(String username) throws Exception {
 		List<LoginUser> users = getUsers();
-		LoginUser user = users.stream().filter(v -> {
-			return StringUtils.equalsIgnoreCase(username, v.getUsername());
-		}).findFirst().orElseThrow(() -> {
-			throw new InvalidParameterException(String.format("'%s does not exist.'", username));
-		});
+		LoginUser user = getUser(users, username);
 
 		users.remove(user);
 
@@ -138,5 +147,36 @@ public class UserServiceImpl implements UserService {
 			String json = mapper.writeValueAsString(users);
 			dataStoreJedis.set(key, json);
 		}
+	}
+
+	@Override
+	public void updateUser(String username, String displayName, String role) throws Exception {
+		List<LoginUser> users = getUsers();
+		LoginUser user = getUser(users, username);
+
+		if (displayName.length() > 255) {
+			throw new InvalidParameterException("displayName must be less than 256.");
+		}
+
+		if (StringUtils.isNotBlank(displayName)) {
+			user.setDisplayName(displayName);
+		}
+		if (StringUtils.isNotBlank(role)) {
+			user.setRole(Role.get(role).getAuthority());
+		}
+
+		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
+			String key = Constants.getUsersRedisKey(redisPrefixKey);
+			String json = mapper.writeValueAsString(users);
+			dataStoreJedis.set(key, json);
+		}
+	}
+
+	private LoginUser getUser(List<LoginUser> users, String username) {
+		return users.stream().filter(v -> {
+			return StringUtils.equalsIgnoreCase(username, v.getUsername());
+		}).findFirst().orElseThrow(() -> {
+			throw new InvalidParameterException(String.format("'%s' does not exist.", username));
+		});
 	}
 }

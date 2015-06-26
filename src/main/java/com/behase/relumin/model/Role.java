@@ -19,15 +19,12 @@ public class Role implements GrantedAuthority {
 	}
 
 	public static final Role VIEWER = new Role("VIEWER");
-	public static final Role REDIS_ADMIN = new Role("REDIS_ADMIN");
 	public static final Role RELUMIN_ADMIN = new Role("RELUMIN_ADMIN");
 
 	public static Role get(String role) {
 		switch (role) {
 			case "VIEWER":
 				return VIEWER;
-			case "REDIS_ADMIN":
-				return REDIS_ADMIN;
 			case "RELUMIN_ADMIN":
 				return RELUMIN_ADMIN;
 			default:

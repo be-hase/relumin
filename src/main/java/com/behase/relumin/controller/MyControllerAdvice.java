@@ -6,10 +6,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.context.request.NativeWebRequest;
 
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.ErrorResponse;
@@ -29,13 +33,14 @@ public class MyControllerAdvice {
 	}
 
 	@ExceptionHandler(MissingServletRequestParameterException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	@ResponseBody
-	public ResponseEntity<ErrorResponse> missingServletRequestParameterExceptionHandler(
+	public ErrorResponse missingServletRequestParameterExceptionHandler(
 			MissingServletRequestParameterException e,
 			HttpServletRequest request,
 			HttpServletResponse response) {
 		log.warn("handle Exception.", e); // 意図しているExceptionなので、warn logを出す。
-		return new ResponseEntity<ErrorResponse>(new ErrorResponse("400", "Invalid parameter."), HttpStatus.BAD_REQUEST);
+		return new ErrorResponse("400", "Invalid parameter.");
 	}
 
 	@ExceptionHandler(ApiException.class)
@@ -43,10 +48,29 @@ public class MyControllerAdvice {
 	public ResponseEntity<Object> apiExceptionHandler(ApiException e, HttpServletRequest request,
 			HttpServletResponse response) {
 		if (e.getHttpStatus().is5xxServerError()) {
-			log.error("apiExceptionHandler.", e);
+			log.error("handle Exception.", e);
 		} else {
-			log.warn("apiExceptionHandler.", e);
+			log.warn("handle Exception.", e);
 		}
 		return new ResponseEntity<Object>(e.getErrorResponse(), e.getHttpStatus());
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	@ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+	@ResponseBody
+	public ErrorResponse httpRequestMethodNotSupportedExceptionHandle(
+			final HttpRequestMethodNotSupportedException e,
+			final NativeWebRequest request) {
+		log.warn("handle Exception.", e); // 意図しているExceptionなので、warn logを出す。
+		return new ErrorResponse("405", e.getMessage());
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	@ResponseBody
+	public ErrorResponse httpMessageNotReadableExceptionHandle(final HttpMessageNotReadableException e,
+			final NativeWebRequest request) {
+		log.warn("handle Exception.", e); // 意図しているExceptionなので、warn logを出す。
+		return new ErrorResponse("400", "Invalid parameter.");
 	}
 }

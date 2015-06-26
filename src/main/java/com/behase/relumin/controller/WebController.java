@@ -27,6 +27,9 @@ public class WebController {
 	@Value("${auth.enabled}")
 	private boolean authEnabled;
 
+	@Value("${auth.allowAnonymous}")
+	private boolean authAllowAnonymous;
+
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public String getClusterList(
 			Authentication authentication,
@@ -35,9 +38,14 @@ public class WebController {
 		model.addAttribute("buildNumber", buildNumber);
 		model.addAttribute("collectStaticsInfoIntervalMillis", collectStaticsInfoIntervalMillis);
 		model.addAttribute("authEnabled", authEnabled);
+		model.addAttribute("authAllowAnonymous", authAllowAnonymous);
 		if (authEnabled && authentication != null) {
 			LoginUser loginUser = userService.getUser(authentication.getName());
-			model.addAttribute("loginUser", loginUser);
+			model.addAttribute("loginUsername", loginUser.getUsername());
+			model.addAttribute("login", true);
+		} else {
+			model.addAttribute("loginUsername", "");
+			model.addAttribute("login", false);
 		}
 		return "/index";
 	}

@@ -1,7 +1,9 @@
 host: localhost
 
 auth:
-  enabled: false
+  enabled: true
+  loggingOperation: false
+  allowAnonymous: true
 
 server:
   port: 8080

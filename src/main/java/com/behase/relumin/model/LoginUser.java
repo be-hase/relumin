@@ -13,11 +13,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class LoginUser {
 	private String username;
+	private String displayName;
 	private String password;
 	private String role;
 
-	public LoginUser(String username, String rawPassword, String role) {
+	public LoginUser(String username, String displayName, String rawPassword, String role) {
 		this.username = username;
+		this.displayName = displayName;
 		this.password = new StandardPasswordEncoder().encode(rawPassword);
 		this.role = Role.get(role).getAuthority();
 	}

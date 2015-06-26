@@ -64,6 +64,11 @@ public class ReluminConfig {
 			StringUtils.defaultIfBlank(
 				auth.getLoggingOperation(),
 				AuthConfig.DEFAULT_LOGGING_OPERATION));
+		prop.setProperty(
+			"auth.allowAnonymous",
+			StringUtils.defaultIfBlank(
+				auth.getAllowAnonymous(),
+				AuthConfig.DEFAULT_ALLOW_ANONYMOUS));
 
 		// server
 		prop.setProperty(

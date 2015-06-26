@@ -36,29 +36,53 @@ public class UserApiController {
 	public Object add(
 			Authentication authentication,
 			@PathVariable String username,
-			@RequestParam(defaultValue = "") String password,
-			@RequestParam(defaultValue = "") String role
+			@RequestParam(defaultValue = "") String displayName,
+			@RequestParam(defaultValue = "") String role,
+			@RequestParam(defaultValue = "") String password
 			) throws Exception {
-		userService.addUser(username, password, role);
+		userService.addUser(username, displayName, password, role);
 		return userService.getUser(username);
 	}
 
-	@RequestMapping(value = "/change-password", method = RequestMethod.POST)
+	@RequestMapping(value = "/user/{username}/update", method = RequestMethod.POST)
+	public Object update(
+			@PathVariable String username,
+			@RequestParam(defaultValue = "") String displayName,
+			@RequestParam(defaultValue = "") String role
+			) throws Exception {
+		userService.updateUser(username, displayName, role);
+		return userService.getUser(username);
+	}
+
+	@RequestMapping(value = "/me/update", method = RequestMethod.POST)
+	public Object updateMe(
+			Authentication authentication,
+			@RequestParam(defaultValue = "") String displayName
+			) throws Exception {
+		if (authentication == null) {
+			throw new InvalidParameterException("You are not loggedin.");
+		}
+		String username = authentication.getName();
+		userService.updateUser(username, displayName, null);
+		return userService.getUser(username);
+	}
+
+	@RequestMapping(value = "/me/change-password", method = RequestMethod.POST)
 	public Object changePassword(
 			Authentication authentication,
+			@RequestParam(defaultValue = "") String oldPassword,
 			@RequestParam(defaultValue = "") String password
 			) throws Exception {
 		if (authentication == null) {
 			throw new InvalidParameterException("You are not loggedin.");
 		}
 		String username = authentication.getName();
-		userService.changePassword(username, password);
+		userService.changePassword(username, oldPassword, password);
 		return userService.getUser(username);
 	}
 
 	@RequestMapping(value = "/user/{username}/delete", method = RequestMethod.POST)
 	public Object delete(
-			Authentication authentication,
 			@PathVariable String username
 			) throws Exception {
 		userService.deleteUser(username);
