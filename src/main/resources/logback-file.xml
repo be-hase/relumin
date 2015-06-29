@@ -22,7 +22,7 @@
 		</encoder>
 	</appender>
 	
-	<logger name="com.behase.relumin" level="${log.level:-WARN}" />
+	<logger name="com.behase.relumin" level="${log.level:-INFO}" />
 	
 	<logger name="logging_operation" level="INFO">
 		<appender-ref ref="logging_operation" />
