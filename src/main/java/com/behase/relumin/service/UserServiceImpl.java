@@ -176,7 +176,7 @@ public class UserServiceImpl implements UserService {
 		return users.stream().filter(v -> {
 			return StringUtils.equalsIgnoreCase(username, v.getUsername());
 		}).findFirst().orElseThrow(() -> {
-			throw new InvalidParameterException(String.format("'%s' does not exist.", username));
+			return new InvalidParameterException(String.format("'%s' does not exist.", username));
 		});
 	}
 }
