@@ -320,20 +320,6 @@ public class ApiTest {
 	}
 
 	@Test
-	public void fix() throws Exception {
-		createBasicCluster();
-
-		MvcResult result;
-		result = mockMvc.perform(
-			post("/api/trib/check")
-				.param("clusterName", "test")
-			)
-			.andExpect(jsonPath("$.errors").isArray())
-			.andReturn();
-		log.debug(result.getResponse().getContentAsString());
-	}
-
-	@Test
 	public void reshard() throws Exception {
 		createBasicCluster();
 

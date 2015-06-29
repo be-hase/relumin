@@ -28,13 +28,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class NotifyServiceImpl implements NotifyService {
-	@Value("${relumin.host:}")
+	@Value("${relumin.host}")
 	private String reluminHost;
 
-	@Value("${server.port:}")
+	@Value("${server.port}")
 	private String serverPort;
 
-	@Value("${notice.mail.from:}")
+	@Value("${notice.mail.from}")
 	private String noticeMailFrom;
 
 	@Autowired

@@ -60,11 +60,6 @@ public class ReluminConfig {
 				auth.getEnabled(),
 				AuthConfig.DEFAULT_ENABLED));
 		prop.setProperty(
-			"auth.loggingOperation",
-			StringUtils.defaultIfBlank(
-				auth.getLoggingOperation(),
-				AuthConfig.DEFAULT_LOGGING_OPERATION));
-		prop.setProperty(
 			"auth.allowAnonymous",
 			StringUtils.defaultIfBlank(
 				auth.getAllowAnonymous(),
@@ -113,31 +108,31 @@ public class ReluminConfig {
 				SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT));
 
 		// notice email
-		if (notice.getMail().getHost() != null) {
-			prop.setProperty(
-				"notice.mail.host",
-				notice.getMail().getHost());
-		}
-		if (notice.getMail().getPort() != null) {
-			prop.setProperty(
-				"notice.mail.port",
-				notice.getMail().getPort());
-		}
-		if (notice.getMail().getUser() != null) {
-			prop.setProperty(
-				"notice.mail.user",
-				notice.getMail().getUser());
-		}
-		if (notice.getMail().getPassword() != null) {
-			prop.setProperty(
-				"notice.mail.password",
-				notice.getMail().getPassword());
-		}
-		if (notice.getMail().getFrom() != null) {
-			prop.setProperty(
-				"notice.mail.from",
-				notice.getMail().getFrom());
-		}
+		prop.setProperty(
+			"notice.mail.host",
+			StringUtils.defaultIfBlank(
+				notice.getMail().getHost(),
+				NoticeMailConfig.DEFAULT_HOST));
+		prop.setProperty(
+			"notice.mail.port",
+			StringUtils.defaultIfBlank(
+				notice.getMail().getPort(),
+				NoticeMailConfig.DEFAULT_PORT));
+		prop.setProperty(
+			"notice.mail.user",
+			StringUtils.defaultIfBlank(
+				notice.getMail().getUser(),
+				NoticeMailConfig.DEFAULT_USER));
+		prop.setProperty(
+			"notice.mail.password",
+			StringUtils.defaultIfBlank(
+				notice.getMail().getPassword(),
+				NoticeMailConfig.DEFAULT_PASSWORD));
+		prop.setProperty(
+			"notice.mail.from",
+			StringUtils.defaultIfBlank(
+				notice.getMail().getFrom(),
+				NoticeMailConfig.DEFAULT_FROM));
 		prop.setProperty(
 			"notice.mail.charset",
 			StringUtils.defaultIfBlank(
@@ -177,16 +172,16 @@ public class ReluminConfig {
 			StringUtils.defaultIfBlank(
 				outputMetrics.getFluentd().getEnabled(),
 				OutputMetricsFluentdConfig.DEFAULT_ENABLED));
-		if (outputMetrics.getFluentd().getHost() != null) {
-			prop.setProperty(
-				"outputMetrics.fluentd.host",
-				outputMetrics.getFluentd().getHost());
-		}
-		if (outputMetrics.getFluentd().getPort() != null) {
-			prop.setProperty(
-				"outputMetrics.fluentd.port",
-				outputMetrics.getFluentd().getPort());
-		}
+		prop.setProperty(
+			"outputMetrics.fluentd.host",
+			StringUtils.defaultIfBlank(
+				outputMetrics.getFluentd().getHost(),
+				OutputMetricsFluentdConfig.DEFAULT_HOST));
+		prop.setProperty(
+			"outputMetrics.fluentd.port",
+			StringUtils.defaultIfBlank(
+				outputMetrics.getFluentd().getPort(),
+				OutputMetricsFluentdConfig.DEFAULT_PORT));
 		prop.setProperty(
 			"outputMetrics.fluentd.timeout",
 			StringUtils.defaultIfBlank(

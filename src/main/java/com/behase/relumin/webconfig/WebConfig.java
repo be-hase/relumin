@@ -34,7 +34,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	@Autowired
 	private AddResponseHeaderInterceptor addResponseHeaderInterceptor;
 
-	@Value("${auth.enabled:false}")
+	@Value("${auth.enabled}")
 	private boolean authEnabled;
 
 	@Value("${redis.host}")
@@ -43,28 +43,28 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	@Value("${redis.port}")
 	private int redisPort;
 
-	@Value("${notice.mail.host:}")
+	@Value("${notice.mail.host}")
 	private String noticeMailHost;
 
-	@Value("${notice.mail.port:0}")
+	@Value("${notice.mail.port}")
 	private int noticeMailPort;
 
 	@Value("${notice.mail.charset}")
 	private String noticeMailCharset;
 
-	@Value("${notice.mail.user:}")
+	@Value("${notice.mail.user}")
 	private String noticeMailUser;
 
-	@Value("${notice.mail.password:}")
+	@Value("${notice.mail.password}")
 	private String noticeMailPassword;
 
 	@Value("${outputMetrics.fluentd.enabled}")
 	private boolean outputMetricsFluentdEnabled;
 
-	@Value("${outputMetrics.fluentd.host:}")
+	@Value("${outputMetrics.fluentd.host}")
 	private String outputMetricsFluentdHost;
 
-	@Value("${outputMetrics.fluentd.port:0}")
+	@Value("${outputMetrics.fluentd.port}")
 	private int outputMetricsFluentdPort;
 
 	@Value("${outputMetrics.fluentd.timeout}")
@@ -133,7 +133,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 		mailSender.setHost(noticeMailHost);
 		mailSender.setPort(noticeMailPort);
 		mailSender.setDefaultEncoding(StringUtils.defaultString(noticeMailCharset, NoticeMailConfig.DEFAULT_CHARSET));
-		if (StringUtils.isNotBlank(noticeMailUser) && StringUtils.isNotBlank(noticeMailPassword)) {
+		if (StringUtils.isNotBlank(noticeMailUser)) {
 			mailSender.setUsername(noticeMailUser);
 			mailSender.setPassword(noticeMailPassword);
 		}

@@ -2,7 +2,6 @@ host: localhost
 
 auth:
   enabled: true
-  loggingOperation: false
   allowAnonymous: true
 
 server:
