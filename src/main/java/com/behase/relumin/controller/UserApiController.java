@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.LoginUser;
+import com.behase.relumin.service.LoggingOperationService;
 import com.behase.relumin.service.UserService;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -23,6 +24,9 @@ import com.google.common.collect.Maps;
 public class UserApiController {
 	@Autowired
 	UserService userService;
+
+	@Autowired
+	private LoggingOperationService loggingOperationService;
 
 	@RequestMapping(value = "/users", method = RequestMethod.GET)
 	public Object users(
@@ -40,16 +44,21 @@ public class UserApiController {
 			@RequestParam(defaultValue = "") String role,
 			@RequestParam(defaultValue = "") String password
 			) throws Exception {
+		loggingOperationService.log("addUser", authentication, "username={}, displayName={}, role={}.", username, displayName, role);
+
 		userService.addUser(username, displayName, password, role);
 		return userService.getUser(username);
 	}
 
 	@RequestMapping(value = "/user/{username}/update", method = RequestMethod.POST)
 	public Object update(
+			Authentication authentication,
 			@PathVariable String username,
 			@RequestParam(defaultValue = "") String displayName,
 			@RequestParam(defaultValue = "") String role
 			) throws Exception {
+		loggingOperationService.log("updateUser", authentication, "username={}, displayName={}, role={}.", username, displayName, role);
+
 		userService.updateUser(username, displayName, role);
 		return userService.getUser(username);
 	}
@@ -83,8 +92,11 @@ public class UserApiController {
 
 	@RequestMapping(value = "/user/{username}/delete", method = RequestMethod.POST)
 	public Object delete(
+			Authentication authentication,
 			@PathVariable String username
 			) throws Exception {
+		loggingOperationService.log("deleteUser", authentication, "username={}.", username);
+
 		userService.deleteUser(username);
 
 		Map<String, Boolean> result = Maps.newHashMap();

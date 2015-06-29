@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -18,6 +19,7 @@ import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.Notice;
 import com.behase.relumin.service.ClusterService;
+import com.behase.relumin.service.LoggingOperationService;
 import com.behase.relumin.service.NodeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
@@ -35,6 +37,9 @@ public class ClusterApiController {
 
 	@Autowired
 	NodeService nodeService;
+
+	@Autowired
+	private LoggingOperationService loggingOperationService;
 
 	@Autowired
 	ObjectMapper mapper;
@@ -71,9 +76,12 @@ public class ClusterApiController {
 
 	@RequestMapping(value = "/cluster/{clusterName}", method = RequestMethod.POST)
 	public Cluster setCluster(
+			Authentication authentication,
 			@PathVariable String clusterName,
 			@RequestParam String hostAndPort
 			) throws IOException {
+		loggingOperationService.log("registCluster", authentication, "clusterName={}, hostAndPort={}.", clusterName, hostAndPort);
+
 		if (clusterService.existsClusterName(clusterName)) {
 			throw new InvalidParameterException(String.format("This clusterName(%s) already exists.", clusterName));
 		}
@@ -83,8 +91,11 @@ public class ClusterApiController {
 
 	@RequestMapping(value = "/cluster/{clusterName}/delete", method = RequestMethod.POST)
 	public Map<String, Boolean> deleteClusterByPost(
+			Authentication authentication,
 			@PathVariable String clusterName
 			) {
+		loggingOperationService.log("deleteCluster", authentication, "clusterName={}.", clusterName);
+
 		clusterService.deleteCluster(clusterName);
 
 		Map<String, Boolean> result = Maps.newHashMap();
@@ -145,9 +156,12 @@ public class ClusterApiController {
 
 	@RequestMapping(value = "/cluster/{clusterName}/notice", method = RequestMethod.POST)
 	public Object setClusterNotice(
+			Authentication authentication,
 			@PathVariable String clusterName,
 			@RequestParam(defaultValue = "") String notice
 			) throws IOException {
+		loggingOperationService.log("addNotice", authentication, "clusterName={}, notice={}.", clusterName, notice);
+
 		if (StringUtils.isBlank(notice)) {
 			throw new InvalidParameterException("'notice' is blank.");
 		}
