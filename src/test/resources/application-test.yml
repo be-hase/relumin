@@ -1,6 +1,11 @@
+#### SPRING BOOT SETTING ###
 server:
   port: 0
 
+management:
+  port: 0
+
+#### RELUMIN SETTING ###
 redis:
   prefixKey: _relumin
   host: 192.168.33.11

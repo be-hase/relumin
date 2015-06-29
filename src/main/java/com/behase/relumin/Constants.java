@@ -16,23 +16,27 @@ public class Constants {
 	public static final String ERR_CODE_CLUSTER_HAS_ERRORS = "500_004";
 	public static final String ERR_CODE_UNKNOWN = "500_999";
 
-	public static String getClustersKey(String prefixKey) {
+	public static String getUsersRedisKey(String prefixKey) {
+		return Joiner.on(".").join(prefixKey, "users").toString();
+	}
+
+	public static String getClustersRedisKey(String prefixKey) {
 		return Joiner.on(".").join(prefixKey, "clusters").toString();
 	}
 
-	public static String getClusterKey(String prefixKey, String clusterName) {
+	public static String getClusterRedisKey(String prefixKey, String clusterName) {
 		return Joiner.on(".").join(prefixKey, "cluster", clusterName).toString();
 	}
 
-	public static String getClusterNoticeKey(String prefixKey, String clusterName) {
+	public static String getClusterNoticeRedisKey(String prefixKey, String clusterName) {
 		return Joiner.on(".").join(prefixKey, "cluster", clusterName, "notice").toString();
 	}
 
-	public static String getNodeKey(String prefixKey, String clusterName, String nodeId) {
+	public static String getNodeRedisKey(String prefixKey, String clusterName, String nodeId) {
 		return Joiner.on(".").join(prefixKey, "cluster", clusterName, "node", nodeId).toString();
 	}
 
-	public static String getNodeStaticsInfoKey(String prefixKey, String clusterName, String nodeId) {
+	public static String getNodeStaticsInfoRedisKey(String prefixKey, String clusterName, String nodeId) {
 		return Joiner.on(".").join(prefixKey, "cluster", clusterName, "node", nodeId, "staticsInfo").toString();
 	}
 }

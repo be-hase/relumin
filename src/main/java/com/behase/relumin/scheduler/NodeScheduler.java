@@ -67,13 +67,13 @@ public class NodeScheduler {
 	@Value("${redis.prefixKey}")
 	private String redisPrefixKey;
 
-	@Value("${notice.mail.host:}")
+	@Value("${notice.mail.host}")
 	private String noticeMailHost;
 
-	@Value("${notice.mail.port:0}")
+	@Value("${notice.mail.port}")
 	private int noticeMailPort;
 
-	@Value("${notice.mail.from:}")
+	@Value("${notice.mail.from}")
 	private String noticeMailFrom;
 
 	@Value("${outputMetrics.fluentd.nodeTag}")
@@ -98,7 +98,7 @@ public class NodeScheduler {
 						staticsInfos.put(clusterNode, staticsInfo);
 
 						try (Jedis jedis = datastoreJedisPool.getResource()) {
-							String key = Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
+							String key = Constants.getNodeStaticsInfoRedisKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
 							jedis.lpush(key, mapper.writeValueAsString(staticsInfo));
 							jedis.ltrim(key, 0, collectStaticsInfoMaxCount - 1);
 						}
@@ -129,7 +129,7 @@ public class NodeScheduler {
 				});
 				staticsObj.put("node_id", clusterNode.getNodeId());
 				staticsObj.put("host_and_port", clusterNode.getHostAndPort());
-				log.info("Logging on fluentd.");
+				log.debug("Logging on fluentd.");
 				fluentLogger.log(
 					String.format("%s", outputMetricsFluentdNodeTag, clusterNode.getNodeId()),
 					staticsObj);

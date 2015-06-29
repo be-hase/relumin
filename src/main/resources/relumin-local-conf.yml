@@ -1,5 +1,9 @@
 host: localhost
 
+auth:
+  enabled: true
+  allowAnonymous: true
+
 server:
   port: 8080
   monitorPort: 20080

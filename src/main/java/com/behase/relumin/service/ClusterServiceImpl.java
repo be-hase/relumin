@@ -52,7 +52,7 @@ public class ClusterServiceImpl implements ClusterService {
 	@Override
 	public Set<String> getClusters() {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			return dataStoreJedis.smembers(Constants.getClustersKey(redisPrefixKey));
+			return dataStoreJedis.smembers(Constants.getClustersRedisKey(redisPrefixKey));
 		}
 	}
 
@@ -133,7 +133,7 @@ public class ClusterServiceImpl implements ClusterService {
 	@Override
 	public boolean existsClusterName(String clusterName) {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			Set<String> clusterNames = dataStoreJedis.smembers(Constants.getClustersKey(redisPrefixKey));
+			Set<String> clusterNames = dataStoreJedis.smembers(Constants.getClustersRedisKey(redisPrefixKey));
 			return clusterNames.contains(clusterName);
 		}
 	}
@@ -162,15 +162,15 @@ public class ClusterServiceImpl implements ClusterService {
 
 			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
 
-			dataStoreJedis.sadd(Constants.getClustersKey(redisPrefixKey), clusterName);
-			dataStoreJedis.set(Constants.getClusterKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
+			dataStoreJedis.sadd(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
+			dataStoreJedis.set(Constants.getClusterRedisKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
 		}
 	}
 
 	@Override
 	public Notice getClusterNotice(String clusterName) throws IOException {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			String result = dataStoreJedis.get(Constants.getClusterNoticeKey(redisPrefixKey, clusterName));
+			String result = dataStoreJedis.get(Constants.getClusterNoticeRedisKey(redisPrefixKey, clusterName));
 			if (StringUtils.isBlank(result)) {
 				return null;
 			}
@@ -182,18 +182,18 @@ public class ClusterServiceImpl implements ClusterService {
 	public void setClusterNotice(String clusterName, Notice notice) throws IOException {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
 			String json = mapper.writeValueAsString(notice);
-			dataStoreJedis.set(Constants.getClusterNoticeKey(redisPrefixKey, clusterName), json);
+			dataStoreJedis.set(Constants.getClusterNoticeRedisKey(redisPrefixKey, clusterName), json);
 		}
 	}
 
 	@Override
 	public void deleteCluster(String clusterName) {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			Set<String> keys = dataStoreJedis.keys(Constants.getClusterKey(redisPrefixKey, clusterName) + ".*");
+			Set<String> keys = dataStoreJedis.keys(Constants.getClusterRedisKey(redisPrefixKey, clusterName) + ".*");
 
-			dataStoreJedis.srem(Constants.getClustersKey(redisPrefixKey), clusterName);
-			dataStoreJedis.del(Constants.getClusterKey(redisPrefixKey, clusterName));
-			dataStoreJedis.del(Constants.getClusterNoticeKey(redisPrefixKey, clusterName));
+			dataStoreJedis.srem(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
+			dataStoreJedis.del(Constants.getClusterRedisKey(redisPrefixKey, clusterName));
+			dataStoreJedis.del(Constants.getClusterNoticeRedisKey(redisPrefixKey, clusterName));
 			if (keys.size() > 0) {
 				dataStoreJedis.del(keys.toArray(new String[keys.size()]));
 			}
@@ -217,14 +217,14 @@ public class ClusterServiceImpl implements ClusterService {
 					List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), clusterNode.getHostAndPort());
 
 					// update
-					dataStoreJedis.sadd(Constants.getClustersKey(redisPrefixKey), clusterName);
-					dataStoreJedis.set(Constants.getClusterKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
+					dataStoreJedis.sadd(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
+					dataStoreJedis.set(Constants.getClusterRedisKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
 
 					// remove deleted statics
-					Set<String> keys = dataStoreJedis.keys(Constants.getClusterKey(redisPrefixKey, clusterName)
+					Set<String> keys = dataStoreJedis.keys(Constants.getClusterRedisKey(redisPrefixKey, clusterName)
 						+ ".*.staticsInfo");
 					Set<String> existOnRedisNodeIds = keys.stream().map(key -> {
-						String nodeId = StringUtils.removeStart(key, Constants.getClusterKey(redisPrefixKey, clusterName)
+						String nodeId = StringUtils.removeStart(key, Constants.getClusterRedisKey(redisPrefixKey, clusterName)
 							+ ".node.");
 						nodeId = StringUtils.removeEnd(nodeId, ".staticsInfo");
 						return nodeId;
@@ -240,7 +240,7 @@ public class ClusterServiceImpl implements ClusterService {
 					log.debug("extra NodeIds : {}", existOnRedisNodeIds);
 					if (!existOnRedisNodeIds.isEmpty()) {
 						for (String nodeId : existOnRedisNodeIds) {
-							String key = Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, nodeId);
+							String key = Constants.getNodeStaticsInfoRedisKey(redisPrefixKey, clusterName, nodeId);
 							log.info("delete extra data node. key : {}", key);
 							dataStoreJedis.del(key);
 						}
@@ -261,7 +261,7 @@ public class ClusterServiceImpl implements ClusterService {
 	@Override
 	public ClusterNode getActiveClusterNodeWithExcludeNodeId(String clusterName, String nodeId) throws IOException {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			String result = dataStoreJedis.get(Constants.getClusterKey(redisPrefixKey, clusterName));
+			String result = dataStoreJedis.get(Constants.getClusterRedisKey(redisPrefixKey, clusterName));
 			if (StringUtils.isBlank(result)) {
 				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
 			}
@@ -292,7 +292,7 @@ public class ClusterServiceImpl implements ClusterService {
 	public ClusterNode getActiveClusterNodeWithExcludeHostAndPort(String clusterName, String hostAndPort)
 			throws IOException {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			String result = dataStoreJedis.get(Constants.getClusterKey(redisPrefixKey, clusterName));
+			String result = dataStoreJedis.get(Constants.getClusterRedisKey(redisPrefixKey, clusterName));
 			if (StringUtils.isBlank(result)) {
 				throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
 			}

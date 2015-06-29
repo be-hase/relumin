@@ -14,10 +14,11 @@ public class ValidationUtils {
 	private ValidationUtils() {
 	}
 
-	private static final String NAME_REGEX = "^[a-zA-Z0-9_-]{1,20}$";
+	private static final String CLUSTER_NAME_REGEX = "^[a-zA-Z0-9_-]{1,20}$";
+	private static final String USERNAME_REGEX = "^[a-zA-Z0-9_-]{4,20}$";
 
 	public static void clusterName(String name) {
-		if (!name.matches(NAME_REGEX)) {
+		if (!name.matches(CLUSTER_NAME_REGEX)) {
 			throw new InvalidParameterException(String.format("clusterName is invalid. (%s)", name));
 		}
 	}
@@ -146,4 +147,11 @@ public class ValidationUtils {
 			throw new InvalidParameterException(String.format("Slot is not enough. You must specify %s.", JedisUtils.slotsDisplay(allSlots)));
 		}
 	}
+
+	public static void username(String username) {
+		if (!username.matches(USERNAME_REGEX)) {
+			throw new InvalidParameterException(String.format("User ID is invalid. (%s)", username));
+		}
+	}
+
 }

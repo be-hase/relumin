@@ -198,7 +198,7 @@ public class NodeServiceImpl implements NodeService {
 		List<Map<String, String>> result = Lists.newArrayList();
 
 		try (Jedis jedis = dataStoreJedisPool.getResource()) {
-			List<String> rawResult = jedis.lrange(Constants.getNodeStaticsInfoKey(redisPrefixKey, clusterName, nodeId), startIndex, endIndex);
+			List<String> rawResult = jedis.lrange(Constants.getNodeStaticsInfoRedisKey(redisPrefixKey, clusterName, nodeId), startIndex, endIndex);
 			rawResult.forEach(v -> {
 				try {
 					Map<String, String> map = mapper.readValue(v, new TypeReference<Map<String, Object>>() {

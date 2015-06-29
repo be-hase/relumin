@@ -3,10 +3,20 @@ server:
 
 management:
   add-application-context-header: false
+  security:
+    enabled: false
+
+endpoints:
+  shutdown:
+    enabled: true
 
 spring:
   freemarker:
     charset: UTF-8
+
+security:
+  basic:
+    enabled: false
 
 build:
   number: 1
