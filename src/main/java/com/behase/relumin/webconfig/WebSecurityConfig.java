@@ -46,7 +46,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.tokenValiditySeconds(Integer.MAX_VALUE).and()
 
 				.authorizeRequests()
-				.antMatchers("/css/**", "/js/**", "/img/**", "**/favicon.ico", "/vendor/**")
+				.antMatchers("/login", "/css/**", "/js/**", "/img/**", "**/favicon.ico", "/vendor/**")
 				.permitAll()
 				.antMatchers(HttpMethod.POST, "/api/cluster/*", "/api/cluster/*/delete", "/api/cluster/*/notice")
 				.hasAuthority(Role.RELUMIN_ADMIN.getAuthority())
@@ -59,12 +59,12 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.formLogin()
 				.loginPage("/login")
 				.defaultSuccessUrl("/")
-				.permitAll()
 				.and()
 
 				.logout()
 				.logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-				.permitAll().and()
+				.logoutSuccessUrl("/")
+				.and()
 
 				.exceptionHandling()
 				.accessDeniedHandler(new AccessDeniedHandler() {
