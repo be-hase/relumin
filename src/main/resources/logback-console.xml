@@ -8,6 +8,8 @@
 
 	<logger name="com.behase.relumin" level="DEBUG" />
 	
+	<logger name="logging_operation" level="INFO" />
+	
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />
 	</root>
