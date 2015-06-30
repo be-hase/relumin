@@ -105,7 +105,7 @@ public class NodeServiceImpl implements NodeService {
 			thresholdMillis = 24 * 60 * 60 * 1000;
 		}
 
-		Map<String, List<List<Object>>> averageResult = Maps.newHashMap();
+		Map<String, List<List<Object>>> averageResult = Maps.newConcurrentMap();
 		fields.parallelStream().forEach(field -> {
 			List<List<Object>> fieldAverageResult = Lists.newArrayList();
 			long preTimestamp = 0;
@@ -171,8 +171,6 @@ public class NodeServiceImpl implements NodeService {
 				log.debug("ESCAPE threshold. averageValue={}, averageTs={}, sum={}, sumTs={}, sumCount={}", averageValue, averageTs, sum, sumTs, count);
 				fieldAverageResult.add(Lists.newArrayList(averageTs, averageValue.doubleValue()));
 			}
-
-			log.debug("fieldAverageResult : {}", fieldAverageResult);
 
 			averageResult.put(field, fieldAverageResult);
 		});
