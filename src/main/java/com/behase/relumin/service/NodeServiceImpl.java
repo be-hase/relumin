@@ -12,9 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
@@ -26,6 +23,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import lombok.extern.slf4j.Slf4j;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 @Slf4j
 @Service
@@ -50,7 +49,6 @@ public class NodeServiceImpl implements NodeService {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public Map<String, List<List<Object>>> getStaticsInfoHistory(String clusterName, String nodeId,
 			List<String> fields,
@@ -136,7 +134,8 @@ public class NodeServiceImpl implements NodeService {
 
 				long curDurationMillis = timestamp - preTimestamp;
 				if (curDurationMillis < thresholdMillis) {
-					log.debug("Within threshold. value={}, curDurationSecs={}, thresholdSecs={}", value, curDurationMillis / 1000, thresholdMillis);
+					log.debug("Within threshold. value={}, curDurationSecs={}, thresholdSecs={}", value, curDurationMillis
+						/ 1000, thresholdMillis);
 					sum = sum.add(value);
 					sumTs += timestamp;
 					count++;

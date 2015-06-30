@@ -1,7 +1,7 @@
 host: localhost
 
 auth:
-  enabled: true
+  enabled: false
   allowAnonymous: true
 
 server:

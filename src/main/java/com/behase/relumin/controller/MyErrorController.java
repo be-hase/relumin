@@ -3,7 +3,6 @@ package com.behase.relumin.controller;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.ErrorController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,20 +12,15 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.behase.relumin.model.ErrorResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
 public class MyErrorController implements ErrorController {
 	private static final String ERROR_PATH = "/error";
 
-	@Autowired
-	private ObjectMapper mapper;
-
 	@RequestMapping(value = ERROR_PATH)
 	@ResponseBody
 	public ResponseEntity<ErrorResponse> handleError(
-			HttpServletRequest request
-			) throws JsonProcessingException {
+			HttpServletRequest request) throws JsonProcessingException {
 		HttpStatus status = getStatus(request);
 
 		if (status.equals(HttpStatus.NOT_FOUND) || ERROR_PATH.equals(request.getRequestURI())) {
