@@ -1,4 +1,5 @@
-relumin
-=======
+# relumin
 
-Developing...
+DONE.
+
+i'm writing document now.
