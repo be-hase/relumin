@@ -27,8 +27,13 @@ So I developed.
 
 ### Screenshot
 
+Cluster status
 ![SS1](https://raw.githubusercontent.com/be-hase/relumin/master/docs/img/SS1.png)
+
+Metics chart
 ![SS2](https://raw.githubusercontent.com/be-hase/relumin/master/docs/img/SS2.png)
+
+Setting alert
 ![SS3](https://raw.githubusercontent.com/be-hase/relumin/master/docs/img/SS3.png)
 
 ## Getting start
