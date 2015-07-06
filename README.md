@@ -42,8 +42,8 @@ Very easy.
 
 ### 1. Download JAR file
 
-Please download from this.
-https://github.com/be-hase/relumin
+Please download from this.  
+https://github.com/be-hase/relumin/releases
 
 ### 2. Install Java8 on your server
 
