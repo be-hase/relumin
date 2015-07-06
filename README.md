@@ -93,7 +93,7 @@ scheduler:
 This is property table.
 
 | property name | default | required | description |
-|-|-|-|-|
+| --- | --- | --- | --- |
 | host |  |  | Host or IP of server which Relumin running on. <br> This is used for alert mail. |
 |  |  |  |  |
 | server.port | 8080 |  | Port of Relumin server. |
@@ -164,7 +164,7 @@ Relumin support easy authenticate&authorize.
 Relumin user has 2 role.
 
 | role name | description |
-|-|-|
+| --- | --- |
 | VIEWER | Only view user. |
 | RELUMIN_ADMIN | This user execute all Relumin operation. <br> (Cluster operation, User CRUD, Notification CRUD...etc) |
 
