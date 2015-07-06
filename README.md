@@ -27,9 +27,9 @@ So I developed.
 
 ### Screenshot
 
-Very easy.
-
 ## Getting start
+
+Very easy.
 
 ### 1. Download JAR file
 
