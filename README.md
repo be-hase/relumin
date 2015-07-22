@@ -28,13 +28,13 @@ So I developed.
 ### Screenshot
 
 Cluster status
-![SS1](https://raw.githubusercontent.com/be-hase/relumin/master/docs/img/SS1.png)
+![SS1](https://raw.githubusercontent.com/be-hase/relumin/develop/docs/img/SS1.png)
 
 Metics chart
-![SS2](https://raw.githubusercontent.com/be-hase/relumin/master/docs/img/SS2.png)
+![SS2](https://raw.githubusercontent.com/be-hase/relumin/develop/docs/img/SS1.png)
 
 Setting alert
-![SS3](https://raw.githubusercontent.com/be-hase/relumin/master/docs/img/SS3.png)
+![SS3](https://raw.githubusercontent.com/be-hase/relumin/develop/docs/img/SS1.png)
 
 ## Getting start
 
