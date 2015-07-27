@@ -95,27 +95,22 @@ This is property table.
 | property name | default | required | description |
 | --- | --- | --- | --- |
 | host |  |  | Host or IP of server which Relumin running on. <br> This is used for alert mail. |
-|  |  |  |  |
 | server.port | 8080 |  | Port of Relumin server. |
 | server.monitorPort | 20080 |  | Port of Relumin server for monitoring. |
-|  |  |  |  |
 | redis.prefixKey | _relumin |  | Prefix key of Redis. This prefix key is used for meta data and metrics data. |
 | redis.host |  | Y | Redis's host. |
 | redis.port |  | Y | Redis's port |
-|  |  |  |  |
 | auth.enabled | false |  | If this value is false, Every user can execute all operation. <br> (Cluster operation, User CRUD, Notification CRUD...etc)  |
 | auth.allowAnonymous | false |  | If this value is true, anonymous user can access Relumin. <br> But only view. |
-|  |  |  |  |
 | notice.mail.host |  |  | Host of SMTP server. |
 | notice.mail.port |  |  | Port of SMTP server. |
 | notice.mail.user |  |  | User of SMTP Auth. |
 | notice.mail.password |  |  | Password of SMTP Auth. |
 | notice.mail.charset | UTF-8 |  | Charset of alert mail. |
-|  |  |  |  |
+| notice.mail.from |  |  | "From" mail address. This value can be overriden by cluster setting. |
 | scheduler.refreshClustersIntervalMillis | 120000 |  | Interval(milliseconds) of refresh meta data of Redis cluster. <br> Recommend default. |
 | scheduler.collectStaticsInfoIntervalMillis | 120000 |  | Interval(milliseconds) of collect metrics data. If threshold condition is satisfied, send notice. |
 | scheduler.collectStaticsInfoMaxCount | 1500 |  | Save count of metrics data. <br> If you want save latest 1 week, you specify "5040". <br><br> (60 * 24 * 7) / 2 = 5040 |
-|  |  |  |  |
 | outputMetrics.fluentd.enabled | false |  | If you want to forward metris data into fluentd, specify true. |
 | outputMetrics.fluentd.host |  |  | Host of Fluentd. |
 | outputMetrics.fluentd.port |  |  | Port of Fluentd. |
