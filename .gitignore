@@ -95,6 +95,10 @@ com_crashlytics_export_strings.xml
 /repository/
 /logs/
 src/main/resources/application-local.yml
+front/node_modules
+*.log
+front/build
+.atomignore
 
 # ------------------------------
 # OS generated files
