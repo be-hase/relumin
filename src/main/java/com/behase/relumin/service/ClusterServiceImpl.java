@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.exceptions.JedisException;
 
 import com.behase.relumin.Constants;
@@ -162,8 +163,35 @@ public class ClusterServiceImpl implements ClusterService {
 
 			List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
 
-			dataStoreJedis.sadd(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
-			dataStoreJedis.set(Constants.getClusterRedisKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
+			Pipeline p = dataStoreJedis.pipelined();
+			p.sadd(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
+			p.set(Constants.getClusterRedisKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
+			p.sync();
+		}
+	}
+
+	@Override
+	public void changeClusterName(String clusterName, String newClusterName) throws IOException {
+		ValidationUtils.clusterName(newClusterName);
+		if (!existsClusterName(clusterName)) {
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("Cluster name(%s) does not exists. Please confirm.", clusterName), HttpStatus.BAD_REQUEST);
+		}
+		if (existsClusterName(newClusterName)) {
+			throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("New cluster name(%s) already exists. Please confirm.", newClusterName), HttpStatus.BAD_REQUEST);
+		}
+
+		String clusterPrefixKey = Constants.getClusterRedisKey(redisPrefixKey, clusterName);
+		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
+			Set<String> currentKeys = dataStoreJedis.keys(clusterPrefixKey + "*");
+			Pipeline p = dataStoreJedis.pipelined();
+			currentKeys.forEach(currentKey -> {
+				String newKey = Constants.getClusterRedisKey(redisPrefixKey, newClusterName)
+						+ StringUtils.removeStart(currentKey, clusterPrefixKey);
+				p.rename(currentKey, newKey);
+			});
+			p.sadd(Constants.getClustersRedisKey(redisPrefixKey), newClusterName);
+			p.srem(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
+			p.sync();
 		}
 	}
 
@@ -191,12 +219,14 @@ public class ClusterServiceImpl implements ClusterService {
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
 			Set<String> keys = dataStoreJedis.keys(Constants.getClusterRedisKey(redisPrefixKey, clusterName) + ".*");
 
-			dataStoreJedis.srem(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
-			dataStoreJedis.del(Constants.getClusterRedisKey(redisPrefixKey, clusterName));
-			dataStoreJedis.del(Constants.getClusterNoticeRedisKey(redisPrefixKey, clusterName));
+			Pipeline p = dataStoreJedis.pipelined();
+			p.srem(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
+			p.del(Constants.getClusterRedisKey(redisPrefixKey, clusterName));
+			p.del(Constants.getClusterNoticeRedisKey(redisPrefixKey, clusterName));
 			if (keys.size() > 0) {
-				dataStoreJedis.del(keys.toArray(new String[keys.size()]));
+				p.del(keys.toArray(new String[keys.size()]));
 			}
+			p.sync();
 		}
 	}
 
@@ -217,7 +247,6 @@ public class ClusterServiceImpl implements ClusterService {
 					List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), clusterNode.getHostAndPort());
 
 					// update
-					dataStoreJedis.sadd(Constants.getClustersRedisKey(redisPrefixKey), clusterName);
 					dataStoreJedis.set(Constants.getClusterRedisKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
 
 					// remove deleted statics

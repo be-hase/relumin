@@ -21,11 +21,15 @@ var ClusterSettingDelete = React.createClass({
         }
 
         return (
-            <div>
-                <div className="text-right">
-                    <button className="btn btn-default btn-xs" data-toggle="modal" data-target=".unregist-cluster-modal">Unregist this cluster.</button>
+            <div className="cluster-setting-delete-components">
+                <div className="panel panel-default">
+                    <div className="panel-heading clearfix">
+                        Unregist cluster
+                    </div>
+                    <div className="panel-body">
+                        <button className="btn btn-danger" data-toggle="modal" data-target=".unregist-cluster-modal">Unregist cluster.</button>
+                    </div>
                 </div>
-
                 <div className="modal unregist-cluster-modal" ref="unregist-cluster-modal">
                     <div className="modal-dialog">
                         <div className="modal-content">

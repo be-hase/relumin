@@ -14,7 +14,7 @@ public class ValidationUtils {
 	private ValidationUtils() {
 	}
 
-	private static final String CLUSTER_NAME_REGEX = "^[a-zA-Z0-9_-]{1,20}$";
+	private static final String CLUSTER_NAME_REGEX = "^[a-zA-Z0-9_-]{1,50}$";
 	private static final String USERNAME_REGEX = "^[a-zA-Z0-9_-]{4,20}$";
 
 	public static void clusterName(String name) {

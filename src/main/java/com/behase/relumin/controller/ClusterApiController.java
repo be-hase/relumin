@@ -89,6 +89,19 @@ public class ClusterApiController {
 		return clusterService.getCluster(clusterName);
 	}
 
+	@RequestMapping(value = "/cluster/{clusterName}/change-cluster-name", method = RequestMethod.POST)
+	public Object changeClusterName(
+			Authentication authentication,
+			@PathVariable String clusterName,
+			@RequestParam String newClusterName
+	) throws IOException {
+		loggingOperationService.log("changeClusterName", authentication, "clusterName={}, newClusterName={}.", clusterName, newClusterName);
+
+		clusterService.changeClusterName(clusterName, newClusterName);
+
+		return clusterService.getCluster(newClusterName);
+	}
+
 	@RequestMapping(value = "/cluster/{clusterName}/delete", method = RequestMethod.POST)
 	public Map<String, Boolean> deleteClusterByPost(
 			Authentication authentication,

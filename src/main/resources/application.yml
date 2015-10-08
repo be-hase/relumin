@@ -19,4 +19,4 @@ security:
     enabled: false
 
 build:
-  number: 2
+  number: 3

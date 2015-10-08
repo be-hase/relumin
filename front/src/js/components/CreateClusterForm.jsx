@@ -14,7 +14,7 @@ var ValidationRender = require('../mixins/ValidationRender');
 var CreateCluste = React.createClass({
     mixins: [ValidationMixin, ValidationRender, React.addons.LinkedStateMixin],
     validatorTypes: {
-        clusterName: Joi.string().allow('').max(20).regex(/^[a-zA-Z0-9_-]+$/).trim().label('Cluster name')
+        clusterName: Joi.string().allow('').max(50).regex(/^[a-zA-Z0-9_-]+$/).trim().label('Cluster name')
     },
     componentDidMount: function() {
         CreateClusterParamsStore.addChangeListener(this.onChangeHandle);

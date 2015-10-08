@@ -10,6 +10,7 @@ var ClusterNoticeStore = require('../stores/ClusterNoticeStore');
 var ClusterSettingGeneral = require('../components/ClusterSettingGeneral');
 var ClusterSettingThreshold = require('../components/ClusterSettingThreshold');
 var ClusterSettingDelete = require('../components/ClusterSettingDelete');
+var ClusterSettingChangeName = require('../components/ClusterSettingChangeName');
 var Utils = require('../utils/Utils');
 
 var ClusterSetting = React.createClass({
@@ -33,6 +34,7 @@ var ClusterSetting = React.createClass({
             <div className="cluster-setting-components">
                 <ClusterSettingGeneral cluster={this.props.cluster} notice={this.state.notice} />
                 <ClusterSettingThreshold cluster={this.props.cluster} notice={this.state.notice} />
+                <ClusterSettingChangeName cluster={this.props.cluster} />
                 <ClusterSettingDelete cluster={this.props.cluster} />
             </div>
         );

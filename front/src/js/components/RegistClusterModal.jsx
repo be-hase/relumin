@@ -9,7 +9,7 @@ var Utils = require('../utils/Utils');
 var RegisterClusterModal = React.createClass({
     mixins: [ValidationMixin, React.addons.LinkedStateMixin],
     validatorTypes: {
-        clusterName: Joi.string().max(20).regex(/^[a-zA-Z0-9_-]+$/).trim().required().label('Cluster name'),
+        clusterName: Joi.string().max(50).regex(/^[a-zA-Z0-9_-]+$/).trim().required().label('Cluster name'),
         hostAndPort:  Joi.string().regex(/^.+:[0-9]{1,5}$/).trim().required().label('Host and port')
     },
     getInitialState: function() {

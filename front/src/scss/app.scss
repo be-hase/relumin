@@ -52,6 +52,10 @@
 .side-nav > li > a {
     padding-top: 10px;
     padding-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
 }
 
 // spinner override //
