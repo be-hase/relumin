@@ -146,6 +146,17 @@ var ApiUtils = {
             };
             _.assign(ajaxOptions, callbacks);
             return $.ajax(ajaxOptions);
+        },
+        changeClusterName: function(clusterName, data, callbacks) {
+            var apiUrl = BASE_URL + '/api/cluster/' + clusterName + '/change-cluster-name';
+
+            var ajaxOptions = {
+                type: 'POST',
+                url: apiUrl,
+                data: data
+            };
+            _.assign(ajaxOptions, callbacks);
+            return $.ajax(ajaxOptions);
         }
     },
     Trib: {

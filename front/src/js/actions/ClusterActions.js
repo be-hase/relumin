@@ -98,6 +98,15 @@ var ClusterActions = {
         });
 
         ApiUtils.Cluster.deleteCluster(clusterName, callbacks);
+    },
+    changeClusterName: function(clusterName, data, callbacks) {
+        callbacks = callbacks || {};
+
+        Utils.wrapSuccess(callbacks, function(data) {
+            ClusterActions.getClusters();
+        });
+
+        ApiUtils.Cluster.changeClusterName(clusterName, data, callbacks);
     }
 };
 
