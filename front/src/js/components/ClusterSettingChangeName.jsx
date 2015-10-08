@@ -92,7 +92,7 @@ var ClusterSettingChangeName = React.createClass({
                             message: 'Change cluster name successfully',
                             level: 'success'
                         });
-                        _this.transitionTo('/cluster/' + newClusterName);
+                        //_this.transitionTo('/cluster/' + newClusterName);
                     },
                     complete: function() {
                         Utils.loading(false);
