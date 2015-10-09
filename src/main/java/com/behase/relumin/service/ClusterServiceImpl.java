@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -182,7 +183,9 @@ public class ClusterServiceImpl implements ClusterService {
 
 		String clusterPrefixKey = Constants.getClusterRedisKey(redisPrefixKey, clusterName);
 		try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-			Set<String> currentKeys = dataStoreJedis.keys(clusterPrefixKey + "*");
+			Set<String> currentKeys = Sets.newHashSet(clusterPrefixKey);
+			currentKeys.addAll(dataStoreJedis.keys(clusterPrefixKey + ".*"));
+
 			Pipeline p = dataStoreJedis.pipelined();
 			currentKeys.forEach(currentKey -> {
 				String newKey = Constants.getClusterRedisKey(redisPrefixKey, newClusterName)
