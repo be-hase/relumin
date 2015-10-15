@@ -27,7 +27,7 @@
     "react-router": "0.13.3",
     "react-select": "0.4.9",
     "react-spinkit": "1.1.2",
-    "react-validation-mixin": "4.1.0"
+    "react-validation-mixin": "4.2.0"
   },
   "devDependencies": {
     "browser-sync": "^2.7.1",
