@@ -18,17 +18,6 @@ public class NodeSchedulerTest {
 	}
 
 	@Test
-	public void test() throws InterruptedException {
-		int i = 0;
-		long sum = 0;
-		while (true) {
-			log.debug("i={}, sum={}", i, sum);
-			sum += System.currentTimeMillis();
-			i++;
-		}
-	}
-
-	@Test
 	public void isNotify() {
 		assertThat(nodeScheduler.isNotify("string", "eq", "hoge", "hoge"), is(true));
 		assertThat(nodeScheduler.isNotify("string", "ne", "hogo", "hoge"), is(true));

@@ -361,13 +361,13 @@ public class ClusterServiceImpl implements ClusterService {
 
 		Map<String, Map<String, List<List<Object>>>> result = Maps.newLinkedHashMap();
 
-		for (String nodeId : nodes) {
+		nodes.parallelStream().forEach(nodeId -> {
 			log.debug("node loop : {}", nodeId);
 			Map<String, List<List<Object>>> staticsInfoHistory = nodeService.getStaticsInfoHistory(clusterName, nodeId, fields, start, end);
 			if (!staticsInfoHistory.isEmpty()) {
 				result.put(nodeId, staticsInfoHistory);
 			}
-		}
+		});
 
 		return result;
 	}
