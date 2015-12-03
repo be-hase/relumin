@@ -207,6 +207,10 @@ public class NodeScheduler {
 	}
 
 	public boolean isNotify(String valueType, String operator, String value, String threshold) {
+		if (value == null) {
+			return false;
+		}
+
 		boolean isNotify = false;
 
 		switch (NoticeValueType.getNoticeValueType(valueType)) {

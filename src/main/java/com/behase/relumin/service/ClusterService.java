@@ -20,6 +20,8 @@ public interface ClusterService {
 
 	void setCluster(String clusterName, String node) throws IOException;
 
+	void changeClusterName(String clusterName, String newClusterName) throws IOException;
+
 	Notice getClusterNotice(String clusterName) throws IOException;
 
 	void setClusterNotice(String clusterName, Notice notice) throws IOException;
