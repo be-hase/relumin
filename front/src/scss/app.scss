@@ -50,6 +50,7 @@
     }
 }
 .side-nav > li > a {
+    font-size: 12px;
     padding-top: 10px;
     padding-bottom: 10px;
     white-space: nowrap;
@@ -132,6 +133,10 @@
 // cluster-tab-components //
 .cluster-tab-components {
     margin-bottom: 30px;
+    h2 {
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
 }
 
 // cluster-info-components //
@@ -159,6 +164,13 @@
         th, td {
             font-size: 13px;
         }
+    }
+    td .label {
+        margin-right: 5px;
+        font-size: 11px;
+    }
+    .add-node-btn {
+        margin-left: 20px;
     }
 }
 

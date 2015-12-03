@@ -45,8 +45,8 @@ var HeaderSidebar = React.createClass({
         var registAndCreateClusterMenuView;
         if (!AUTH_ENABLED || me.role === 'RELUMIN_ADMIN') {
             registAndCreateClusterMenuView = [
-                (<li><a href="#" data-toggle="modal" data-target=".regist-cluster-modal-components">Regist cluster</a></li>),
-                (<li><a href="#/create-cluster">Create cluster</a></li>)
+                (<li key="regist-cluster"><a href="#" data-toggle="modal" data-target=".regist-cluster-modal-components">Regist cluster</a></li>),
+                (<li key="create-cluster"><a href="#/create-cluster">Create cluster</a></li>)
             ];
         }
 

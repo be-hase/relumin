@@ -27,15 +27,16 @@ var Utils = require('../utils/Utils');
 var ClusterInfoNodes = React.createClass({
     getInitialState: function() {
         return {
-            sortLabel: 'host_and_port',
-            sortDirect: 'ASC'
+            nodeFilterType: 'all'
         };
     },
     componentDidMount: function() {
         $(React.findDOMNode(this)).find('[data-toggle="tooltip"]').tooltip();
+        $(React.findDOMNode(this)).find('[data-toggle="popover"]').popover();
     },
     componentDidUpdate: function() {
         $(React.findDOMNode(this)).find('[data-toggle="tooltip"]').tooltip();
+        $(React.findDOMNode(this)).find('[data-toggle="popover"]').popover();
     },
     render: function() {
         var _this = this;
@@ -44,12 +45,21 @@ var ClusterInfoNodes = React.createClass({
         var hasPermission = !AUTH_ENABLED || me.role === 'RELUMIN_ADMIN';
 
         var nodesList = _.map(nodes, function(node) {
+            var isMaster = !!_.find(node.flags, function(flag) { return flag === 'master'; });
             var isDander = !!_.find(node.flags, function(flag) { return flag === 'fail'; });
             var isWarning = !!_.find(node.flags, function(flag) { return flag === 'fail?'; });
             var nodeClass = classSet({
                 danger: isDander,
                 warning: isWarning
             });
+
+            if (_this.state.nodeFilterType === 'all') {
+                //ok
+            } else if (_this.state.nodeFilterType === 'master' && !isMaster) {
+                return;
+            } else if (_this.state.nodeFilterType === 'slave' && isMaster) {
+                return;
+            }
 
             var nodeAction;
             if (hasPermission) {
@@ -59,8 +69,6 @@ var ClusterInfoNodes = React.createClass({
                         (<li><a href="#" onClick={function(event){ _this.handleClickDeleteDeadNode(event, node); }}>Delete from cluster</a></li>)
                     ];
                 } else {
-                    var isMaster = _.findIndex(node.flags, function(flag) { return flag === 'master'; }) >= 0;
-
                     if (isMaster) {
                         action = [
                             (<li><a href="#" onClick={function(event){ _this.handleClickReshard(event, node); }}>Reshard by nodes</a></li>),
@@ -95,12 +103,46 @@ var ClusterInfoNodes = React.createClass({
 
             var masterNode = Utils.getNodeByNodeId(_this.props.cluster.nodes, node.master_node_id);
 
+            var flags = [];
+            _.each(node.flags, function(flag) {
+                switch (flag) {
+                    case 'myself':
+                        break;
+                    case 'master':
+                        var slaveNodes = Utils.getSlaveNodesOfMasterNode(_this.props.cluster.nodes, node.node_id);
+                        var htmlContent = "";
+                        _.each(slaveNodes, function(slaveNode) {
+                            htmlContent += slaveNode.host_and_port + "<br>";
+                        });
+                        flags.push((<span key={flag} className="label label-success" data-title="slave nodes" data-toggle="popover" data-placement="top" data-content={htmlContent} data-html="true" data-trigger="hover">{flag}</span>));
+                        break;
+                    case 'slave':
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
+                        break;
+                    case 'fail':
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
+                        break;
+                    case 'fail?':
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
+                        break;
+                    case 'handshake':
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
+                        break;
+                    case 'noaddr':
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
+                        break;
+                    default:
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
+                        break;
+                }
+            });
+
             return (
                 <tr key={node.node_id} className={nodeClass}>
                     <td data-label="node_id">{node.node_id}</td>
                     <td data-label="host_and_port">{node.host_and_port}</td>
                     <td data-label="flags">
-                        {_.filter(node.flags, function(flag) { return flag !== 'myself'; }).join(', ')}
+                        {flags}
                     </td>
                     <td data-label="master_host_and_port">{!!masterNode ? masterNode.host_and_port : ''}</td>
                     <td data-label="config_epoch">{node.config_epoch}</td>
@@ -121,17 +163,37 @@ var ClusterInfoNodes = React.createClass({
         var addNodeBtnView;
         if (hasPermission) {
             addNodeBtnView = (
-                <button className="btn btn-default btn-xs" data-toggle="modal" data-target=".add-node-modal">
+                <button className="btn btn-default btn-xs add-node-btn" data-toggle="modal" data-target=".add-node-modal">
                     Add node
                 </button>
             );
         }
+
+        var nodeFilterType = {
+            all: {
+                classes: 'btn btn-default btn-xs ' + (_this.state.nodeFilterType === 'all' ? 'active' : '')
+            },
+            master: {
+                classes: 'btn btn-default btn-xs ' + (_this.state.nodeFilterType === 'master' ? 'active' : '')
+            },
+            slave: {
+                classes: 'btn btn-default btn-xs ' + (_this.state.nodeFilterType === 'slave' ? 'active' : '')
+            }
+        };
 
         return (
             <div className="panel panel-default cluster-info-nodes-components">
                 <div className="panel-heading clearfix">
                     Nodes
                     <div className="pull-right">
+                        <span>
+                            <span>select : </span>
+                            <div className="btn-group" data-toggle="buttons">
+                                <button className={nodeFilterType.all.classes} onClick={function(){_this.handleClickNodeFilterType('all');}}>All</button>
+                                <button className={nodeFilterType.master.classes} onClick={function(){_this.handleClickNodeFilterType('master');}}>master</button>
+                                <button className={nodeFilterType.slave.classes} onClick={function(){_this.handleClickNodeFilterType('slave');}}>slave</button>
+                            </div>
+                        </span>
                         {addNodeBtnView}
                     </div>
                 </div>
@@ -274,6 +336,11 @@ var ClusterInfoNodes = React.createClass({
             hostAndPort: node.host_and_port
         });
         modal.showModal();
+    },
+    handleClickNodeFilterType: function(val) {
+        this.setState({
+            nodeFilterType: val,
+        });
     }
 });
 
