@@ -3,7 +3,7 @@ FROM centos:6
 MAINTAINER Ryosuke Hasebe <hsb.1014@gmail.com>
 
 ENV HOME /root
-ENV REDIS_VER 3.0.2
+ENV REDIS_VER 3.0.5
 
 # Define working directory.
 WORKDIR $HOME
