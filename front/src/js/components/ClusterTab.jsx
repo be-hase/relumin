@@ -28,9 +28,12 @@ var ClusterTab = React.createClass({
             );
         });
         return (
-            <ul className="nav nav-tabs cluster-tab-components">
-                {list}
-            </ul>
+            <div className="cluster-tab-components">
+                <h2><span className="glyphicon glyphicon-menu-right"></span> {clusterName}</h2>
+                <ul className="nav nav-tabs">
+                    {list}
+                </ul>
+            </div>
         );
     }
 });

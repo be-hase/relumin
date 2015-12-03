@@ -74,6 +74,11 @@ var Utils = {
             return _.findIndex(node.flags, function(flag) { return flag === 'master'; }) >= 0;
         });
     },
+    getSlaveNodesOfMasterNode: function(nodes, masterNodeId) {
+        return _.filter(nodes, function(node) {
+            return node.master_node_id === masterNodeId;
+        });
+    },
     getPickerRanges: function() {
         return {
             'Last 1h': [moment().subtract(1, 'h'), moment()],
