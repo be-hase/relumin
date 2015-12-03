@@ -120,16 +120,16 @@ var ClusterInfoNodes = React.createClass({
                         flags.push((<span key={flag} className="label label-default">{flag}</span>));
                         break;
                     case 'fail':
-                        flags.push((<span key={flag} className="label label-danger">{flag}</span>));
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
                         break;
                     case 'fail?':
-                        flags.push((<span key={flag} className="label label-danger">{flag}</span>));
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
                         break;
                     case 'handshake':
-                        flags.push((<span key={flag} className="label label-warning">{flag}</span>));
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
                         break;
                     case 'noaddr':
-                        flags.push((<span key={flag} className="label label-warning">{flag}</span>));
+                        flags.push((<span key={flag} className="label label-default">{flag}</span>));
                         break;
                     default:
                         flags.push((<span key={flag} className="label label-default">{flag}</span>));
