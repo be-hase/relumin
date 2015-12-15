@@ -29,7 +29,7 @@ import redis.clients.jedis.JedisPool;
 @Slf4j
 @Service
 public class NodeServiceImpl implements NodeService {
-	private static final int OFFSET = 9999;
+	private static final int OFFSET = 999;
 
 	@Autowired
 	JedisPool dataStoreJedisPool;

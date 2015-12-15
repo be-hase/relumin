@@ -54,13 +54,22 @@ public class ClusterApiController {
 
 		if (StringUtils.equalsIgnoreCase(full, "true")) {
 			List<Cluster> clusters = Lists.newArrayList();
-			clusterNames.forEach(clusterName -> {
+			Map<String, Cluster> clustersMap = Maps.newHashMap();
+
+			clusterNames.parallelStream().forEach(clusterName -> {
 				try {
-					clusters.add(clusterService.getCluster(clusterName));
+					clustersMap.put(clusterName, clusterService.getCluster(clusterName));
 				} catch (Exception e) {
 					log.error("Failed to get cluster. clusterName = {}", clusterName, e);
 				}
 			});
+			clusterNames.forEach(clusterName -> {
+				Cluster cluster = clustersMap.get(clusterName);
+				if (cluster != null) {
+					clusters.add(cluster);
+				}
+			});
+
 			return clusters;
 		} else {
 			return clusterNames;
