@@ -10,7 +10,7 @@ public class NoticeConfig {
 	public static class NoticeMailConfig {
 		public static final String DEFAULT_HOST = "";
 		public static final String DEFAULT_PORT = "0";
-		public static final String DEFAULT_USER = "0";
+		public static final String DEFAULT_USER = "";
 		public static final String DEFAULT_PASSWORD = "";
 		public static final String DEFAULT_CHARSET = "UTF-8";
 		public static final String DEFAULT_FROM = "";

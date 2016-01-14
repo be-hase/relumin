@@ -1,23 +1,23 @@
 package com.behase.relumin.config;
 
+import com.behase.relumin.config.NoticeConfig.NoticeMailConfig;
+import com.behase.relumin.config.OutputMetricsConfig.OutputMetricsFluentdConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.core.io.ClassPathResource;
+
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.core.io.ClassPathResource;
-
-import com.behase.relumin.config.NoticeConfig.NoticeMailConfig;
-import com.behase.relumin.config.OutputMetricsConfig.OutputMetricsFluentdConfig;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-
-import lombok.Data;
+import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @Data
 public class ReluminConfig {
@@ -49,152 +49,157 @@ public class ReluminConfig {
 
 		//relumin
 		prop.setProperty(
-			"relumin.host",
-			StringUtils.defaultString(host));
+				"relumin.host",
+				defaultString(host));
 
 		// auth
 		prop.setProperty(
-			"auth.enabled",
-			StringUtils.defaultIfBlank(
-				auth.getEnabled(),
-				AuthConfig.DEFAULT_ENABLED));
+				"auth.enabled",
+				defaultIfBlank(
+						auth.getEnabled(),
+						AuthConfig.DEFAULT_ENABLED));
 		prop.setProperty(
-			"auth.allowAnonymous",
-			StringUtils.defaultIfBlank(
-				auth.getAllowAnonymous(),
-				AuthConfig.DEFAULT_ALLOW_ANONYMOUS));
+				"auth.allowAnonymous",
+				defaultIfBlank(
+						auth.getAllowAnonymous(),
+						AuthConfig.DEFAULT_ALLOW_ANONYMOUS));
 
 		// server
 		prop.setProperty(
-			"server.port",
-			StringUtils.defaultIfBlank(
-				server.getPort(),
-				ServerConfig.DEFAULT_PORT));
+				"server.port",
+				defaultIfBlank(
+						server.getPort(),
+						ServerConfig.DEFAULT_PORT));
 		prop.setProperty(
-			"management.port",
-			StringUtils.defaultIfBlank(
-				server.getMonitorPort(),
-				ServerConfig.DEFAULT_MONITOR_PORT));
+				"management.port",
+				defaultIfBlank(
+						server.getMonitorPort(),
+						ServerConfig.DEFAULT_MONITOR_PORT));
 
 		// redis
 		prop.setProperty(
-			"redis.prefixKey",
-			StringUtils.defaultIfBlank(
-				redis.getPrefixKey(),
-				RedisConfig.DEFAULT_PREFIX_KEY));
+				"redis.prefixKey",
+				defaultIfBlank(
+						redis.getPrefixKey(),
+						RedisConfig.DEFAULT_PREFIX_KEY));
 		prop.setProperty(
-			"redis.host",
-			redis.getHost());
+				"redis.host",
+				redis.getHost());
 		prop.setProperty(
-			"redis.port",
-			redis.getPort());
+				"redis.port",
+				redis.getPort());
 
 		// scheduler
 		prop.setProperty(
-			"scheduler.refreshClustersIntervalMillis",
-			StringUtils.defaultIfBlank(
-				scheduler.getRefreshClustersIntervalMillis(),
-				SchedulerConfig.DEFAULT_REFRESH_CLUSTERS_INTERVAL_MILLIS));
+				"scheduler.refreshClustersIntervalMillis",
+				defaultIfBlank(
+						scheduler.getRefreshClustersIntervalMillis(),
+						SchedulerConfig.DEFAULT_REFRESH_CLUSTERS_INTERVAL_MILLIS));
 		prop.setProperty(
-			"scheduler.collectStaticsInfoIntervalMillis",
-			StringUtils.defaultIfBlank(
-				scheduler.getCollectStaticsInfoIntervalMillis(),
-				SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS));
+				"scheduler.collectStaticsInfoIntervalMillis",
+				defaultIfBlank(
+						scheduler.getCollectStaticsInfoIntervalMillis(),
+						SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_INTERVAL_MILLIS));
 		prop.setProperty(
-			"scheduler.collectStaticsInfoMaxCount",
-			StringUtils.defaultIfBlank(
-				scheduler.getCollectStaticsInfoMaxCount(),
-				SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT));
+				"scheduler.collectStaticsInfoMaxCount",
+				defaultIfBlank(
+						scheduler.getCollectStaticsInfoMaxCount(),
+						SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT));
 
 		// notice email
 		prop.setProperty(
-			"notice.mail.host",
-			StringUtils.defaultIfBlank(
-				notice.getMail().getHost(),
-				NoticeMailConfig.DEFAULT_HOST));
+				"notice.mail.host",
+				defaultIfBlank(
+						notice.getMail().getHost(),
+						NoticeMailConfig.DEFAULT_HOST));
 		prop.setProperty(
-			"notice.mail.port",
-			StringUtils.defaultIfBlank(
-				notice.getMail().getPort(),
-				NoticeMailConfig.DEFAULT_PORT));
+				"notice.mail.port",
+				defaultIfBlank(
+						notice.getMail().getPort(),
+						NoticeMailConfig.DEFAULT_PORT));
 		prop.setProperty(
-			"notice.mail.user",
-			StringUtils.defaultIfBlank(
-				notice.getMail().getUser(),
-				NoticeMailConfig.DEFAULT_USER));
+				"notice.mail.user",
+				defaultIfBlank(
+						notice.getMail().getUser(),
+						NoticeMailConfig.DEFAULT_USER));
 		prop.setProperty(
-			"notice.mail.password",
-			StringUtils.defaultIfBlank(
-				notice.getMail().getPassword(),
-				NoticeMailConfig.DEFAULT_PASSWORD));
+				"notice.mail.password",
+				defaultIfBlank(
+						notice.getMail().getPassword(),
+						NoticeMailConfig.DEFAULT_PASSWORD));
 		prop.setProperty(
-			"notice.mail.from",
-			StringUtils.defaultIfBlank(
-				notice.getMail().getFrom(),
-				NoticeMailConfig.DEFAULT_FROM));
+				"notice.mail.from",
+				defaultIfBlank(
+						notice.getMail().getFrom(),
+						NoticeMailConfig.DEFAULT_FROM));
 		prop.setProperty(
-			"notice.mail.charset",
-			StringUtils.defaultIfBlank(
-				notice.getMail().getCharset(),
-				NoticeMailConfig.DEFAULT_CHARSET));
+				"notice.mail.charset",
+				defaultIfBlank(
+						notice.getMail().getCharset(),
+						NoticeMailConfig.DEFAULT_CHARSET));
 
 		// fluentd
 		prop.setProperty(
-			"outputMetrics.fluentd.enabled",
-			StringUtils.defaultIfBlank(
-				outputMetrics.getFluentd().getEnabled(),
-				OutputMetricsFluentdConfig.DEFAULT_ENABLED));
+				"outputMetrics.fluentd.enabled",
+				defaultIfBlank(
+						outputMetrics.getFluentd().getEnabled(),
+						OutputMetricsFluentdConfig.DEFAULT_ENABLED));
 		prop.setProperty(
-			"outputMetrics.fluentd.host",
-			StringUtils.defaultIfBlank(
-				outputMetrics.getFluentd().getHost(),
-				OutputMetricsFluentdConfig.DEFAULT_HOST));
+				"outputMetrics.fluentd.host",
+				defaultIfBlank(
+						outputMetrics.getFluentd().getHost(),
+						OutputMetricsFluentdConfig.DEFAULT_HOST));
 		prop.setProperty(
-			"outputMetrics.fluentd.port",
-			StringUtils.defaultIfBlank(
-				outputMetrics.getFluentd().getPort(),
-				OutputMetricsFluentdConfig.DEFAULT_PORT));
+				"outputMetrics.fluentd.port",
+				defaultIfBlank(
+						outputMetrics.getFluentd().getPort(),
+						OutputMetricsFluentdConfig.DEFAULT_PORT));
 		prop.setProperty(
-			"outputMetrics.fluentd.timeout",
-			StringUtils.defaultIfBlank(
-				outputMetrics.getFluentd().getTimeout(),
-				OutputMetricsFluentdConfig.DEFAULT_TIMEOUT));
+				"outputMetrics.fluentd.timeout",
+				defaultIfBlank(
+						outputMetrics.getFluentd().getTimeout(),
+						OutputMetricsFluentdConfig.DEFAULT_TIMEOUT));
 		prop.setProperty(
-			"outputMetrics.fluentd.bufferCapacity",
-			StringUtils.defaultIfBlank(
-				outputMetrics.getFluentd().getBufferCapacity(),
-				OutputMetricsFluentdConfig.DEFAULT_BUFFER_CAPACITY));
+				"outputMetrics.fluentd.bufferCapacity",
+				defaultIfBlank(
+						outputMetrics.getFluentd().getBufferCapacity(),
+						OutputMetricsFluentdConfig.DEFAULT_BUFFER_CAPACITY));
 		prop.setProperty(
-			"outputMetrics.fluentd.tag",
-			StringUtils.defaultIfBlank(
-				outputMetrics.getFluentd().getTag(),
-				OutputMetricsFluentdConfig.DEFAULT_TAG));
+				"outputMetrics.fluentd.tag",
+				defaultIfBlank(
+						outputMetrics.getFluentd().getTag(),
+						OutputMetricsFluentdConfig.DEFAULT_TAG));
 		prop.setProperty(
-			"outputMetrics.fluentd.nodeTag",
-			StringUtils.defaultIfBlank(
-				outputMetrics.getFluentd().getNodeTag(),
-				OutputMetricsFluentdConfig.DEFAULT_NODE_TAG));
+				"outputMetrics.fluentd.nodeTag",
+				defaultIfBlank(
+						outputMetrics.getFluentd().getNodeTag(),
+						OutputMetricsFluentdConfig.DEFAULT_NODE_TAG));
 
 		return prop;
 	}
 
-	private void validate() {
+	void validate() {
 		List<String> errors = Lists.newArrayList();
 
 		// server
 		if (server.getPort() != null) {
-			check(isNumeric(server.getPort()), "'server.port' must be numeric.");
+			check(isInteger(server.getPort()), "'server.port' must be integer.");
 		}
 		if (server.getMonitorPort() != null) {
-			check(isNumeric(server.getMonitorPort()), "'server.monitorPort' must be numeric.");
+			check(isInteger(server.getMonitorPort()), "'server.monitorPort' must be integer.");
 		}
 
 		// auth
+		if (auth.getEnabled() != null) {
+			check(isBoolean(auth.getEnabled()), "'auth.enabled' must be boolean.");
+		}
+		if (auth.getAllowAnonymous() != null) {
+			check(isBoolean(auth.getAllowAnonymous()), "'auth.allowAnonymous' must be boolean.");
+		}
 
 		// redis
-		check(StringUtils.isNotBlank(redis.getHost()), "'redis.host' is blank.");
-		check(StringUtils.isNotBlank(redis.getPort()), "'redis.port' is blank.");
-		check(isNumeric(redis.getPort()), "'redis.port' must be numeric.");
+		check(isNotBlank(redis.getHost()), "'redis.host' is blank.");
+		check(isInteger(redis.getPort()), "'redis.port' must be integer.");
 
 		// scheduler
 		if (scheduler.getRefreshClustersIntervalMillis() != null) {
@@ -204,17 +209,23 @@ public class ReluminConfig {
 			check(isInteger(scheduler.getCollectStaticsInfoIntervalMillis()), "'scheduler.collectStaticsInfoIntervalMillis' must be integer.");
 		}
 		if (scheduler.getCollectStaticsInfoMaxCount() != null) {
-			check(isInteger(scheduler.getCollectStaticsInfoMaxCount()), "'scheduler.collectStaticsInfoMaxCount' must be numeric.");
+			check(isInteger(scheduler.getCollectStaticsInfoMaxCount()), "'scheduler.collectStaticsInfoMaxCount' must be integer.");
 		}
 
 		// notice
 		// notice email
 		if (notice.getMail().getPort() != null) {
-			check(isNumeric(notice.getMail().getPort()), "'notice.email.port' must be numeric.");
+			check(isInteger(notice.getMail().getPort()), "'notice.email.port' must be integer.");
 		}
 
 		// output metrics
 		// fluentd
+		if (outputMetrics.getFluentd().getEnabled() != null) {
+			check(isInteger(outputMetrics.getFluentd().getEnabled()), "'outputMetcis.fluentd.enabled' must be boolean.");
+		}
+		if (outputMetrics.getFluentd().getPort() != null) {
+			check(isInteger(outputMetrics.getFluentd().getPort()), "'outputMetcis.fluentd.port' must be integer.");
+		}
 		if (outputMetrics.getFluentd().getTimeout() != null) {
 			check(isInteger(outputMetrics.getFluentd().getTimeout()), "'outputMetcis.fluentd.timeout' must be integer.");
 		}
@@ -227,13 +238,13 @@ public class ReluminConfig {
 		}
 	}
 
-	private void check(boolean bool, String error) {
+	void check(boolean bool, String error) {
 		if (!bool) {
 			errors.add(error);
 		}
 	}
 
-	private boolean isInteger(String str) {
+	static boolean isInteger(String str) {
 		try {
 			Integer.valueOf(str);
 			return true;
@@ -242,7 +253,7 @@ public class ReluminConfig {
 		}
 	}
 
-	private boolean isNumeric(String str) {
-		return StringUtils.isNumeric(str);
+	static boolean isBoolean(String str) {
+		return StringUtils.equalsIgnoreCase(str, "true") || StringUtils.equalsIgnoreCase(str, "false");
 	}
 }

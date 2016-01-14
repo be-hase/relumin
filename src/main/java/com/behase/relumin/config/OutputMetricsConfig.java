@@ -7,21 +7,6 @@ public class OutputMetricsConfig {
 	//	private OutputMetricsFileConfig file = new OutputMetricsFileConfig();
 	private OutputMetricsFluentdConfig fluentd = new OutputMetricsFluentdConfig();
 
-	//	@Data
-	//	public static class OutputMetricsFileConfig {
-	//		public static final String DEFAULT_ENABLED = "false";
-	//		public static final String DEFAULT_NAME = "relumin_metrics";
-	//		public static final String DEFAULT_DIR = ".";
-	//		public static final String DEFAULT_MAX_SIZE = "500MB";
-	//		public static final String DEFAULT_COUNT = "10";
-	//
-	//		private String enabled;
-	//		private String name;
-	//		private String dir;
-	//		private String maxSize;
-	//		private String count;
-	//	}
-
 	@Data
 	public static class OutputMetricsFluentdConfig {
 		public static final String DEFAULT_ENABLED = "false";

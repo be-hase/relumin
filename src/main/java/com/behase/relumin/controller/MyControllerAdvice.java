@@ -28,7 +28,7 @@ public class MyControllerAdvice {
 	@ResponseBody
 	public ResponseEntity<ErrorResponse> allExceptionHandler(Exception e, HttpServletRequest request,
 			HttpServletResponse response) {
-		log.error("handle Exception.", e); // 意図していないExceptionなので、error logを出す。
+		log.error("handle Exception.", e);
 		return new ResponseEntity<ErrorResponse>(new ErrorResponse("500", "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
@@ -39,7 +39,7 @@ public class MyControllerAdvice {
 			MissingServletRequestParameterException e,
 			HttpServletRequest request,
 			HttpServletResponse response) {
-		log.warn("handle Exception.", e); // 意図しているExceptionなので、warn logを出す。
+		log.warn("handle Exception.", e);
 		return new ErrorResponse("400", "Invalid parameter.");
 	}
 
@@ -61,7 +61,7 @@ public class MyControllerAdvice {
 	public ErrorResponse httpRequestMethodNotSupportedExceptionHandle(
 			final HttpRequestMethodNotSupportedException e,
 			final NativeWebRequest request) {
-		log.warn("handle Exception.", e); // 意図しているExceptionなので、warn logを出す。
+		log.warn("handle Exception.", e);
 		return new ErrorResponse("405", e.getMessage());
 	}
 
@@ -70,7 +70,7 @@ public class MyControllerAdvice {
 	@ResponseBody
 	public ErrorResponse httpMessageNotReadableExceptionHandle(final HttpMessageNotReadableException e,
 			final NativeWebRequest request) {
-		log.warn("handle Exception.", e); // 意図しているExceptionなので、warn logを出す。
+		log.warn("handle Exception.", e);
 		return new ErrorResponse("400", "Invalid parameter.");
 	}
 }
