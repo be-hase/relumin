@@ -31,8 +31,7 @@ public class ReluminConfig {
 
 	private List<String> errors = Lists.newArrayList();
 
-	public static ReluminConfig create(String configLocation) throws JsonParseException, JsonMappingException,
-			IOException {
+	public static ReluminConfig create(String configLocation) throws IOException {
 		if (Paths.get(configLocation).toFile().exists()) {
 			ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 			return mapper.readValue(Paths.get(configLocation).toFile(), ReluminConfig.class);
@@ -139,33 +138,6 @@ public class ReluminConfig {
 				notice.getMail().getCharset(),
 				NoticeMailConfig.DEFAULT_CHARSET));
 
-		// output metrics
-		// file
-		//		prop.setProperty(
-		//			"outputMetrics.file.enabled",
-		//			StringUtils.defaultIfBlank(
-		//				outputMetrics.getFile().getEnabled(),
-		//				OutputMetricsFileConfig.DEFAULT_ENABLED));
-		//		prop.setProperty(
-		//			"outputMetrics.file.name",
-		//			StringUtils.defaultIfBlank(
-		//				outputMetrics.getFile().getName(),
-		//				OutputMetricsFileConfig.DEFAULT_NAME));
-		//		prop.setProperty(
-		//			"outputMetrics.file.dir",
-		//			StringUtils.defaultIfBlank(
-		//				outputMetrics.getFile().getDir(),
-		//				OutputMetricsFileConfig.DEFAULT_DIR));
-		//		prop.setProperty(
-		//			"outputMetrics.file.maxSize",
-		//			StringUtils.defaultIfBlank(
-		//				outputMetrics.getFile().getMaxSize(),
-		//				OutputMetricsFileConfig.DEFAULT_MAX_SIZE));
-		//		prop.setProperty(
-		//			"outputMetrics.file.count",
-		//			StringUtils.defaultIfBlank(
-		//				outputMetrics.getFile().getCount(),
-		//				OutputMetricsFileConfig.DEFAULT_COUNT));
 		// fluentd
 		prop.setProperty(
 			"outputMetrics.fluentd.enabled",
@@ -242,10 +214,6 @@ public class ReluminConfig {
 		}
 
 		// output metrics
-		// file
-		//		if (outputMetrics.getFile().getCount() != null) {
-		//			check(isNumeric(outputMetrics.getFile().getCount()), "'outputMetcis.file.count' must be numeric.");
-		//		}
 		// fluentd
 		if (outputMetrics.getFluentd().getTimeout() != null) {
 			check(isInteger(outputMetrics.getFluentd().getTimeout()), "'outputMetcis.fluentd.timeout' must be integer.");

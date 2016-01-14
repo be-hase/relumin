@@ -1,0 +1,5 @@
+#### RELUMIN INTERNAL SETTING ###
+redis:
+  host: 127.0.0.1 # set your docker host
+
+# FOR TEST SETTING

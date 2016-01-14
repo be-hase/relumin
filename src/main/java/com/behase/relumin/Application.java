@@ -26,6 +26,8 @@ public class Application extends WebMvcConfigurerAdapter {
 	private static final String CONFIG_LOCATION = "config";
 
 	public static void main(String[] args) throws IOException {
+		log.info("Starting Relumin...");
+
 		String configLocation = System.getProperty(CONFIG_LOCATION, "relumin-local-conf.yml");
 		checkArgument(configLocation != null, "Specify config VM parameter.");
 
@@ -33,7 +35,6 @@ public class Application extends WebMvcConfigurerAdapter {
 		log.info("config : {}", config);
 
 		SpringApplication app = new SpringApplication(Application.class);
-		app.setAddCommandLineProperties(false);
 		app.setDefaultProperties(config.getProperties());
 		app.run(args);
 	}
