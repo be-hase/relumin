@@ -12,7 +12,7 @@ security:
     enabled: false
 
 build:
-  number: 6
+  number: 0
 
 #### RELUMIN INTERNAL SETTING ###
 relumin:
