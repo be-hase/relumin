@@ -1,0 +1,7 @@
+language: java
+jdk:
+  - oraclejdk8
+script: mvn clean test -Dtest=com.behase.relumin.util.JedisUtilsTest -DargLine="-Dspring.profiles.active=travis"
+cache:
+  directories:
+    - $HOME/.m2
