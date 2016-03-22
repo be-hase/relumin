@@ -254,6 +254,6 @@ public class ReluminConfig {
 	}
 
 	static boolean isBoolean(String str) {
-		return StringUtils.equalsIgnoreCase(str, "true") || StringUtils.equalsIgnoreCase(str, "false");
+		return StringUtils.equals(str, "true") || StringUtils.equals(str, "false");
 	}
 }

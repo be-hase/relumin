@@ -1,5 +1,7 @@
 package com.behase.relumin.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.StandardPasswordEncoder;
 
@@ -10,6 +12,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 public class LoginUser {
 	private String username;

@@ -89,7 +89,7 @@ public class ClusterApiController {
 			@PathVariable String clusterName,
 			@RequestParam String hostAndPort
 			) throws IOException {
-		loggingOperationService.log("registCluster", authentication, "clusterName={}, hostAndPort={}.", clusterName, hostAndPort);
+		loggingOperationService.log("registerCluster", authentication, "clusterName={}, hostAndPort={}.", clusterName, hostAndPort);
 
 		if (clusterService.existsClusterName(clusterName)) {
 			throw new InvalidParameterException(String.format("This clusterName(%s) already exists.", clusterName));
@@ -99,7 +99,7 @@ public class ClusterApiController {
 	}
 
 	@RequestMapping(value = "/cluster/{clusterName}/change-cluster-name", method = RequestMethod.POST)
-	public Object changeClusterName(
+	public Cluster changeClusterName(
 			Authentication authentication,
 			@PathVariable String clusterName,
 			@RequestParam String newClusterName
@@ -166,7 +166,7 @@ public class ClusterApiController {
 	}
 
 	@RequestMapping(value = "/cluster/{clusterName}/notice", method = RequestMethod.GET)
-	public Object getClusterNotice(
+	public Notice getClusterNotice(
 			@PathVariable String clusterName
 			) throws IOException {
 		Notice notice = clusterService.getClusterNotice(clusterName);
@@ -177,7 +177,7 @@ public class ClusterApiController {
 	}
 
 	@RequestMapping(value = "/cluster/{clusterName}/notice", method = RequestMethod.POST)
-	public Object setClusterNotice(
+	public Notice setClusterNotice(
 			Authentication authentication,
 			@PathVariable String clusterName,
 			@RequestParam(defaultValue = "") String notice

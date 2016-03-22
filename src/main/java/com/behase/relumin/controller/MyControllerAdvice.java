@@ -29,7 +29,7 @@ public class MyControllerAdvice {
 	public ResponseEntity<ErrorResponse> allExceptionHandler(Exception e, HttpServletRequest request,
 			HttpServletResponse response) {
 		log.error("handle Exception.", e);
-		return new ResponseEntity<ErrorResponse>(new ErrorResponse("500", "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+		return new ResponseEntity<>(new ErrorResponse("500", "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	@ExceptionHandler(MissingServletRequestParameterException.class)
@@ -45,14 +45,14 @@ public class MyControllerAdvice {
 
 	@ExceptionHandler(ApiException.class)
 	@ResponseBody
-	public ResponseEntity<Object> apiExceptionHandler(ApiException e, HttpServletRequest request,
+	public ResponseEntity<ErrorResponse> apiExceptionHandler(ApiException e, HttpServletRequest request,
 			HttpServletResponse response) {
 		if (e.getHttpStatus().is5xxServerError()) {
 			log.error("handle Exception.", e);
 		} else {
 			log.warn("handle Exception.", e);
 		}
-		return new ResponseEntity<Object>(e.getErrorResponse(), e.getHttpStatus());
+		return new ResponseEntity<>(e.getErrorResponse(), e.getHttpStatus());
 	}
 
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)

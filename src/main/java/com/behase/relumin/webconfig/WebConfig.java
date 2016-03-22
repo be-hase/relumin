@@ -31,6 +31,19 @@ import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 
 @Configuration
 public class WebConfig extends WebMvcConfigurerAdapter {
+	public static final ObjectMapper MAPPER = new ObjectMapper();
+	static {
+		MAPPER.registerModule(new AfterburnerModule());
+		MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+		MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
+		MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		MAPPER.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+		format.setTimeZone(TimeZone.getTimeZone("UTC"));
+		MAPPER.setDateFormat(format);
+	}
+
 	@Autowired
 	private AddResponseHeaderInterceptor addResponseHeaderInterceptor;
 
@@ -79,19 +92,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	@Bean
 	@Primary
 	public ObjectMapper objectMapper() {
-		ObjectMapper objectMapper = new ObjectMapper();
-
-		objectMapper.registerModule(new AfterburnerModule());
-		objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-		objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
-		objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-		objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
-
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
-		format.setTimeZone(TimeZone.getTimeZone("UTC"));
-		objectMapper.setDateFormat(format);
-
-		return objectMapper;
+		return MAPPER;
 	}
 
 	@Bean

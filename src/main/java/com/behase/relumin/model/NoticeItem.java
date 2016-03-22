@@ -2,12 +2,18 @@ package com.behase.relumin.model;
 
 import java.util.Arrays;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
 import lombok.Data;
 import lombok.Getter;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class NoticeItem {
 	private String metricsType;
 	private String metricsName;

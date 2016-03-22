@@ -1,13 +1,18 @@
 package com.behase.relumin.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
-import lombok.Data;
-
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Cluster {
 	private String clusterName;
 	private String status;
@@ -16,15 +21,17 @@ public class Cluster {
 	private List<SlotInfo> slots;
 
 	public ClusterNode getNodeByHostAndPort(String hostAndPort) {
-		return nodes.stream().filter(node -> {
-			return StringUtils.equalsIgnoreCase(hostAndPort, node.getHostAndPort());
-		}).findFirst().orElse(null);
+		return nodes.stream()
+				.filter(node -> StringUtils.equalsIgnoreCase(hostAndPort, node.getHostAndPort()))
+				.findFirst()
+				.orElse(null);
 	}
 
 	public ClusterNode getNodeByNodeId(String nodeId) {
-		return nodes.stream().filter(node -> {
-			return StringUtils.equalsIgnoreCase(nodeId, node.getNodeId());
-		}).findFirst().orElse(null);
+		return nodes.stream()
+				.filter(node -> StringUtils.equalsIgnoreCase(nodeId, node.getNodeId()))
+				.findFirst()
+				.orElse(null);
 	}
 
 	public String getStatus() {
@@ -38,9 +45,10 @@ public class Cluster {
 			return status;
 		}
 
-		boolean existsFailNode = nodes.stream().filter(node -> {
-			return node.hasFlag("fail");
-		}).findAny().isPresent();
+		boolean existsFailNode = nodes.stream()
+				.filter(node -> node.hasFlag("fail"))
+				.findAny()
+				.isPresent();
 
 		if (existsFailNode) {
 			status = "warn";

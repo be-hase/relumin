@@ -3,6 +3,9 @@ package com.behase.relumin.model;
 import java.util.Map;
 import java.util.Set;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
 import com.behase.relumin.util.JedisUtils;
@@ -13,6 +16,9 @@ import com.google.common.collect.Sets;
 import lombok.Data;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ClusterNode {
 	private String nodeId;
 	private String hostAndPort;
