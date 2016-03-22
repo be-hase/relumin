@@ -17,7 +17,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class MyErrorController implements ErrorController {
 	private static final String ERROR_PATH = "/error";
 
-	@RequestMapping(value = ERROR_PATH)
+	@RequestMapping(ERROR_PATH)
 	@ResponseBody
 	public ResponseEntity<ErrorResponse> handleError(
 			HttpServletRequest request) throws JsonProcessingException {
@@ -25,10 +25,10 @@ public class MyErrorController implements ErrorController {
 
 		if (status.equals(HttpStatus.NOT_FOUND) || ERROR_PATH.equals(request.getRequestURI())) {
 			ErrorResponse response = new ErrorResponse("404", "Not Found.");
-			return new ResponseEntity<ErrorResponse>(response, HttpStatus.NOT_FOUND);
+			return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 		}
 		ErrorResponse response = new ErrorResponse(String.valueOf(getStatus(request)), getMessage(request));
-		return new ResponseEntity<ErrorResponse>(response, getStatus(request));
+		return new ResponseEntity<>(response, getStatus(request));
 	}
 
 	@Override
@@ -36,7 +36,7 @@ public class MyErrorController implements ErrorController {
 		return ERROR_PATH;
 	}
 
-	private HttpStatus getStatus(HttpServletRequest request) {
+	HttpStatus getStatus(HttpServletRequest request) {
 		Integer statusCode = (Integer)request.getAttribute("javax.servlet.error.status_code");
 		if (statusCode != null) {
 			try {
@@ -47,7 +47,7 @@ public class MyErrorController implements ErrorController {
 		return HttpStatus.INTERNAL_SERVER_ERROR;
 	}
 
-	private String getMessage(HttpServletRequest request) {
+	String getMessage(HttpServletRequest request) {
 		String message = (String)request.getAttribute("javax.servlet.error.message");
 		return StringUtils.defaultIfBlank(message, "No message.");
 	}
