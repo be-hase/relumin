@@ -1,8 +1,11 @@
 package com.behase.relumin.controller;
 
-import java.util.List;
-import java.util.Map;
-
+import com.behase.relumin.exception.InvalidParameterException;
+import com.behase.relumin.model.LoginUser;
+import com.behase.relumin.service.LoggingOperationService;
+import com.behase.relumin.service.UserService;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,39 +14,33 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.behase.relumin.exception.InvalidParameterException;
-import com.behase.relumin.model.LoginUser;
-import com.behase.relumin.service.LoggingOperationService;
-import com.behase.relumin.service.UserService;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import java.util.List;
+import java.util.Map;
 
 //@Slf4j
 @RestController
 @RequestMapping(value = "/api")
 public class UserApiController {
 	@Autowired
-	UserService userService;
+	private UserService userService;
 
 	@Autowired
 	private LoggingOperationService loggingOperationService;
 
 	@RequestMapping(value = "/users", method = RequestMethod.GET)
-	public Object users(
-			Authentication authentication
-			) throws Exception {
+	public List<LoginUser> users() throws Exception {
 		List<LoginUser> users = userService.getUsers();
 		return users == null ? Lists.newArrayList() : users;
 	}
 
 	@RequestMapping(value = "/user/{username}", method = RequestMethod.POST)
-	public Object add(
+	public LoginUser add(
 			Authentication authentication,
 			@PathVariable String username,
 			@RequestParam(defaultValue = "") String displayName,
 			@RequestParam(defaultValue = "") String role,
 			@RequestParam(defaultValue = "") String password
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("addUser", authentication, "username={}, displayName={}, role={}.", username, displayName, role);
 
 		userService.addUser(username, displayName, password, role);
@@ -51,12 +48,12 @@ public class UserApiController {
 	}
 
 	@RequestMapping(value = "/user/{username}/update", method = RequestMethod.POST)
-	public Object update(
+	public LoginUser update(
 			Authentication authentication,
 			@PathVariable String username,
 			@RequestParam(defaultValue = "") String displayName,
 			@RequestParam(defaultValue = "") String role
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("updateUser", authentication, "username={}, displayName={}, role={}.", username, displayName, role);
 
 		userService.updateUser(username, displayName, role);
@@ -64,10 +61,10 @@ public class UserApiController {
 	}
 
 	@RequestMapping(value = "/me/update", method = RequestMethod.POST)
-	public Object updateMe(
+	public LoginUser updateMe(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String displayName
-			) throws Exception {
+	) throws Exception {
 		if (authentication == null) {
 			throw new InvalidParameterException("You are not loggedin.");
 		}
@@ -77,11 +74,11 @@ public class UserApiController {
 	}
 
 	@RequestMapping(value = "/me/change-password", method = RequestMethod.POST)
-	public Object changePassword(
+	public LoginUser changePassword(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String oldPassword,
 			@RequestParam(defaultValue = "") String password
-			) throws Exception {
+	) throws Exception {
 		if (authentication == null) {
 			throw new InvalidParameterException("You are not loggedin.");
 		}
@@ -91,10 +88,10 @@ public class UserApiController {
 	}
 
 	@RequestMapping(value = "/user/{username}/delete", method = RequestMethod.POST)
-	public Object delete(
+	public Map<String, Boolean> delete(
 			Authentication authentication,
 			@PathVariable String username
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("deleteUser", authentication, "username={}.", username);
 
 		userService.deleteUser(username);

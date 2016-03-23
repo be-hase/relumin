@@ -15,7 +15,7 @@ import com.behase.relumin.service.UserService;
 @Controller
 public class WebController {
 	@Autowired
-	UserService userService;
+	private UserService userService;
 
 	@Value("${build.number}")
 	private String buildNumber;
@@ -31,7 +31,7 @@ public class WebController {
 	private boolean authAllowAnonymous;
 
 	@RequestMapping(value = "/", method = RequestMethod.GET)
-	public String getClusterList(
+	public String index(
 			Authentication authentication,
 			Model model
 			) throws Exception {

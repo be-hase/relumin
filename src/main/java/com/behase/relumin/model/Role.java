@@ -1,5 +1,6 @@
 package com.behase.relumin.model;
 
+import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 
 import com.behase.relumin.exception.InvalidParameterException;
