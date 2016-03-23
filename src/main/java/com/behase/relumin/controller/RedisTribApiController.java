@@ -1,17 +1,7 @@
 package com.behase.relumin.controller;
 
-import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.behase.relumin.exception.InvalidParameterException;
+import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.param.CreateClusterParam;
 import com.behase.relumin.service.ClusterService;
@@ -23,6 +13,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/api/trib")
@@ -46,7 +47,7 @@ public class RedisTribApiController {
 	public List<CreateClusterParam> getCreateParameter(
 			@RequestParam(defaultValue = "") String replicas,
 			@RequestParam(defaultValue = "") String hostAndPorts
-			) throws Exception {
+	) throws Exception {
 		ValidationUtils.number(replicas, "replicas");
 		ValidationUtils.notBlank(hostAndPorts, "hostAndPorts");
 
@@ -54,17 +55,18 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/create/{clusterName}", method = RequestMethod.POST)
-	public Object createCluster(
+	public Cluster createCluster(
 			Authentication authentication,
 			@PathVariable String clusterName,
 			@RequestParam(defaultValue = "") String params
-			) throws Exception {
-		loggingOperationService.log("createAndRegistCluster", authentication, "clusterName={}, params={}.", clusterName, params);
+	) throws Exception {
+		loggingOperationService.log("createAndRegisterCluster", authentication, "clusterName={}, params={}.", clusterName, params);
 
 		if (clusterService.existsClusterName(clusterName)) {
 			throw new InvalidParameterException(String.format("This clusterName(%s) already exists.", clusterName));
 		}
 
+		ValidationUtils.notBlank(params, "params");
 		List<CreateClusterParam> paramsList;
 		try {
 			paramsList = mapper.readValue(params, new TypeReference<List<CreateClusterParam>>() {
@@ -79,12 +81,13 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/create", method = RequestMethod.POST)
-	public Object createCluster(
+	public Cluster createCluster(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String params
-			) throws Exception {
-		loggingOperationService.log("createtCluster", authentication, "params={}.", params);
+	) throws Exception {
+		loggingOperationService.log("createCluster", authentication, "params={}.", params);
 
+		ValidationUtils.notBlank(params, "params");
 		List<CreateClusterParam> paramsList;
 		try {
 			paramsList = mapper.readValue(params, new TypeReference<List<CreateClusterParam>>() {
@@ -92,26 +95,27 @@ public class RedisTribApiController {
 		} catch (Exception e) {
 			throw new InvalidParameterException("params is not JSON.");
 		}
+
 		redisTibService.createCluster(paramsList);
 		return clusterService.getClusterByHostAndPort(paramsList.get(0).getMaster());
 	}
 
 	@RequestMapping(value = "/check", method = RequestMethod.GET)
-	public Object checkCluster(
+	public Map<String, List<String>> checkCluster(
 			@RequestParam(defaultValue = "") String clusterName
-			) throws Exception {
+	) throws Exception {
 		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
 		return ImmutableMap.of("errors", redisTibService.checkCluster(node.getHostAndPort()));
 	}
 
 	@RequestMapping(value = "/reshard", method = RequestMethod.POST)
-	public Object reshardCluster(
+	public Cluster reshardCluster(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String slotCount,
 			@RequestParam(defaultValue = "") String fromNodeIds,
 			@RequestParam(defaultValue = "") String toNodeId
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("reshard", authentication, "clusterName={}, slotCount={}, fromNodeId={}, toNodeId={}.", clusterName, slotCount, fromNodeIds, toNodeId);
 
 		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
@@ -120,12 +124,12 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/reshard-by-slots", method = RequestMethod.POST)
-	public Object reshardClusterBySlots(
+	public Cluster reshardClusterBySlots(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String slots,
 			@RequestParam(defaultValue = "") String toNodeId
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("reshardBySlots", authentication, "clusterName={}, slots={}, toNodeId={}.", clusterName, slots, toNodeId);
 
 		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
@@ -134,12 +138,12 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/add-node", method = RequestMethod.POST)
-	public Object addNode(
+	public Cluster addNode(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String hostAndPort,
 			@RequestParam(defaultValue = "") String masterNodeId
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("addNode", authentication, "clusterName={}, hostAndPort={}, masterNodeId={}.", clusterName, hostAndPort, masterNodeId);
 
 		ClusterNode node = clusterService.getActiveClusterNode(clusterName);
@@ -148,14 +152,14 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/delete-node", method = RequestMethod.POST)
-	public Object deleteNode(
+	public Cluster deleteNode(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String nodeId,
 			@RequestParam(defaultValue = "") String isFail,
 			@RequestParam(defaultValue = "") String reset,
 			@RequestParam(defaultValue = "") String shutdown
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("deleteNode", authentication, "clusterName={}, nodeId={}, isFail={}, reset={}, shutdown={}.", clusterName, nodeId, isFail, reset, shutdown);
 
 		boolean isFailBool = false;
@@ -183,11 +187,11 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/replicate", method = RequestMethod.POST)
-	public Object replicateNode(
+	public Cluster replicateNode(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String hostAndPort,
 			@RequestParam(defaultValue = "") String masterNodeId
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("replicate", authentication, "hostAndPort={}, masterNodeId={}.", hostAndPort, masterNodeId);
 
 		redisTibService.replicateNode(hostAndPort, masterNodeId);
@@ -195,10 +199,10 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/failover", method = RequestMethod.POST)
-	public Object failoverNode(
+	public Cluster failoverNode(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String hostAndPort
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("failover", authentication, "hostAndPort={}.", hostAndPort);
 
 		redisTibService.failoverNode(hostAndPort);
@@ -206,11 +210,11 @@ public class RedisTribApiController {
 	}
 
 	@RequestMapping(value = "/shutdown", method = RequestMethod.POST)
-	public Object shutdown(
+	public Cluster shutdown(
 			Authentication authentication,
 			@RequestParam(defaultValue = "") String clusterName,
 			@RequestParam(defaultValue = "") String hostAndPort
-			) throws Exception {
+	) throws Exception {
 		loggingOperationService.log("shutdown", authentication, "clusterName={}, hostAndPort={}.", clusterName, hostAndPort);
 
 		ClusterNode node = clusterService.getActiveClusterNodeWithExcludeHostAndPort(clusterName, hostAndPort);

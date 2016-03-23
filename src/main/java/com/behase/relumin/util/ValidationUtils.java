@@ -83,7 +83,7 @@ public class ValidationUtils {
 
 	public static void notBlank(String str, String paramName) {
 		if (StringUtils.isBlank(str)) {
-			throw new InvalidParameterException(String.format("%s must be not blank.", paramName));
+			throw new InvalidParameterException(String.format("%s must not be blank.", paramName));
 		}
 	}
 

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.behase.relumin.util.ValidationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -138,12 +139,12 @@ public class ClusterApiController {
 		try {
 			startLong = Long.valueOf(start);
 		} catch (Exception e) {
-			throw new InvalidParameterException("'start' is must be number.");
+			throw new InvalidParameterException("start is must be number.");
 		}
 		try {
 			endLong = Long.valueOf(end);
 		} catch (Exception e) {
-			throw new InvalidParameterException("'end' is must be number.");
+			throw new InvalidParameterException("end is must be number.");
 		}
 
 		List<String> nodesList = Lists.newArrayList();
@@ -151,7 +152,7 @@ public class ClusterApiController {
 			nodesList.addAll(Splitter.on(",").splitToList(nodes));
 		}
 		if (nodesList.isEmpty()) {
-			throw new InvalidParameterException("'nodes' is empty.");
+			throw new InvalidParameterException("nodes is empty.");
 		}
 
 		List<String> fieldsList = Lists.newArrayList();
@@ -159,7 +160,7 @@ public class ClusterApiController {
 			fieldsList.addAll(Splitter.on(",").splitToList(fields));
 		}
 		if (fieldsList.isEmpty()) {
-			throw new InvalidParameterException("'fields' is empty.");
+			throw new InvalidParameterException("fields is empty.");
 		}
 
 		return clusterService.getClusterStaticsInfoHistory(clusterName, nodesList, fieldsList, startLong, endLong);
@@ -181,18 +182,16 @@ public class ClusterApiController {
 			Authentication authentication,
 			@PathVariable String clusterName,
 			@RequestParam(defaultValue = "") String notice
-			) throws IOException {
+			) throws Exception {
 		loggingOperationService.log("addNotice", authentication, "clusterName={}, notice={}.", clusterName, notice);
 
-		if (StringUtils.isBlank(notice)) {
-			throw new InvalidParameterException("'notice' is blank.");
-		}
+		ValidationUtils.notBlank(notice, "notice");
 
 		Notice noticeObj;
 		try {
 			noticeObj = mapper.readValue(notice, Notice.class);
 		} catch (Exception e) {
-			throw new InvalidParameterException("'notice' is invalid format.");
+			throw new InvalidParameterException("notice is invalid format.");
 		}
 
 		clusterService.setClusterNotice(clusterName, noticeObj);

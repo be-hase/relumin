@@ -21,11 +21,9 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import org.mockito.internal.util.reflection.Whitebox;
@@ -119,16 +117,13 @@ public class ClusterApiControllerTest {
 
 	@Test(expected = InvalidParameterException.class)
 	public void setCluster_clusterName_exist_then_throw_exception() throws Exception {
-		doNothing().when(loggingOperationService).log(any(), any(), any(), any(), any());
 		doReturn(true).when(clusterService).existsClusterName("test1");
 		controller.setCluster(null, "test1", "localhost:10000");
 	}
 
 	@Test
 	public void setCluster() throws Exception {
-		doNothing().when(loggingOperationService).log(any(), any(), any(), any(), any());
 		doReturn(false).when(clusterService).existsClusterName("test1");
-		doNothing().when(clusterService).setCluster(any(), any());
 		doReturn(Cluster.builder()
 				.clusterName("test1")
 				.info(Maps.newHashMap())
@@ -136,6 +131,7 @@ public class ClusterApiControllerTest {
 				.build())
 				.when(clusterService)
 				.getCluster("test1");
+
 		Cluster result = controller.setCluster(null, "test1", "localhost:10000");
 		log.info("result={}", result);
 		assertThat(result.getClusterName(), is("test1"));
@@ -143,8 +139,6 @@ public class ClusterApiControllerTest {
 
 	@Test
 	public void changeClusterName() throws Exception {
-		doNothing().when(loggingOperationService).log(any(), any(), any(), any(), any());
-		doNothing().when(clusterService).changeClusterName(any(), any());
 		doReturn(Cluster.builder()
 				.clusterName("test2")
 				.info(Maps.newHashMap())
@@ -160,9 +154,6 @@ public class ClusterApiControllerTest {
 
 	@Test
 	public void deleteClusterByPost() throws Exception {
-		doNothing().when(loggingOperationService).log(any(), any(), any(), any(), any());
-		doNothing().when(clusterService).deleteCluster(any());
-
 		Map<String, Boolean> result = controller.deleteClusterByPost(null, "test1");
 		log.info("result={}", result);
 		assertThat(result.get("isSuccess"), is(true));
@@ -171,7 +162,7 @@ public class ClusterApiControllerTest {
 	@Test
 	public void getMetrics_start_is_not_number_then_throw_exception() throws Exception {
 		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("'start' is must be number"));
+		expectedEx.expectMessage(containsString("start is must be number"));
 
 		controller.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "hoge", "100");
 	}
@@ -179,7 +170,7 @@ public class ClusterApiControllerTest {
 	@Test
 	public void getMetrics_end_is_not_number_then_throw_exception() throws Exception {
 		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("'end' is must be number"));
+		expectedEx.expectMessage(containsString("end is must be number"));
 
 		controller.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "100", "hoge");
 	}
@@ -187,7 +178,7 @@ public class ClusterApiControllerTest {
 	@Test
 	public void getMetrics_nodes_is_empty_then_throw_exception() throws Exception {
 		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("'nodes' is empty."));
+		expectedEx.expectMessage(containsString("nodes is empty."));
 
 		controller.getMetrics("test1", "", "used_memory,instantaneous_ops_per_sec", "100", "200");
 	}
@@ -195,7 +186,7 @@ public class ClusterApiControllerTest {
 	@Test
 	public void getMetrics_fields_is_empty_then_throw_exception() throws Exception {
 		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("'fields' is empty."));
+		expectedEx.expectMessage(containsString("fields is empty."));
 
 		controller.getMetrics("test1", "node1,node2", "", "100", "200");
 	}
@@ -232,9 +223,7 @@ public class ClusterApiControllerTest {
 	@Test
 	public void setClusterNotice_notice_is_blank_then_throw_exception() throws Exception {
 		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("'notice' is blank."));
-
-		doNothing().when(loggingOperationService).log(any(), any(), any(), any(), any());
+		expectedEx.expectMessage(containsString("notice must not be blank"));
 
 		controller.setClusterNotice(null, "test1", "");
 	}
@@ -242,9 +231,7 @@ public class ClusterApiControllerTest {
 	@Test
 	public void setClusterNotice_notice_is_invalid_format_then_throw_exception() throws Exception {
 		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("'notice' is invalid format."));
-
-		doNothing().when(loggingOperationService).log(any(), any(), any(), any(), any());
+		expectedEx.expectMessage(containsString("notice is invalid format."));
 
 		controller.setClusterNotice(null, "test1", "hoge");
 	}
@@ -253,8 +240,6 @@ public class ClusterApiControllerTest {
 	public void setClusterNotice() throws Exception {
 		Notice notice = new Notice();
 
-		doNothing().when(loggingOperationService).log(any(), any(), any(), any(), any());
-		doNothing().when(clusterService).setClusterNotice(any(), any());
 		doReturn(notice).when(clusterService).getClusterNotice("test1");
 
 		Notice result = controller.setClusterNotice(null, "test1", "{}");
