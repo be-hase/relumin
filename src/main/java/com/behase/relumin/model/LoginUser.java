@@ -1,14 +1,12 @@
 package com.behase.relumin.model;
 
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.crypto.password.StandardPasswordEncoder;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.Lists;
-
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.crypto.password.StandardPasswordEncoder;
 
 @Data
 @Builder

@@ -1,14 +1,9 @@
 package com.behase.relumin.model;
 
-import java.util.Arrays;
-
+import lombok.*;
 import org.apache.commons.lang3.StringUtils;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import java.util.Arrays;
 
 @Data
 @Builder
@@ -34,9 +29,9 @@ public class NoticeItem {
 
         public static NoticeType getNoticeType(String value) {
             return Arrays.stream(values())
-                         .filter(v -> StringUtils.equalsIgnoreCase(v.value, value))
-                         .findFirst()
-                         .orElse(null);
+                    .filter(v -> StringUtils.equalsIgnoreCase(v.value, value))
+                    .findFirst()
+                    .orElse(null);
         }
     }
 
@@ -53,9 +48,9 @@ public class NoticeItem {
 
         public static NoticeValueType getNoticeValueType(String value) {
             return Arrays.stream(values())
-                         .filter(v -> StringUtils.equalsIgnoreCase(v.value, value))
-                         .findFirst()
-                         .orElse(null);
+                    .filter(v -> StringUtils.equalsIgnoreCase(v.value, value))
+                    .findFirst()
+                    .orElse(null);
         }
     }
 
@@ -79,9 +74,9 @@ public class NoticeItem {
 
         public static NoticeOperator getNoticeOperator(String value) {
             return Arrays.stream(values())
-                         .filter(v -> StringUtils.equalsIgnoreCase(v.value, value))
-                         .findFirst()
-                         .orElse(null);
+                    .filter(v -> StringUtils.equalsIgnoreCase(v.value, value))
+                    .findFirst()
+                    .orElse(null);
         }
     }
 }
