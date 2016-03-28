@@ -4,7 +4,7 @@ import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
-import com.behase.relumin.util.JedisUtils;
+import com.behase.relumin.support.JedisSupport;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
@@ -30,18 +30,21 @@ public class NodeServiceImpl implements NodeService {
     private static final int OFFSET = 999;
 
     @Autowired
-    JedisPool dataStoreJedisPool;
+    private JedisPool dataStoreJedisPool;
 
     @Autowired
-    ObjectMapper mapper;
+    private ObjectMapper mapper;
+
+    @Autowired
+    private JedisSupport jedisSupport;
 
     @Value("${redis.prefixKey}")
     private String redisPrefixKey;
 
     @Override
     public Map<String, String> getStaticsInfo(ClusterNode clusterNode) {
-        try (Jedis jedis = JedisUtils.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
-            Map<String, String> result = JedisUtils.parseInfoResult(jedis.info());
+        try (Jedis jedis = jedisSupport.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
+            Map<String, String> result = jedisSupport.parseInfoResult(jedis.info());
 
             return result;
         }
@@ -177,7 +180,7 @@ public class NodeServiceImpl implements NodeService {
 
     @Override
     public void shutdown(String hostAndPort) {
-        try (Jedis jedis = JedisUtils.getJedisByHostAndPort(hostAndPort)) {
+        try (Jedis jedis = jedisSupport.getJedisByHostAndPort(hostAndPort)) {
             try {
                 jedis.ping();
             } catch (Exception e) {
@@ -188,8 +191,8 @@ public class NodeServiceImpl implements NodeService {
         }
     }
 
-    private List<Map<String, String>> getStaticsInfoHistoryFromRedis(String clusterName, String nodeId,
-                                                                     List<String> fields, long startIndex, long endIndex) {
+    List<Map<String, String>> getStaticsInfoHistoryFromRedis(String clusterName, String nodeId,
+                                                             List<String> fields, long startIndex, long endIndex) {
         List<Map<String, String>> result = Lists.newArrayList();
 
         try (Jedis jedis = dataStoreJedisPool.getResource()) {
@@ -208,8 +211,8 @@ public class NodeServiceImpl implements NodeService {
         return filterGetStaticsInfoHistory(result, fields);
     }
 
-    private List<Map<String, String>> filterGetStaticsInfoHistory(List<Map<String, String>> staticsInfos,
-                                                                  List<String> fields) {
+    List<Map<String, String>> filterGetStaticsInfoHistory(List<Map<String, String>> staticsInfos,
+                                                          List<String> fields) {
         List<String> copyedFields = new ArrayList<String>(fields);
         copyedFields.add("_timestamp");
 

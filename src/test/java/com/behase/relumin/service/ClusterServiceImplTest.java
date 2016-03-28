@@ -558,7 +558,7 @@ public class ClusterServiceImplTest {
 
         doReturn(staticsInfoHistory).when(nodeService).getStaticsInfoHistory(anyString(), anyString(), anyList(), anyLong(), anyLong());
 
-        Map<String, Map<String, List<List<Object>>>> result =  service.getClusterStaticsInfoHistory(
+        Map<String, Map<String, List<List<Object>>>> result = service.getClusterStaticsInfoHistory(
                 "clusterName",
                 Lists.newArrayList("nodeId1", "nodeId2"),
                 Lists.newArrayList("instantaneous_ops_per_sec"),
