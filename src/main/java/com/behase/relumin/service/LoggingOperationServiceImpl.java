@@ -28,7 +28,7 @@ public class LoggingOperationServiceImpl implements LoggingOperationService {
         LOG.info(newMsg, objects);
     }
 
-    private String getOperator(Authentication authentication) {
+    String getOperator(Authentication authentication) {
         if (authentication == null) {
             return "Anonymous";
         }

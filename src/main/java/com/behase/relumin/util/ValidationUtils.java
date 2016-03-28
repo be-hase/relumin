@@ -18,7 +18,7 @@ public class ValidationUtils {
 
     public static void clusterName(String name) {
         if (!name.matches(CLUSTER_NAME_REGEX)) {
-            throw new InvalidParameterException(String.format("clusterName is invalid. (%s)", name));
+            throw new InvalidParameterException(String.format("ClusterName is invalid. (%s)", name));
         }
     }
 

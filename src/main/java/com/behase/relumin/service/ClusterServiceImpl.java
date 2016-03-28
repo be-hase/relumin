@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -151,15 +152,15 @@ public class ClusterServiceImpl implements ClusterService {
             try {
                 jedis.ping();
             } catch (Exception e) {
-                log.warn("redis error.", e);
-                throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("Failed to connect to Redis Cluster(%s). Please confirm.", hostAndPort), HttpStatus.BAD_REQUEST);
+                log.warn("Redis error.", e);
+                throw new InvalidParameterException(String.format("Failed to connect to Redis Cluster(%s). Please confirm.", hostAndPort));
             }
 
             Map<String, String> info = jedisSupport.parseInfoResult(jedis.info());
-            log.debug("cluster info={}", info);
+            log.debug("Cluster info={}", info);
             String clusterEnabled = info.get("cluster_enabled");
             if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
-                throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("This Redis(%s) is not cluster mode.", hostAndPort), HttpStatus.BAD_REQUEST);
+                throw new InvalidParameterException(String.format("This Redis(%s) is not cluster mode.", hostAndPort));
             }
 
             List<ClusterNode> nodes = jedisSupport.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
@@ -175,10 +176,10 @@ public class ClusterServiceImpl implements ClusterService {
     public void changeClusterName(String clusterName, String newClusterName) throws IOException {
         ValidationUtils.clusterName(newClusterName);
         if (!existsClusterName(clusterName)) {
-            throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("Cluster name(%s) does not exists. Please confirm.", clusterName), HttpStatus.BAD_REQUEST);
+            throw new InvalidParameterException(String.format("Cluster name(%s) does not exists. Please confirm.", clusterName));
         }
         if (existsClusterName(newClusterName)) {
-            throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, String.format("New cluster name(%s) already exists. Please confirm.", newClusterName), HttpStatus.BAD_REQUEST);
+            throw new InvalidParameterException(String.format("New cluster name(%s) already exists. Please confirm.", newClusterName));
         }
 
         String clusterPrefixKey = Constants.getClusterRedisKey(redisPrefixKey, clusterName);
@@ -252,7 +253,7 @@ public class ClusterServiceImpl implements ClusterService {
                     // update
                     dataStoreJedis.set(Constants.getClusterRedisKey(redisPrefixKey, clusterName), mapper.writeValueAsString(nodes));
 
-                    // remove deleted statics
+                    // remove deleted(node) statics
                     Set<String> keys = dataStoreJedis.keys(Constants.getClusterRedisKey(redisPrefixKey, clusterName)
                             + ".*.staticsInfo");
                     Set<String> existOnRedisNodeIds = keys.stream().map(key -> {
@@ -263,9 +264,7 @@ public class ClusterServiceImpl implements ClusterService {
                     }).collect(Collectors.toSet());
                     log.debug("existOnRedisNodeIds : {}", existOnRedisNodeIds);
 
-                    Set<String> realNodeIds = nodes.stream().map(node -> {
-                        return node.getNodeId();
-                    }).collect(Collectors.toSet());
+                    Set<String> realNodeIds = nodes.stream().map(node -> node.getNodeId()).collect(Collectors.toSet());
                     log.debug("realNodeIds : {}", realNodeIds);
 
                     existOnRedisNodeIds.removeAll(realNodeIds);
@@ -287,58 +286,43 @@ public class ClusterServiceImpl implements ClusterService {
 
     @Override
     public ClusterNode getActiveClusterNode(String clusterName) throws IOException {
-        return getActiveClusterNodeWithExcludeNodeId(clusterName, null);
+        return getActiveClusterNodeWithExcludePredicate(clusterName, null);
     }
 
     @Override
     public ClusterNode getActiveClusterNodeWithExcludeNodeId(String clusterName, String nodeId) throws IOException {
-        try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
-            String result = dataStoreJedis.get(Constants.getClusterRedisKey(redisPrefixKey, clusterName));
-            if (StringUtils.isBlank(result)) {
-                throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
-            }
-
-            List<ClusterNode> existCluterNodes = mapper.readValue(result, new TypeReference<List<ClusterNode>>() {
-            });
-            Collections.shuffle(existCluterNodes);
-
-            for (ClusterNode clusterNode : existCluterNodes) {
-                if (nodeId != null && StringUtils.equalsIgnoreCase(clusterNode.getNodeId(), nodeId)) {
-                    continue;
-                }
-                String[] hostAndPortArray = StringUtils.split(clusterNode.getHostAndPort(), ":");
-                try (Jedis jedis = new Jedis(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]), 200)) {
-                    if ("PONG".equalsIgnoreCase(jedis.ping())) {
-                        return clusterNode;
-                    }
-                } catch (JedisException e) {
-                    log.warn("There is unconnect redis. The hostAndPort is {}", clusterNode.getHostAndPort());
-                }
-            }
-
-            throw new ApiException(Constants.ERR_CODE_ALL_NODE_DOWN, "All node is down.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return getActiveClusterNodeWithExcludePredicate(
+                clusterName,
+                clusterNode -> StringUtils.equalsIgnoreCase(clusterNode.getNodeId(), nodeId)
+        );
     }
 
     @Override
     public ClusterNode getActiveClusterNodeWithExcludeHostAndPort(String clusterName, String hostAndPort)
             throws IOException {
+        return getActiveClusterNodeWithExcludePredicate(
+                clusterName,
+                clusterNode -> StringUtils.equalsIgnoreCase(clusterNode.getHostAndPort(), hostAndPort)
+        );
+    }
+
+    ClusterNode getActiveClusterNodeWithExcludePredicate(String clusterName, Predicate<ClusterNode> excludePredicate)
+            throws IOException {
         try (Jedis dataStoreJedis = dataStoreJedisPool.getResource()) {
             String result = dataStoreJedis.get(Constants.getClusterRedisKey(redisPrefixKey, clusterName));
             if (StringUtils.isBlank(result)) {
-                throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Not exists this cluster name.", HttpStatus.BAD_REQUEST);
+                throw new InvalidParameterException("Not exists this cluster name.");
             }
 
-            List<ClusterNode> existCluterNodes = mapper.readValue(result, new TypeReference<List<ClusterNode>>() {
+            List<ClusterNode> existClusterNodes = mapper.readValue(result, new TypeReference<List<ClusterNode>>() {
             });
-            Collections.shuffle(existCluterNodes);
+            Collections.shuffle(existClusterNodes);
 
-            for (ClusterNode clusterNode : existCluterNodes) {
-                if (hostAndPort != null && StringUtils.equalsIgnoreCase(clusterNode.getHostAndPort(), hostAndPort)) {
+            for (ClusterNode clusterNode : existClusterNodes) {
+                if (excludePredicate != null && excludePredicate.test(clusterNode)) {
                     continue;
                 }
-                String[] hostAndPortArray = StringUtils.split(clusterNode.getHostAndPort(), ":");
-                try (Jedis jedis = new Jedis(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]), 200)) {
+                try (Jedis jedis = jedisSupport.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
                     if ("PONG".equalsIgnoreCase(jedis.ping())) {
                         return clusterNode;
                     }
@@ -350,6 +334,7 @@ public class ClusterServiceImpl implements ClusterService {
             throw new ApiException(Constants.ERR_CODE_ALL_NODE_DOWN, "All node is down.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 
     @Override
     public Map<String, Map<String, List<List<Object>>>> getClusterStaticsInfoHistory(String clusterName,
