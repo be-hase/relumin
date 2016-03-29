@@ -2,6 +2,7 @@ package com.behase.relumin.util;
 
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
+import com.behase.relumin.support.JedisSupport;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

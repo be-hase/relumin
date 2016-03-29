@@ -16,7 +16,9 @@ public class NoticeJob {
     private List<ResultValue> resultValues;
 
     @Data
+    @Builder
     @AllArgsConstructor
+    @NoArgsConstructor
     public static class ResultValue {
         private String nodeId;
         private String hostAndPort;

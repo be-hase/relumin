@@ -34,7 +34,6 @@ public class WebConfig extends WebMvcConfigurerAdapter {
     static {
         MAPPER.registerModule(new AfterburnerModule());
         MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
         MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         MAPPER.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
 

@@ -166,6 +166,14 @@
 			<artifactId>fluent-logger</artifactId>
 			<version>0.3.1</version>
 		</dependency>
+
+		<!--Mock HTTP server-->
+		<dependency>
+			<groupId>com.github.tomakehurst</groupId>
+			<artifactId>wiremock</artifactId>
+			<version>1.57</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

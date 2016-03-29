@@ -145,43 +145,8 @@ public class NodeSchedulerTest {
     public void getNoticeJobs_is_invalid_endtime() {
         Notice notice = Notice.builder().invalidEndTime(String.valueOf(System.currentTimeMillis() + 1000L))
                 .build();
-        nodeScheduler.getNoticeJobs(notice, null, null);
-    }
-
-    @Test
-    public void getNoticeJobs_noticeMailHost_is_blank_and_http_url_is_blank_then_ignore() {
-        noticeMailHost = "";
-        inject();
-
-        Notice notice = new Notice();
-        notice.setItems(Lists.newArrayList(new NoticeItem()));
-
-        nodeScheduler.getNoticeJobs(notice, null, null);
-        assertThat(capture.toString(), containsString("You set notification threshold"));
-    }
-
-    @Test
-    public void getNoticeJobs_noticeMailPort_is_zero_and_http_url_is_blank_then_ignore() {
-        noticeMailPort = 0;
-        inject();
-
-        Notice notice = new Notice();
-        notice.setItems(Lists.newArrayList(new NoticeItem()));
-
-        nodeScheduler.getNoticeJobs(notice, null, null);
-        assertThat(capture.toString(), containsString("You set notification threshold"));
-    }
-
-    @Test
-    public void getNoticeJobs_from_is_blank_and_http_url_is_blank_then_ignore() {
-        noticeMailFrom = "";
-        inject();
-
-        Notice notice = new Notice();
-        notice.setItems(Lists.newArrayList(new NoticeItem()));
-
-        nodeScheduler.getNoticeJobs(notice, null, null);
-        assertThat(capture.toString(), containsString("You set notification threshold"));
+        List<NoticeJob> result = nodeScheduler.getNoticeJobs(notice, null, null);
+        assertThat(result.size(), is(0));
     }
 
     @Test

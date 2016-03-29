@@ -250,13 +250,13 @@ public class NodeServiceImplTest {
 
         result = service.getAveragedStaticsInfoHistory(rangeResult, Lists.newArrayList("hoge"), Long.MAX_VALUE);
         log.info("result={}", result);
+        // Above expression cannot use. Variable Type issue.
         Map<String, List<List<Object>>> expected = Maps.newHashMap();
-        List<Object> hogeValue1 = Lists.newArrayList(350L, 3.5);
         List<List<Object>> hogeValues = Lists.newArrayList();
+        List<Object> hogeValue1 = Lists.newArrayList(350L, 3.5);
         hogeValues.add(hogeValue1);
         expected.put("hoge", hogeValues);
         assertThat(result, is(expected));
-
     }
 
     @Test
@@ -268,6 +268,15 @@ public class NodeServiceImplTest {
 
         doReturn(jedis).when(jedisSupport).getJedisByHostAndPort(anyString());
         doThrow(Exception.class).when(jedis).ping();
+
+        service.shutdown("localhost:10000");
+    }
+
+    @Test
+    public void shutdown() throws Exception {
+        Jedis jedis = mock(Jedis.class);
+
+        doReturn(jedis).when(jedisSupport).getJedisByHostAndPort(anyString());
 
         service.shutdown("localhost:10000");
     }
@@ -290,5 +299,4 @@ public class NodeServiceImplTest {
                 )
         ));
     }
-
 }

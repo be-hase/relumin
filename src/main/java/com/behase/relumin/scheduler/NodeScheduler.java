@@ -148,17 +148,6 @@ public class NodeScheduler {
             return noticeJobs;
         }
 
-        String from = StringUtils.defaultIfBlank(notice.getMail().getFrom(), noticeMailFrom);
-        boolean notNotifyByMail = StringUtils.isBlank(noticeMailHost) || noticeMailPort == 0 || StringUtils.isBlank(from);
-        boolean notNotifyByHttp = StringUtils.isBlank(notice.getHttp().getUrl());
-
-        if (notNotifyByMail && notNotifyByHttp) {
-            if (notice.getItems().size() > 0) {
-                log.warn("You set notification threshold, But mail or http notice setting is not set.");
-            }
-            return noticeJobs;
-        }
-
         for (NoticeItem item : notice.getItems()) {
             switch (NoticeType.getNoticeType(item.getMetricsType())) {
                 case CLUSTER_INFO:
