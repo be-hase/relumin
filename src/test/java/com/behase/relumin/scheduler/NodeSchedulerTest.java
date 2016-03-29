@@ -15,6 +15,10 @@ import org.fluentd.logger.FluentLogger;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
@@ -31,55 +35,40 @@ import static org.mockito.Mockito.*;
 
 @Slf4j
 public class NodeSchedulerTest {
-    private NodeScheduler nodeScheduler;
-    ClusterService clusterService;
-    NodeService nodeService;
-    JedisPool datastoreJedisPool;
-    NotifyService notifyService;
-    ObjectMapper mapper;
-    FluentLogger fluentLogger;
-    private long collectStaticsInfoMaxCount;
-    private String redisPrefixKey;
-    private String noticeMailHost;
-    private int noticeMailPort;
-    private String noticeMailFrom;
-    private String outputMetricsFluentdNodeTag;
+    @InjectMocks
+    @Spy
+    private NodeScheduler nodeScheduler = new NodeScheduler();
+
+    @Mock
+    private ClusterService clusterService;
+
+    @Mock
+    private NodeService nodeService;
+
+    @Mock
+    private JedisPool datastoreJedisPool;
+
+    @Mock
+    private NotifyService notifyService;
+
+    @Spy
+    private ObjectMapper mapper = WebConfig.MAPPER;
+
+    @Mock
+    private FluentLogger fluentLogger;
 
     @Rule
     public OutputCapture capture = new OutputCapture();
 
     @Before
     public void init() {
-        nodeScheduler = new NodeScheduler();
-        clusterService = mock(ClusterService.class);
-        nodeService = mock(NodeService.class);
-        datastoreJedisPool = mock(JedisPool.class);
-        notifyService = mock(NotifyService.class);
-        mapper = WebConfig.MAPPER;
-        fluentLogger = mock(FluentLogger.class);
-        collectStaticsInfoMaxCount = 100;
-        redisPrefixKey = "_relumin";
-        noticeMailHost = "localhost";
-        noticeMailPort = 25;
-        noticeMailFrom = "example.com";
-        outputMetricsFluentdNodeTag = "tag";
-
-        inject();
-    }
-
-    private void inject() {
-        Whitebox.setInternalState(nodeScheduler, "clusterService", clusterService);
-        Whitebox.setInternalState(nodeScheduler, "nodeService", nodeService);
-        Whitebox.setInternalState(nodeScheduler, "datastoreJedisPool", datastoreJedisPool);
-        Whitebox.setInternalState(nodeScheduler, "notifyService", notifyService);
-        Whitebox.setInternalState(nodeScheduler, "mapper", mapper);
-        Whitebox.setInternalState(nodeScheduler, "fluentLogger", fluentLogger);
-        Whitebox.setInternalState(nodeScheduler, "collectStaticsInfoMaxCount", collectStaticsInfoMaxCount);
-        Whitebox.setInternalState(nodeScheduler, "redisPrefixKey", redisPrefixKey);
-        Whitebox.setInternalState(nodeScheduler, "noticeMailHost", noticeMailHost);
-        Whitebox.setInternalState(nodeScheduler, "noticeMailPort", noticeMailPort);
-        Whitebox.setInternalState(nodeScheduler, "noticeMailFrom", noticeMailFrom);
-        Whitebox.setInternalState(nodeScheduler, "outputMetricsFluentdNodeTag", outputMetricsFluentdNodeTag);
+        MockitoAnnotations.initMocks(this);
+        Whitebox.setInternalState(nodeScheduler, "collectStaticsInfoMaxCount", 100);
+        Whitebox.setInternalState(nodeScheduler, "redisPrefixKey", "_relumin");
+        Whitebox.setInternalState(nodeScheduler, "noticeMailHost", "localhost");
+        Whitebox.setInternalState(nodeScheduler, "noticeMailPort", 25);
+        Whitebox.setInternalState(nodeScheduler, "noticeMailFrom", "from@example.com");
+        Whitebox.setInternalState(nodeScheduler, "outputMetricsFluentdNodeTag", "tag");
     }
 
     @Test
@@ -108,10 +97,9 @@ public class NodeSchedulerTest {
         doReturn(Maps.newHashMap()).when(nodeService).getStaticsInfo(any());
         doReturn(mock(Jedis.class)).when(datastoreJedisPool).getResource();
 
-        NodeScheduler spy = spy(nodeScheduler);
-        doReturn(Lists.newArrayList(new NoticeJob())).when(spy).getNoticeJobs(any(), any(), any());
+        doReturn(Lists.newArrayList(new NoticeJob())).when(nodeScheduler).getNoticeJobs(any(), any(), any());
 
-        spy.collectStaticsInfo();
+        nodeScheduler.collectStaticsInfo();
 
         String output = capture.toString();
         assertThat(output, containsString("Save staticsInfo to redis"));
@@ -137,7 +125,6 @@ public class NodeSchedulerTest {
         );
 
         nodeScheduler.outputMetrics(new Cluster(), staticsInfos);
-
         assertThat(capture.toString(), containsString("Logging on fluentd"));
     }
 

@@ -10,6 +10,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.springframework.boot.test.OutputCapture;
 import org.springframework.mail.MailSender;
@@ -27,12 +31,15 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verify;
 
 public class NotifyServiceImplTest {
-    private NotifyServiceImpl service;
-    private String reluminHost;
-    private String serverPort;
-    private String noticeMailFrom;
+    @InjectMocks
+    @Spy
+    private NotifyServiceImpl service = new NotifyServiceImpl();
+
+    @Mock
     private MailSender mailSender;
-    private ObjectMapper mapper;
+
+    @Spy
+    private ObjectMapper mapper = WebConfig.MAPPER;
 
     @Rule
     public WireMockRule mockServer = new WireMockRule(20000);
@@ -86,22 +93,10 @@ public class NotifyServiceImplTest {
 
     @Before
     public void init() {
-        service = spy(new NotifyServiceImpl());
-        reluminHost = "localhost";
-        serverPort = "8080";
-        noticeMailFrom = "from@example.com";
-        mailSender = mock(MailSender.class);
-        mapper = WebConfig.MAPPER;
-
-        inject();
-    }
-
-    private void inject() {
-        Whitebox.setInternalState(service, "reluminHost", reluminHost);
-        Whitebox.setInternalState(service, "serverPort", serverPort);
-        Whitebox.setInternalState(service, "noticeMailFrom", noticeMailFrom);
-        Whitebox.setInternalState(service, "mailSender", mailSender);
-        Whitebox.setInternalState(service, "mapper", mapper);
+        MockitoAnnotations.initMocks(this);
+        Whitebox.setInternalState(service, "reluminHost", "localhost");
+        Whitebox.setInternalState(service, "serverPort", "8080");
+        Whitebox.setInternalState(service, "noticeMailFrom", "from@example.com");
     }
 
     @Test

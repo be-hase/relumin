@@ -33,7 +33,7 @@ public class ClusterNode {
     private Set<Integer> servedSlotsSet = Sets.newTreeSet();
 
     public boolean hasFlag(String flag) {
-        if (flag == null || flags.isEmpty()) {
+        if (flags == null || flags.isEmpty()) {
             return false;
         }
         return flags.contains(flag);

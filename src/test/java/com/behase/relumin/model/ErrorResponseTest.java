@@ -1,9 +1,9 @@
 package com.behase.relumin.model;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
 public class ErrorResponseTest {
     @Test

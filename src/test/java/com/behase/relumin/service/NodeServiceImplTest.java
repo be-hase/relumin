@@ -13,6 +13,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
@@ -28,11 +32,20 @@ import static org.mockito.Mockito.*;
 
 @Slf4j
 public class NodeServiceImplTest {
-    private NodeServiceImpl service;
+    @InjectMocks
+    @Spy
+    private NodeServiceImpl service = new NodeServiceImpl();
+
+    @Mock
     private JedisPool dataStoreJedisPool;
-    private ObjectMapper mapper;
+
+    @Spy
+    private ObjectMapper mapper = WebConfig.MAPPER;
+
+    @Mock
     private JedisSupport jedisSupport;
-    private String redisPrefixKey;
+
+    @Mock
     private Jedis dataStoreJedis;
 
     @Rule
@@ -43,23 +56,8 @@ public class NodeServiceImplTest {
 
     @Before
     public void init() {
-        service = spy(new NodeServiceImpl());
-        dataStoreJedisPool = mock(JedisPool.class);
-        mapper = WebConfig.MAPPER;
-        jedisSupport = mock(JedisSupport.class);
-        redisPrefixKey = "_relumin";
-        dataStoreJedis = mock(Jedis.class);
-
-        inject();
-    }
-
-    private void inject() {
-        Whitebox.setInternalState(service, "dataStoreJedisPool", dataStoreJedisPool);
-        Whitebox.setInternalState(service, "mapper", mapper);
-        Whitebox.setInternalState(service, "jedisSupport", jedisSupport);
-        Whitebox.setInternalState(service, "jedisSupport", jedisSupport);
-        Whitebox.setInternalState(service, "redisPrefixKey", redisPrefixKey);
-
+        MockitoAnnotations.initMocks(this);
+        Whitebox.setInternalState(service, "redisPrefixKey", "_relumin");
         doReturn(dataStoreJedis).when(dataStoreJedisPool).getResource();
     }
 

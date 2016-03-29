@@ -26,10 +26,10 @@ public class UserServiceImpl implements UserService {
     };
 
     @Autowired
-    JedisPool dataStoreJedisPool;
+    private JedisPool dataStoreJedisPool;
 
     @Autowired
-    ObjectMapper mapper;
+    private ObjectMapper mapper;
 
     @Value("${redis.prefixKey}")
     private String redisPrefixKey;
@@ -53,9 +53,7 @@ public class UserServiceImpl implements UserService {
         if (users == null) {
             return null;
         }
-        return users.stream().filter(v -> {
-            return StringUtils.equalsIgnoreCase(username, v.getUsername());
-        }).findFirst().orElse(null);
+        return users.stream().filter(v -> StringUtils.equalsIgnoreCase(username, v.getUsername())).findFirst().orElse(null);
     }
 
     @Override

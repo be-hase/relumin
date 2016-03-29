@@ -1,23 +1,21 @@
 package com.behase.relumin.service;
 
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Spy;
 import org.springframework.boot.test.OutputCapture;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 public class LoggingOperationServiceImplTest {
-    private LoggingOperationServiceImpl service;
+    @InjectMocks
+    @Spy
+    private LoggingOperationServiceImpl service = new LoggingOperationServiceImpl();
 
     @Rule
     public OutputCapture capture = new OutputCapture();
-
-    @Before
-    public void init() {
-        service = new LoggingOperationServiceImpl();
-    }
 
     @Test
     public void log_operationName_authentication() {

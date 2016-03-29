@@ -7,111 +7,110 @@ import com.behase.relumin.service.LoggingOperationService;
 import com.behase.relumin.service.UserService;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+
 @Slf4j
 public class UserApiControllerTest {
-	private UserApiController controller;
-	private UserService userService;
-	private LoggingOperationService loggingOperationService;
+    @InjectMocks
+    @Spy
+    private UserApiController controller = new UserApiController();
 
-	@Rule
-	public ExpectedException expectedEx = ExpectedException.none();
+    @Mock
+    private UserService userService;
 
-	@Before
-	public void init() {
-		controller = new UserApiController();
-		userService = mock(UserService.class);
-		loggingOperationService = mock(LoggingOperationService.class);
+    @Mock
+    private LoggingOperationService loggingOperationService;
 
-		inject();
-	}
+    @Rule
+    public ExpectedException expectedEx = ExpectedException.none();
 
-	private void inject() {
-		Whitebox.setInternalState(controller, "userService", userService);
-		Whitebox.setInternalState(controller, "loggingOperationService", loggingOperationService);
-	}
+    @Before
+    public void init() {
+        MockitoAnnotations.initMocks(this);
+    }
 
-	@Test
-	public void users() throws Exception {
-		doReturn(Lists.newArrayList()).when(userService).getUsers();
+    @Test
+    public void users() throws Exception {
+        doReturn(Lists.newArrayList()).when(userService).getUsers();
 
-		List<LoginUser> result = controller.users();
-		log.info("result={}", result);
-		assertThat(result, is(empty()));
-	}
+        List<LoginUser> result = controller.users();
+        log.info("result={}", result);
+        assertThat(result, is(empty()));
+    }
 
-	@Test
-	public void add() throws Exception {
-		doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
+    @Test
+    public void add() throws Exception {
+        doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
 
-		LoginUser result = controller.add(null, "", "", "", "");
-		log.info("result={}", result);
-		assertThat(result.getUsername(), is("username"));
-	}
+        LoginUser result = controller.add(null, "", "", "", "");
+        log.info("result={}", result);
+        assertThat(result.getUsername(), is("username"));
+    }
 
-	@Test
-	public void update() throws Exception {
-		doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
+    @Test
+    public void update() throws Exception {
+        doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
 
-		LoginUser result = controller.update(null, "", "", "");
-		log.info("result={}", result);
-		assertThat(result.getUsername(), is("username"));
-	}
+        LoginUser result = controller.update(null, "", "", "");
+        log.info("result={}", result);
+        assertThat(result.getUsername(), is("username"));
+    }
 
-	@Test
-	public void updateMe_authentication_is_null_throw_exception() throws Exception {
-		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("You are not loggedin."));
+    @Test
+    public void updateMe_authentication_is_null_throw_exception() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("You are not loggedin."));
 
-		controller.updateMe(null, "");
-	}
+        controller.updateMe(null, "");
+    }
 
-	@Test
-	public void updateMe() throws Exception {
-		doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
+    @Test
+    public void updateMe() throws Exception {
+        doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
 
-		LoginUser result = controller.updateMe(mock(Authentication.class), "");
-		log.info("result={}", result);
-		assertThat(result.getUsername(), is("username"));
-	}
+        LoginUser result = controller.updateMe(mock(Authentication.class), "");
+        log.info("result={}", result);
+        assertThat(result.getUsername(), is("username"));
+    }
 
-	@Test
-	public void changePassword_authentication_is_null_throw_exception() throws Exception {
-		expectedEx.expect(InvalidParameterException.class);
-		expectedEx.expectMessage(containsString("You are not loggedin."));
+    @Test
+    public void changePassword_authentication_is_null_throw_exception() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("You are not loggedin."));
 
-		controller.changePassword(null, "", "");
-	}
+        controller.changePassword(null, "", "");
+    }
 
-	@Test
-	public void changePassword() throws Exception {
-		doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
+    @Test
+    public void changePassword() throws Exception {
+        doReturn(new LoginUser("username", "displayName", "rawPassword", Role.VIEWER.getAuthority())).when(userService).getUser(anyString());
 
-		LoginUser result = controller.changePassword(mock(Authentication.class), "", "");
-		log.info("result={}", result);
-		assertThat(result.getUsername(), is("username"));
-	}
+        LoginUser result = controller.changePassword(mock(Authentication.class), "", "");
+        log.info("result={}", result);
+        assertThat(result.getUsername(), is("username"));
+    }
 
-	@Test
-	public void delete() throws Exception {
-		Map<String, Boolean> result = controller.delete(null, "");
-		log.info("result={}", result);
-		assertThat(result.get("isSuccess"), is(true));
-	}
+    @Test
+    public void delete() throws Exception {
+        Map<String, Boolean> result = controller.delete(null, "");
+        log.info("result={}", result);
+        assertThat(result.get("isSuccess"), is(true));
+    }
 }

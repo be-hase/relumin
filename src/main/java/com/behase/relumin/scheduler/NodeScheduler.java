@@ -36,22 +36,22 @@ import java.util.Set;
 @Profile(value = "!test")
 public class NodeScheduler {
     @Autowired
-    ClusterService clusterService;
+    private ClusterService clusterService;
 
     @Autowired
-    NodeService nodeService;
+    private  NodeService nodeService;
 
     @Autowired
-    JedisPool datastoreJedisPool;
+    private JedisPool datastoreJedisPool;
 
     @Autowired
-    NotifyService notifyService;
+    private NotifyService notifyService;
 
     @Autowired
-    ObjectMapper mapper;
+    private ObjectMapper mapper;
 
     @Autowired
-    FluentLogger fluentLogger;
+    private FluentLogger fluentLogger;
 
     @Value("${scheduler.collectStaticsInfoMaxCount:" + SchedulerConfig.DEFAULT_COLLECT_STATICS_INFO_MAX_COUNT +
             "}")
