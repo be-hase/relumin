@@ -90,7 +90,6 @@ public class NotifyServiceImplTest {
                     .build()
     );
 
-
     @Before
     public void init() {
         MockitoAnnotations.initMocks(this);

@@ -74,15 +74,15 @@ public class UserServiceImpl implements UserService {
 
         ValidationUtils.notBlank(displayName, "displayName");
         if (displayName.length() > 255) {
-            throw new InvalidParameterException("displayName must be less than 256.");
+            throw new InvalidParameterException("displayName must be less than or equal to 255.");
         }
 
         ValidationUtils.notBlank(password, "password");
         if (password.length() < 8) {
-            throw new InvalidParameterException("username must be more than or equal to 8.");
+            throw new InvalidParameterException("password must be more than or equal to 8.");
         }
         if (password.length() > 255) {
-            throw new InvalidParameterException("username must be less than 256.");
+            throw new InvalidParameterException("password must be less than or equal to 255.");
         }
 
         ValidationUtils.notBlank(role, "role");
@@ -108,10 +108,10 @@ public class UserServiceImpl implements UserService {
     public void changePassword(String username, String oldPassword, String password) throws Exception {
         ValidationUtils.notBlank(password, "password");
         if (password.length() < 8) {
-            throw new InvalidParameterException("username must be more than 8.");
+            throw new InvalidParameterException("password must be more than or equal to 8.");
         }
         if (password.length() > 255) {
-            throw new InvalidParameterException("username must be less than 256.");
+            throw new InvalidParameterException("password must be less than or equal to 255.");
         }
 
         List<LoginUser> users = getUsers();
@@ -147,12 +147,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateUser(String username, String displayName, String role) throws Exception {
+        if (displayName.length() > 255) {
+            throw new InvalidParameterException("displayName must be less than or equal to 255.");
+        }
+
         List<LoginUser> users = getUsers();
         LoginUser user = getUser(users, username);
-
-        if (displayName.length() > 255) {
-            throw new InvalidParameterException("displayName must be less than 256.");
-        }
 
         if (StringUtils.isNotBlank(displayName)) {
             user.setDisplayName(displayName);
@@ -168,11 +168,10 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private LoginUser getUser(List<LoginUser> users, String username) {
-        return users.stream().filter(v -> {
-            return StringUtils.equalsIgnoreCase(username, v.getUsername());
-        }).findFirst().orElseThrow(() -> {
-            return new InvalidParameterException(String.format("'%s' does not exist.", username));
-        });
+    LoginUser getUser(List<LoginUser> users, String username) {
+        return users.stream()
+                .filter(v -> StringUtils.equalsIgnoreCase(username, v.getUsername()))
+                .findFirst()
+                .orElseThrow(() -> new InvalidParameterException(String.format("'%s' does not exist.", username)));
     }
 }
