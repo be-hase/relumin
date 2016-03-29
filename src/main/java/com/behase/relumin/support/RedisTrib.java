@@ -5,7 +5,6 @@ import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.param.CreateClusterParam;
-import com.behase.relumin.util.JedisUtils;
 import com.behase.relumin.util.ValidationUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -238,7 +237,7 @@ public class RedisTrib implements Closeable {
         }
 
         if (!notFoundSlot.isEmpty()) {
-            throw new InvalidParameterException(String.format("Cannot find the nodes which has slots(%s).", JedisUtils.slotsDisplay(notFoundSlot)));
+            throw new InvalidParameterException(String.format("Cannot find the nodes which has slots(%s).", new JedisSupport().slotsDisplay(notFoundSlot)));
         }
 
         reshardTables.forEach(reshardTable -> {
@@ -877,25 +876,25 @@ public class RedisTrib implements Closeable {
 
                 replicaNodeOp = interleaved.stream().filter(v -> {
                     boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
-                    boolean sameHostAsAlreadyRegisterdReplica = replicasOfMaster.get(master).stream().anyMatch(rpl -> {
-                        return StringUtils.equals(v.getInfo().getHost(), rpl.getInfo().getHost());
-                    });
+                    boolean sameHostAsAlreadyRegisterdReplica = replicasOfMaster.get(master).stream()
+                            .anyMatch(rpl -> StringUtils.equals(v.getInfo().getHost(), rpl.getInfo().getHost()));
                     return notSameHostAsMaster && !sameHostAsAlreadyRegisterdReplica;
                 }).findFirst();
                 if (replicaNodeOp.isPresent()) {
                     replicaNode = replicaNodeOp.get();
                     interleaved.remove(replicaNode);
                 } else {
-                    //					replicaNodeOp = interleaved.stream().filter(v -> {
-                    //						boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
-                    //						return notSameHostAsMaster;
-                    //					}).findFirst();
-                    //					if (replicaNodeOp.isPresent()) {
-                    //						replicaNode = replicaNodeOp.get();
-                    //						interleaved.remove(replicaNode);
-                    //					} else {
-                    replicaNode = interleaved.remove(0);
-                    //					}
+//                    replicaNodeOp = interleaved.stream()
+//                            .filter(v -> {
+//                                boolean notSameHostAsMaster = !StringUtils.equals(master.getInfo().getHost(), v.getInfo().getHost());
+//                                return notSameHostAsMaster;
+//                            }).findFirst();
+//                    if (replicaNodeOp.isPresent()) {
+//                        replicaNode = replicaNodeOp.get();
+//                        interleaved.remove(replicaNode);
+//                    } else {
+                        replicaNode = interleaved.remove(0);
+//                    }
                 }
                 log.info("Select {} as replica of {}", replicaNode, master);
                 replicaNode.setAsReplica(master.getInfo().getNodeId());
@@ -909,24 +908,21 @@ public class RedisTrib implements Closeable {
             TribClusterNode master;
             Optional<Entry<TribClusterNode, List<TribClusterNode>>> entrySetNodeOp;
 
-            int sameHostOfMasterCount = (int) masters.stream().filter(v -> {
-                return StringUtils.equals(v.getInfo().getHost(), extra.getInfo().getHost());
-            }).count();
+            int sameHostOfMasterCount = (int) masters.stream()
+                    .filter(v -> StringUtils.equals(v.getInfo().getHost(), extra.getInfo().getHost()))
+                    .count();
 
-            entrySetNodeOp = replicasOfMaster.entrySet().stream().min((e1, e2) -> {
-                return Integer.compare(e1.getValue().size(), e2.getValue().size());
-            });
+            entrySetNodeOp = replicasOfMaster.entrySet().stream()
+                    .min((e1, e2) -> Integer.compare(e1.getValue().size(), e2.getValue().size()));
             int minSize = entrySetNodeOp.get().getValue().size();
-            int sameMinCount = (int) replicasOfMaster.entrySet().stream().filter(v -> {
-                return minSize == v.getValue().size();
-            }).count();
+            int sameMinCount = (int) replicasOfMaster.entrySet().stream()
+                    .filter(v -> minSize == v.getValue().size())
+                    .count();
 
             if (sameMinCount > sameHostOfMasterCount) {
-                entrySetNodeOp = replicasOfMaster.entrySet().stream().filter(e -> {
-                    return !StringUtils.equals(e.getKey().getInfo().getHost(), extra.getInfo().getHost());
-                }).min((e1, e2) -> {
-                    return Integer.compare(e1.getValue().size(), e2.getValue().size());
-                });
+                entrySetNodeOp = replicasOfMaster.entrySet().stream()
+                        .filter(e -> !StringUtils.equals(e.getKey().getInfo().getHost(), extra.getInfo().getHost()))
+                        .min((e1, e2) -> Integer.compare(e1.getValue().size(), e2.getValue().size()));
             }
 
             master = entrySetNodeOp.get().getKey();
@@ -939,41 +935,37 @@ public class RedisTrib implements Closeable {
     List<CreateClusterParam> buildCreateClusterParam() {
         // first loop master
         List<CreateClusterParam> params = Lists.newArrayList();
-        nodes.stream().filter(node -> {
-            return StringUtils.isBlank(node.getInfo().getMasterNodeId());
-        }).forEach(node -> {
-            int startSlotNumber = node.getTmpServedSlots().stream().min(Integer::compare).get();
-            int endSlotNumber = node.getTmpServedSlots().stream().max(Integer::compare).get();
+        nodes.stream()
+                .filter(node -> StringUtils.isBlank(node.getInfo().getMasterNodeId()))
+                .forEach(node -> {
+                    int startSlotNumber = node.getTmpServedSlots().stream().min(Integer::compare).get();
+                    int endSlotNumber = node.getTmpServedSlots().stream().max(Integer::compare).get();
 
-            CreateClusterParam param = new CreateClusterParam();
-            param.setStartSlotNumber(String.valueOf(startSlotNumber));
-            param.setEndSlotNumber(String.valueOf(endSlotNumber));
-            param.setMaster(node.getInfo().getHostAndPort());
-            param.setMasterNodeId(node.getInfo().getNodeId());
-            params.add(param);
-        });
+                    CreateClusterParam param = new CreateClusterParam();
+                    param.setStartSlotNumber(String.valueOf(startSlotNumber));
+                    param.setEndSlotNumber(String.valueOf(endSlotNumber));
+                    param.setMaster(node.getInfo().getHostAndPort());
+                    param.setMasterNodeId(node.getInfo().getNodeId());
+                    params.add(param);
+                });
 
         // replica loop
-        nodes.stream().filter(node -> {
-            return StringUtils.isNotBlank(node.getInfo().getMasterNodeId());
-        }).forEach(node -> {
-            String masterNodeId = node.getInfo().getMasterNodeId();
-            params.stream().filter(param -> {
-                return StringUtils.equals(param.getMasterNodeId(), masterNodeId);
-            }).forEach(param -> {
-                List<String> replicaList = param.getReplicas();
-                if (param.getReplicas() == null) {
-                    replicaList = Lists.newArrayList();
-                    param.setReplicas(replicaList);
-                }
-                replicaList.add(node.getInfo().getHostAndPort());
-            });
-        });
+        nodes.stream()
+                .filter(node -> StringUtils.isNotBlank(node.getInfo().getMasterNodeId()))
+                .forEach(node -> {
+                    String masterNodeId = node.getInfo().getMasterNodeId();
+                    params.stream().filter(param -> StringUtils.equals(param.getMasterNodeId(), masterNodeId)).forEach(param -> {
+                        List<String> replicaList = param.getReplicas();
+                        if (param.getReplicas() == null) {
+                            replicaList = Lists.newArrayList();
+                            param.setReplicas(replicaList);
+                        }
+                        replicaList.add(node.getInfo().getHostAndPort());
+                    });
+                });
 
         // sort
-        params.sort((v1, v2) -> {
-            return Integer.compare(Integer.valueOf(v1.getStartSlotNumber()), Integer.valueOf(v2.getStartSlotNumber()));
-        });
+        params.sort((v1, v2) -> Integer.compare(Integer.valueOf(v1.getStartSlotNumber()), Integer.valueOf(v2.getStartSlotNumber())));
 
         return params;
     }
@@ -1014,7 +1006,15 @@ public class RedisTrib implements Closeable {
             if (StringUtils.isNotBlank(node.getInfo().getMasterNodeId())) {
                 TribClusterNode master = getNodeByNodeId(node.getInfo().getMasterNodeId());
                 if (master == null) {
-                    throw new ApiException(Constants.ERR_CODE_UNKNOWN, String.format("%s claims to be slave of unknown node ID %s.", node.getInfo().getHostAndPort(), node.getInfo().getMasterNodeId()), HttpStatus.INTERNAL_SERVER_ERROR);
+                    throw new ApiException(
+                            Constants.ERR_CODE_UNKNOWN,
+                            String.format(
+                                    "%s claims to be slave of unknown node ID %s.",
+                                    node.getInfo().getHostAndPort(),
+                                    node.getInfo().getMasterNodeId()
+                            ),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    );
                 }
                 master.getReplicas().add(node);
             }
@@ -1022,15 +1022,17 @@ public class RedisTrib implements Closeable {
     }
 
     TribClusterNode getNodeByNodeId(String nodeId) {
-        return nodes.stream().filter(node -> {
-            return StringUtils.equalsIgnoreCase(node.getInfo().getNodeId(), nodeId);
-        }).findFirst().orElse(null);
+        return nodes.stream()
+                .filter(node -> StringUtils.equalsIgnoreCase(node.getInfo().getNodeId(), nodeId))
+                .findFirst()
+                .orElse(null);
     }
 
     TribClusterNode getNodeByHostAndPort(String hostAndPort) {
-        return nodes.stream().filter(node -> {
-            return StringUtils.equalsIgnoreCase(node.getInfo().getHostAndPort(), hostAndPort);
-        }).findFirst().orElse(null);
+        return nodes.stream()
+                .filter(node -> StringUtils.equalsIgnoreCase(node.getInfo().getHostAndPort(), hostAndPort))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

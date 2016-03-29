@@ -3,6 +3,7 @@ package com.behase.relumin.util;
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.param.CreateClusterParam;
+import com.behase.relumin.support.JedisSupport;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 
@@ -109,8 +110,8 @@ public class ValidationUtils {
         }
 
         params.forEach(param -> {
-            ValidationUtils.slotNumber(param.getStartSlotNumber());
-            ValidationUtils.slotNumber(param.getEndSlotNumber());
+            slotNumber(param.getStartSlotNumber());
+            slotNumber(param.getEndSlotNumber());
             int start = Integer.valueOf(param.getStartSlotNumber());
             int end = Integer.valueOf(param.getEndSlotNumber());
             for (int i = start; i <= end; i++) {
@@ -120,14 +121,14 @@ public class ValidationUtils {
                 slots.add(i);
             }
 
-            ValidationUtils.hostAndPort(param.getMaster());
+            hostAndPort(param.getMaster());
             if (hostAndPorts.contains(param.getMaster())) {
                 throw new InvalidParameterException(String.format("Duplicate hostAndPort(%s).", param.getMaster()));
             }
             hostAndPorts.add(param.getMaster());
 
             param.getReplicas().forEach(replica -> {
-                ValidationUtils.hostAndPort(replica);
+                hostAndPort(replica);
                 if (hostAndPorts.contains(replica)) {
                     throw new InvalidParameterException(String.format("Duplicate hostAndPort(%s).", replica));
                 }
@@ -143,7 +144,7 @@ public class ValidationUtils {
                 allSlots.add(i);
             }
             allSlots.removeAll(slots);
-            throw new InvalidParameterException(String.format("Slot is not enough. You must specify %s.", JedisUtils.slotsDisplay(allSlots)));
+            throw new InvalidParameterException(String.format("Slot is not enough. You must specify %s.", new JedisSupport().slotsDisplay(allSlots)));
         }
     }
 

@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 @ActiveProfiles("test")
 @WebIntegrationTest
 public class ApiTest {
+/*
     @Value("${test.redis.normalCluster}")
     private String testRedisNormalCluster;
 
@@ -479,4 +480,5 @@ public class ApiTest {
                 .andReturn();
         log.debug(result.getResponse().getContentAsString());
     }
+    */
 }

@@ -2,7 +2,6 @@ package com.behase.relumin.support;
 
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
-import com.behase.relumin.util.JedisUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -39,16 +38,32 @@ public class TribClusterNode implements Closeable {
         info.setHostAndPort(hostAndPort);
     }
 
+    public Jedis getJedis() {
+        return jedis;
+    }
+
+    public ClusterNode getInfo() {
+        return info;
+    }
+
+    public boolean isDirty() {
+        return dirty;
+    }
+
     public List<ClusterNode> getFriends() {
         return friends;
     }
 
-    public String getServedSlots() {
-        return info.getServedSlots();
-    }
-
     public Set<Integer> getTmpServedSlots() {
         return tmpSlots;
+    }
+
+    public List<TribClusterNode> getReplicas() {
+        return replicas;
+    }
+
+    public String getServedSlots() {
+        return info.getServedSlots();
     }
 
     public boolean hasFlag(String flag) {
@@ -65,7 +80,7 @@ public class TribClusterNode implements Closeable {
         }
 
         try {
-            jedis = JedisUtils.getJedisByHostAndPort(info.getHostAndPort());
+            jedis = createJedisSupport().getJedisByHostAndPort(info.getHostAndPort());
             if (!"PONG".equalsIgnoreCase(jedis.ping())) {
                 throw new InvalidParameterException(String.format("Invalid PONG-message from Redis(%s).", info.getHostAndPort()));
             }
@@ -78,8 +93,7 @@ public class TribClusterNode implements Closeable {
     }
 
     public void assertCluster() {
-        Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
-        log.debug("cluster info={}", infoResult);
+        Map<String, String> infoResult = createJedisSupport().parseInfoResult(jedis.info());
         String clusterEnabled = infoResult.get("cluster_enabled");
         if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
             throw new InvalidParameterException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()));
@@ -87,11 +101,16 @@ public class TribClusterNode implements Closeable {
     }
 
     public void assertEmpty() {
-        Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
-        Map<String, String> clusterInfoResult = JedisUtils.parseInfoResult(jedis.clusterInfo());
-        log.debug("cluster info={}", infoResult);
+        Map<String, String> infoResult = createJedisSupport().parseInfoResult(jedis.info());
+        Map<String, String> clusterInfoResult = createJedisSupport().parseClusterInfoResult(jedis.clusterInfo());
         if (infoResult.get("db0") != null || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
-            throw new InvalidParameterException(String.format("%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHostAndPort()));
+            throw new InvalidParameterException(
+                    String.format(
+                            "%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) " +
+                                    "or contains some key in database 0.",
+                            info.getHostAndPort()
+                    )
+            );
         }
     }
 
@@ -103,13 +122,15 @@ public class TribClusterNode implements Closeable {
         connect();
 
         String hostAndPort = info.getHostAndPort();
-        List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
+        List<ClusterNode> nodes = createJedisSupport().parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
         nodes.forEach(v -> {
             if (v.hasFlag("myself")) {
                 info = v;
                 info.setHostAndPort(hostAndPort);
-            } else if (getFriend) {
-                friends.add(v);
+            } else {
+                if (getFriend) {
+                    friends.add(v);
+                }
             }
         });
     }
@@ -169,9 +190,7 @@ public class TribClusterNode implements Closeable {
             for (int i = 8; i < lineArray.length; i++) {
                 slots.add(lineArray[i]);
             }
-            slots.stream().filter(v -> {
-                return !StringUtils.startsWith(v, "[");
-            }).collect(Collectors.toList());
+            slots.stream().filter(v -> !StringUtils.startsWith(v, "[")).collect(Collectors.toList());
 
             if (slots.size() > 0) {
                 Collections.sort(slots);
@@ -183,20 +202,8 @@ public class TribClusterNode implements Closeable {
         return Joiner.on("|").join(config);
     }
 
-    public ClusterNode getInfo() {
-        return info;
-    }
-
-    public boolean isDirty() {
-        return dirty;
-    }
-
-    public Jedis getJedis() {
-        return jedis;
-    }
-
-    public List<TribClusterNode> getReplicas() {
-        return replicas;
+    JedisSupport createJedisSupport() {
+        return new JedisSupport();
     }
 
     @Override

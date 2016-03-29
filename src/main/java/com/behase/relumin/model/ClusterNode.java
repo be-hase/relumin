@@ -1,5 +1,6 @@
 package com.behase.relumin.model;
 
+import com.behase.relumin.support.JedisSupport;
 import com.behase.relumin.util.JedisUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.Maps;
@@ -40,7 +41,7 @@ public class ClusterNode {
     }
 
     public String getServedSlots() {
-        return JedisUtils.slotsDisplay(servedSlotsSet);
+        return new JedisSupport().slotsDisplay(servedSlotsSet);
     }
 
     public int getSlotCount() {

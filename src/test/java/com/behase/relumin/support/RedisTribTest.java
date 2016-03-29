@@ -32,6 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @SpringApplicationConfiguration(classes = Application.class)
 @ActiveProfiles("test")
 public class RedisTribTest {
+    /*
     @Value("${test.redis.normalCluster}")
     private String testRedisNormalCluster;
 
@@ -508,4 +509,5 @@ public class RedisTribTest {
         addRedisTrib.close();
         createTrib.close();
     }
+    */
 }

@@ -1,145 +1,195 @@
 package com.behase.relumin.support;
 
-import com.behase.relumin.Application;
+import com.behase.relumin.TestUtils;
 import com.behase.relumin.exception.InvalidParameterException;
-import com.behase.relumin.util.JedisUtils;
+import com.behase.relumin.model.ClusterNode;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.rules.ExpectedException;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.SpringApplicationConfiguration;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCluster.Reset;
 import redis.clients.jedis.exceptions.JedisDataException;
 
+import java.util.List;
+
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.not;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 
 @Slf4j
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = Application.class)
-@ActiveProfiles("test")
 public class TribClusterNodeTest {
-    @Value("${test.redis.normalCluster}")
-    private String testRedisNormalCluster;
+    @Spy
+    private TribClusterNode tribClusterNode = new TribClusterNode("localhost:10000");
 
-    @Value("${test.redis.emptyCluster}")
-    private String testRedisEmptyCluster;
+    @Mock
+    private Jedis jedis;
 
-    @Value("${test.redis.emptyClusterAll}")
-    private String testRedisEmptyClusterAll;
+    @Mock
+    private JedisSupport jedisSupport;
 
-    @Value("${test.redis.normalStandAlone}")
-    private String testRedisNormalStandAlone;
+    @Rule
+    public ExpectedException expectedEx = ExpectedException.none();
 
-    @Value("${test.redis.normalStandAloneAll}")
-    private String testRedisNormalStandAloneAll;
-
-    @Value("${test.redis.emptyStandAlone}")
-    private String testRedisEmptyStandAlone;
-
-    @Value("${test.redis.emptyStandAloneAll}")
-    private String testRedisEmptyStandAloneAll;
-
-    private TribClusterNode tribClusterNode;
+    @Rule
+    public OutputCapture capture = new OutputCapture();
 
     @Before
-    public void before() {
-        // empty (and reset)
-        for (String item : StringUtils.split(testRedisEmptyClusterAll, ",")) {
-            try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
-                try {
-                    jedis.flushAll();
-                } catch (Exception e) {
-                }
-                try {
-                    jedis.clusterReset(Reset.HARD);
-                } catch (Exception e) {
-                }
-            } catch (Exception e) {
-            }
-        }
-        for (String item : StringUtils.split(testRedisEmptyStandAloneAll, ",")) {
-            try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
-                jedis.flushAll();
-            } catch (Exception e) {
-            }
-        }
-
-        tribClusterNode = new TribClusterNode(testRedisNormalCluster);
+    public void init() {
+        MockitoAnnotations.initMocks(this);
+        doReturn(jedisSupport).when(tribClusterNode).createJedisSupport();
+        doReturn(jedis).when(jedisSupport).getJedisByHostAndPort(anyString());
     }
 
-    @After
-    public void after() throws Exception {
-        tribClusterNode.close();
+    private void initConnect() {
+        doReturn("PONG").when(jedis).ping();
+        tribClusterNode.connect();
+    }
+
+    @Test
+    public void connect_abort_is_true_and_cannot_connect_redis_then_throw_exception() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Failed to connect to node"));
+
+        doThrow(Exception.class).when(jedis).ping();
+
+        tribClusterNode.connect(true);
+    }
+
+    @Test
+    public void connect_abort_is_true_and_not_pong_then_throw_exception() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Failed to connect to node"));
+
+        doReturn("hoge").when(jedis).ping();
+
+        tribClusterNode.connect(true);
     }
 
     @Test
     public void connect() throws Exception {
+        doReturn("PONG").when(jedis).ping();
         tribClusterNode.connect(true);
-    }
-
-    @Test(expected = InvalidParameterException.class)
-    public void connect_invalid_host_and_port() throws Exception {
-        tribClusterNode = new TribClusterNode("192.168.33.11:80");
-        tribClusterNode.connect(true);
+        assertThat(tribClusterNode.getJedis(), is(not(nullValue())));
     }
 
     @Test
-    public void connect_invalid_host_and_port_then_through() throws Exception {
-        tribClusterNode = new TribClusterNode("192.168.33.11:80");
-        tribClusterNode.connect(false);
-    }
+    public void assertCluster_clusterEnabled_is_blank_then_throw_exception() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("is not configured as a cluster node"));
 
-    @Test
-    public void assertCluster() throws Exception {
-        tribClusterNode.connect();
-        tribClusterNode.assertCluster();
-    }
+        initConnect();
+        doReturn(Maps.newHashMap()).when(jedisSupport).parseInfoResult(anyString());
 
-    @Test(expected = InvalidParameterException.class)
-    public void assertCluster_not_cluster_mode() throws Exception {
-        tribClusterNode = new TribClusterNode(testRedisEmptyStandAlone);
-        tribClusterNode.connect();
         tribClusterNode.assertCluster();
     }
 
     @Test
-    public void assertEmpty() throws Exception {
-        tribClusterNode = new TribClusterNode(testRedisEmptyCluster);
-        tribClusterNode.connect();
-        tribClusterNode.assertEmpty();
+    public void assertCluster_clusterEnabled_is_not_1_then_throw_exception() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("is not configured as a cluster node"));
+
+        initConnect();
+        doReturn(ImmutableMap.of("cluster_enabled", "0")).when(jedisSupport).parseInfoResult(anyString());
+
+        tribClusterNode.assertCluster();
     }
 
-    @Test(expected = InvalidParameterException.class)
-    public void assertEmpty_already_knows_other_cluster() throws Exception {
-        tribClusterNode.connect();
-        tribClusterNode.assertEmpty();
-    }
+    @Test
+    public void assertEmpty_db0_is_not_null_then_throw_exception() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("is not empty. Either the node already knows other nodes"));
 
-    @Test(expected = JedisDataException.class)
-    public void assertEmpty_not_cluster() throws Exception {
-        tribClusterNode = new TribClusterNode(testRedisEmptyStandAlone);
-        tribClusterNode.connect();
+        initConnect();
+        doReturn(ImmutableMap.of("db0", "aaa")).when(jedisSupport).parseInfoResult(anyString());
+        doReturn(ImmutableMap.of("cluster_known_nodes", "1")).when(jedisSupport).parseClusterInfoResult(anyString());
+
         tribClusterNode.assertEmpty();
     }
 
     @Test
-    public void loadInfo() throws Exception {
+    public void assertEmpty_cluster_known_nodes_is_not_1_then_throw_exception() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("is not empty. Either the node already knows other nodes"));
+
+        initConnect();
+        doReturn(Maps.newHashMap()).when(jedisSupport).parseInfoResult(anyString());
+        doReturn(ImmutableMap.of("cluster_known_nodes", "0")).when(jedisSupport).parseClusterInfoResult(anyString());
+
+        tribClusterNode.assertEmpty();
+    }
+
+    @Test
+    public void assertEmpty() {
+        initConnect();
+        doReturn(Maps.newHashMap()).when(jedisSupport).parseInfoResult(anyString());
+        doReturn(ImmutableMap.of("cluster_known_nodes", "1")).when(jedisSupport).parseClusterInfoResult(anyString());
+
+        tribClusterNode.assertEmpty();
+    }
+
+    @Test
+    public void loadInfo_getFriend_true() {
+        List<ClusterNode> nodes = Lists.newArrayList(
+                ClusterNode.builder()
+                        .nodeId("nodeId1")
+                        .hostAndPort("localhost:10000")
+                        .flags(Sets.newHashSet("myself"))
+                        .build(),
+                ClusterNode.builder()
+                        .nodeId("nodeId2")
+                        .hostAndPort("localhost:10001")
+                        .flags(Sets.newHashSet())
+                        .build()
+        );
+
+        initConnect();
+        doReturn(nodes).when(jedisSupport).parseClusterNodesResult(anyString(), anyString());
+
+        tribClusterNode.loadInfo(true);
+
+        assertThat(tribClusterNode.getInfo().getNodeId(), is("nodeId1"));
+        assertThat(tribClusterNode.getFriends().get(0).getNodeId(), is("nodeId2"));
+    }
+
+    @Test
+    public void loadInfo_getFriend_false() {
+        List<ClusterNode> nodes = Lists.newArrayList(
+                ClusterNode.builder()
+                        .nodeId("nodeId1")
+                        .hostAndPort("localhost:10000")
+                        .flags(Sets.newHashSet("myself"))
+                        .build(),
+                ClusterNode.builder()
+                        .nodeId("nodeId2")
+                        .hostAndPort("localhost:10001")
+                        .flags(Sets.newHashSet())
+                        .build()
+        );
+
+        initConnect();
+        doReturn(nodes).when(jedisSupport).parseClusterNodesResult(anyString(), anyString());
+
         tribClusterNode.loadInfo();
-        log.debug("config signature={}", tribClusterNode.getConfigSignature());
-    }
 
-    @Test
-    public void addSlots() {
-        assertThat(tribClusterNode.isDirty(), is(false));
-        tribClusterNode.addTmpSlots(Lists.newArrayList(1, 2, 3));
-        assertThat(tribClusterNode.isDirty(), is(true));
+        assertThat(tribClusterNode.getInfo().getNodeId(), is("nodeId1"));
+        assertThat(tribClusterNode.getFriends(), is(empty()));
     }
 }

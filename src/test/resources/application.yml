@@ -63,4 +63,5 @@ outputMetrics:
 
 # FOR TEST SETTING
 test:
-  host: 192.168.99.100
+  redis:
+    host: 192.168.99.100

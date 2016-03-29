@@ -40,7 +40,7 @@ public class JedisSupport {
     }
 
     public JedisCluster getJedisClusterByHostAndPorts(String hostAndPorts) {
-        Set<HostAndPort> hostAndPortSet = getHostAndPorts(Splitter.on(",").splitToList(hostAndPorts)).stream().map(v -> {
+        Set<HostAndPort> hostAndPortSet = getHostAndPorts(Splitter.on(",").trimResults().omitEmptyStrings().splitToList(hostAndPorts)).stream().map(v -> {
             String[] hostAndPortArray = StringUtils.split(v, ":");
             return new HostAndPort(hostAndPortArray[0], Integer.valueOf(hostAndPortArray[1]));
         }).collect(Collectors.toSet());
@@ -74,7 +74,6 @@ public class JedisSupport {
             if (eachArray.length != 2) {
                 continue;
             }
-
             String key = StringUtils.trim(eachArray[0]);
             String value = StringUtils.trim(eachArray[1]);
             map.put(key, value);
@@ -84,8 +83,8 @@ public class JedisSupport {
     }
 
     public List<ClusterNode> parseClusterNodesResult(String result, String hostAndPort) {
-        log.debug("--start--");
         List<ClusterNode> clusterNodes = Lists.newArrayList();
+
         for (String resultLine : StringUtils.split(result, "\n")) {
             ClusterNode clusterNode = new ClusterNode();
 
@@ -93,7 +92,6 @@ public class JedisSupport {
             clusterNode.setNodeId(resultLineArray[0]);
 
             String eachHostAndPort = resultLineArray[1];
-            log.debug("{}", resultLine);
             if (StringUtils.isBlank(hostAndPort)) {
                 clusterNode.setHostAndPort(eachHostAndPort);
             } else {
@@ -110,7 +108,7 @@ public class JedisSupport {
             }
 
             String eachFlag = resultLineArray[2];
-            List<String> eachFlagList = Arrays.asList(StringUtils.split(eachFlag, ","));
+            List<String> eachFlagList = Splitter.on(",").trimResults().omitEmptyStrings().splitToList(eachFlag);
             Set<String> eachFlagSet = Sets.newLinkedHashSet(eachFlagList);
             clusterNode.setFlags(eachFlagSet);
 
@@ -154,7 +152,7 @@ public class JedisSupport {
 
             clusterNodes.add(clusterNode);
         }
-        log.debug("--end--");
+
         return clusterNodes;
     }
 
@@ -164,10 +162,11 @@ public class JedisSupport {
         }
 
         List<String> result = Lists.newArrayList();
+
         int i = 0;
         int first = 0;
         int last = 0;
-        for (int current : slots) {
+        for (int current : Sets.newTreeSet(slots)) {
             // if first loop
             if (i == 0) {
                 if (slots.size() == 1) {
@@ -184,7 +183,7 @@ public class JedisSupport {
             if (current == last + 1) {
                 // if last loop
                 if (i == slots.size() - 1) {
-                    result.add(new StringBuilder().append(String.valueOf(first)).append("-").append(String.valueOf(current)).toString());
+                    result.add(new StringBuilder().append(first).append("-").append(current).toString());
                     break;
                 }
 
@@ -197,7 +196,7 @@ public class JedisSupport {
                     if (first == last) {
                         result.add(String.valueOf(first));
                     } else {
-                        result.add(new StringBuilder().append(String.valueOf(first)).append("-").append(String.valueOf(last)).toString());
+                        result.add(new StringBuilder().append(first).append("-").append(last).toString());
                     }
                     result.add(String.valueOf(current));
                     break;
@@ -206,7 +205,7 @@ public class JedisSupport {
                 if (first == last) {
                     result.add(String.valueOf(first));
                 } else {
-                    result.add(new StringBuilder().append(String.valueOf(first)).append("-").append(String.valueOf(last)).toString());
+                    result.add(new StringBuilder().append(first).append("-").append(last).toString());
                 }
                 first = current;
                 last = current;
@@ -214,6 +213,7 @@ public class JedisSupport {
                 continue;
             }
         }
+
         return StringUtils.join(result, ",");
     }
 
