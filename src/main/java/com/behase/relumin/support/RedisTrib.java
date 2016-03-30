@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Almost clone of redis-trib.rb
@@ -779,7 +780,7 @@ public class RedisTrib implements Closeable {
 
     void allocSlots() {
         int mastersCount = nodes.size() / (replicas + 1);
-        List<TribClusterNode> masters = Lists.newArrayList();
+        List<TribClusterNode> masters;
 
         // The first step is to split instances by IP. This is useful as
         // we'll try to allocate master nodes in different physical machines
@@ -789,9 +790,9 @@ public class RedisTrib implements Closeable {
         // This code assumes just that if the IP is different, than it is more
         // likely that the instance is running in a different physical host
         // or at least a different virtual machine.
-        Map<String, List<TribClusterNode>> tmpIps = nodes.stream().collect(Collectors.groupingBy(v -> v.getNodeInfo().getHost(), Collectors.toList()));
         Map<String, List<TribClusterNode>> ips = Maps.newTreeMap();
-        ips.putAll(tmpIps);
+        ips.putAll(nodes.stream().collect(Collectors.groupingBy(v -> v.getNodeInfo().getHost(), Collectors.toList())));
+        // sort hostNodes
         for (Map.Entry<String, List<TribClusterNode>> e : ips.entrySet()) {
             List<TribClusterNode> hostNodes = e.getValue();
             hostNodes.sort((o1, o2) -> {
@@ -803,19 +804,24 @@ public class RedisTrib implements Closeable {
             });
         }
 
-        // Select master instances
+        log.info("Select master instances.");
         List<TribClusterNode> interleaved = Lists.newArrayList();
         boolean stop = false;
         while (!stop) {
+            // Take one node from each IP until we run out of nodes
+            // across every IP.
             for (Map.Entry<String, List<TribClusterNode>> e : ips.entrySet()) {
                 List<TribClusterNode> hostNodes = e.getValue();
 
                 if (hostNodes.isEmpty()) {
+                    // if this IP has no remaining nodes, check for termination
                     if (interleaved.size() == nodes.size()) {
+                        // stop when 'interleaved' has accumulated all nodes
                         stop = true;
                         continue;
                     }
                 } else {
+                    // else, move one node from this IP to 'interleaved'
                     interleaved.add(hostNodes.remove(0));
                 }
             }
@@ -826,7 +832,7 @@ public class RedisTrib implements Closeable {
         log.info("masters={}", masters);
         log.info("interleaved={}", interleaved);
 
-        // Alloc slots on masters
+        log.info("Alloc slots on masters.");
         double slotsPerNode = Constants.ALL_SLOTS_SIZE / mastersCount;
         int first = 0;
         int last;
@@ -841,10 +847,8 @@ public class RedisTrib implements Closeable {
             }
 
             Set<Integer> slots = Sets.newTreeSet();
-            for (int j = first; j <= last; j++) {
-                slots.add(j);
-            }
-            log.info("add slots to {}. first={}, last={}", masters.get(i), first, last);
+            IntStream.rangeClosed(first, last).forEach(v -> slots.add(v));
+            log.info("Add slots to {}. first={}, last={}", masters.get(i), first, last);
             masters.get(i).addTmpSlots(slots);
 
             first = last + 1;
@@ -864,7 +868,7 @@ public class RedisTrib implements Closeable {
         Map<TribClusterNode, List<TribClusterNode>> replicasOfMaster = Maps.newLinkedHashMap();
         for (TribClusterNode master : masters) {
             replicasOfMaster.put(master, Lists.newArrayList());
-            while (replicasOfMaster.get(master).size() < this.replicas) {
+            while (replicasOfMaster.get(master).size() < replicas) {
                 if (interleaved.size() == 0) {
                     log.info("break because node count is 0");
                     break;
@@ -874,27 +878,19 @@ public class RedisTrib implements Closeable {
                 TribClusterNode replicaNode;
                 Optional<TribClusterNode> replicaNodeOp;
 
-                replicaNodeOp = interleaved.stream().filter(v -> {
-                    boolean notSameHostAsMaster = !StringUtils.equals(master.getNodeInfo().getHost(), v.getNodeInfo().getHost());
-                    boolean sameHostAsAlreadyRegisterdReplica = replicasOfMaster.get(master).stream()
-                            .anyMatch(rpl -> StringUtils.equals(v.getNodeInfo().getHost(), rpl.getNodeInfo().getHost()));
-                    return notSameHostAsMaster && !sameHostAsAlreadyRegisterdReplica;
-                }).findFirst();
+                replicaNodeOp = interleaved.stream()
+                        .filter(v -> {
+                            boolean isNotSameHostAsMaster = !StringUtils.equals(master.getNodeInfo().getHost(), v.getNodeInfo().getHost());
+                            boolean isSameHostAsAlreadyRegisteredReplica = replicasOfMaster.get(master).stream()
+                                    .anyMatch(rpl -> StringUtils.equals(v.getNodeInfo().getHost(), rpl.getNodeInfo().getHost()));
+                            return isNotSameHostAsMaster && !isSameHostAsAlreadyRegisteredReplica;
+                        }).findFirst();
+
                 if (replicaNodeOp.isPresent()) {
                     replicaNode = replicaNodeOp.get();
                     interleaved.remove(replicaNode);
                 } else {
-//                    replicaNodeOp = interleaved.stream()
-//                            .filter(v -> {
-//                                boolean notSameHostAsMaster = !StringUtils.equals(master.getNodeInfo().getHost(), v.getNodeInfo().getHost());
-//                                return notSameHostAsMaster;
-//                            }).findFirst();
-//                    if (replicaNodeOp.isPresent()) {
-//                        replicaNode = replicaNodeOp.get();
-//                        interleaved.remove(replicaNode);
-//                    } else {
                     replicaNode = interleaved.remove(0);
-//                    }
                 }
                 log.info("Select {} as replica of {}", replicaNode, master);
                 replicaNode.setAsReplica(master.getNodeInfo().getNodeId());
@@ -902,20 +898,20 @@ public class RedisTrib implements Closeable {
             }
         }
 
-        // want to attach different host of master and min size.
+        // we want to attach different host of master and min size.
         log.info("Select extra replica.");
         for (TribClusterNode extra : interleaved) {
             TribClusterNode master;
             Optional<Entry<TribClusterNode, List<TribClusterNode>>> entrySetNodeOp;
 
-            int sameHostOfMasterCount = (int) masters.stream()
+            int sameHostOfMasterCount = (int)masters.stream()
                     .filter(v -> StringUtils.equals(v.getNodeInfo().getHost(), extra.getNodeInfo().getHost()))
                     .count();
 
             entrySetNodeOp = replicasOfMaster.entrySet().stream()
                     .min((e1, e2) -> Integer.compare(e1.getValue().size(), e2.getValue().size()));
             int minSize = entrySetNodeOp.get().getValue().size();
-            int sameMinCount = (int) replicasOfMaster.entrySet().stream()
+            int sameMinCount = (int)replicasOfMaster.entrySet().stream()
                     .filter(v -> minSize == v.getValue().size())
                     .count();
 
@@ -1033,6 +1029,10 @@ public class RedisTrib implements Closeable {
                 .filter(node -> StringUtils.equalsIgnoreCase(node.getNodeInfo().getHostAndPort(), hostAndPort))
                 .findFirst()
                 .orElse(null);
+    }
+
+    TribClusterNode createTribClusterNode(String hostAndPort) {
+        return new TribClusterNode(hostAndPort);
     }
 
     @Override

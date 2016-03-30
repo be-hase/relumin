@@ -1,5 +1,8 @@
 package com.behase.relumin.support;
 
+import com.behase.relumin.exception.InvalidParameterException;
+import com.behase.relumin.model.param.CreateClusterParam;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.Rule;
@@ -8,10 +11,18 @@ import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.internal.util.reflection.Whitebox;
 import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
 
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 
 @Slf4j
@@ -32,6 +43,125 @@ public class RedisTribTest {
 
     @Test
     public void getCreateClusterParams_invalid_replica_then_throw_exception() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Replicas must be equal or longer than 0"));
+
+        redisTrib.getCreateClusterParams(-1, null);
+    }
+
+    @Test
+    public void getCreateClusterParams() {
+        doNothing().when(redisTrib).checkCreateParameters();
+        doNothing().when(redisTrib).allocSlots();
+        doReturn(Lists.newArrayList()).when(redisTrib).getCreateClusterParams(anyInt(), anySet());
+
+        assertThat(redisTrib.getCreateClusterParams(2, null), is(empty()));
+    }
+
+    @Test
+    public void checkCreateParameters_master_nodes_need_more_than_3() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Redis Cluster requires at least 3 master nodes"));
+
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(null, null, null));
+        Whitebox.setInternalState(redisTrib, "replicas", 1);
+        redisTrib.checkCreateParameters();
+    }
+
+    @Test
+    public void checkCreateParameters() {
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(null, null, null));
+        Whitebox.setInternalState(redisTrib, "replicas", 0);
+        redisTrib.checkCreateParameters();
+
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(null, null, null, null));
+        Whitebox.setInternalState(redisTrib, "replicas", 0);
+        redisTrib.checkCreateParameters();
+
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(null, null, null, null, null, null));
+        Whitebox.setInternalState(redisTrib, "replicas", 1);
+        redisTrib.checkCreateParameters();
+
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(null, null, null, null, null, null, null));
+        Whitebox.setInternalState(redisTrib, "replicas", 1);
+        redisTrib.checkCreateParameters();
+    }
+
+    @Test
+    public void allocSlots() {
+        TribClusterNode node1 = new TribClusterNode("host1:1001");
+        node1.getNodeInfo().setNodeId("nodeId1");
+        TribClusterNode node2 = new TribClusterNode("host1:1002");
+        node2.getNodeInfo().setNodeId("nodeId2");
+        TribClusterNode node3 = new TribClusterNode("host2:1001");
+        node3.getNodeInfo().setNodeId("nodeId3");
+        TribClusterNode node4 = new TribClusterNode("host2:1002");
+        node4.getNodeInfo().setNodeId("nodeId4");
+        TribClusterNode node5 = new TribClusterNode("host3:1001");
+        node5.getNodeInfo().setNodeId("nodeId5");
+        TribClusterNode node6 = new TribClusterNode("host3:1002");
+        node6.getNodeInfo().setNodeId("nodeId6");
+        TribClusterNode node7 = new TribClusterNode("host4:1001");
+        node7.getNodeInfo().setNodeId("nodeId7");
+
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(
+                node1, node2, node3, node4, node5, node6, node7
+        ));
+        Whitebox.setInternalState(redisTrib, "replicas", 1);
+
+        redisTrib.allocSlots();
+
+        assertThat(node1.getTmpSlots().size(), is(5461));
+        assertThat(node2.getNodeInfo().getMasterNodeId(), is("nodeId3"));
+        assertThat(node3.getTmpSlots().size(), is(5461));
+        assertThat(node4.getNodeInfo().getMasterNodeId(), is("nodeId5"));
+        assertThat(node5.getTmpSlots().size(), is(5462));
+        assertThat(node6.getNodeInfo().getMasterNodeId(), is("nodeId1"));
+        assertThat(node7.getNodeInfo().getMasterNodeId(), is("nodeId1"));
+    }
+
+    @Test
+    public void buildCreateClusterParam() {
+        TribClusterNode node1 = new TribClusterNode("host1:1001");
+        node1.getNodeInfo().setNodeId("nodeId1");
+        TribClusterNode node2 = new TribClusterNode("host1:1002");
+        node2.getNodeInfo().setNodeId("nodeId2");
+        TribClusterNode node3 = new TribClusterNode("host2:1001");
+        node3.getNodeInfo().setNodeId("nodeId3");
+        TribClusterNode node4 = new TribClusterNode("host2:1002");
+        node4.getNodeInfo().setNodeId("nodeId4");
+        TribClusterNode node5 = new TribClusterNode("host3:1001");
+        node5.getNodeInfo().setNodeId("nodeId5");
+        TribClusterNode node6 = new TribClusterNode("host3:1002");
+        node6.getNodeInfo().setNodeId("nodeId6");
+        TribClusterNode node7 = new TribClusterNode("host4:1001");
+        node7.getNodeInfo().setNodeId("nodeId7");
+
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(
+                node1, node2, node3, node4, node5, node6, node7
+        ));
+        Whitebox.setInternalState(redisTrib, "replicas", 1);
+
+        redisTrib.allocSlots();
+
+        List<CreateClusterParam> result = redisTrib.buildCreateClusterParam();
+        log.info("result={}", result);
+        assertThat(result.get(0).getStartSlotNumber(), is("0"));
+        assertThat(result.get(0).getEndSlotNumber(), is("5460"));
+        assertThat(result.get(0).getMaster(), is("host1:1001"));
+        assertThat(result.get(0).getMasterNodeId(), is("nodeId1"));
+        assertThat(result.get(0).getReplicas(), contains("host3:1002", "host4:1001"));
+        assertThat(result.get(1).getStartSlotNumber(), is("5461"));
+        assertThat(result.get(1).getEndSlotNumber(), is("10921"));
+        assertThat(result.get(1).getMaster(), is("host2:1001"));
+        assertThat(result.get(1).getMasterNodeId(), is("nodeId3"));
+        assertThat(result.get(1).getReplicas(), contains("host1:1002"));
+        assertThat(result.get(2).getStartSlotNumber(), is("10922"));
+        assertThat(result.get(2).getEndSlotNumber(), is("16383"));
+        assertThat(result.get(2).getMaster(), is("host3:1001"));
+        assertThat(result.get(2).getMasterNodeId(), is("nodeId5"));
+        assertThat(result.get(2).getReplicas(), contains("host2:1002"));
+
     }
 
     /*
