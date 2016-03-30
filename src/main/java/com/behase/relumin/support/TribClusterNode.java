@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Clone of redis-trib.rb (ClusterNode)
+ * Almost clone of redis-trib.rb (ClusterNode)
  *
  * @author Ryosuke Hasebe
  */
@@ -27,7 +27,7 @@ public class TribClusterNode implements Closeable {
     private Jedis jedis;
     private ClusterNode nodeInfo;
     private Map<String, String> clusterInfo = Maps.newHashMap();
-    private boolean dirty = false;
+    private boolean dirty;
     private List<ClusterNode> friends = Lists.newArrayList();
     private Set<Integer> tmpSlots = Sets.newTreeSet();
     private List<TribClusterNode> replicas = Lists.newArrayList();

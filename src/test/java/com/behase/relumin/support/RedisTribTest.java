@@ -1,13 +1,39 @@
 package com.behase.relumin.support;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
+import org.springframework.boot.test.OutputCapture;
+import redis.clients.jedis.Jedis;
+
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doReturn;
 
 @Slf4j
 public class RedisTribTest {
-    @Test
-    public void test() {
+    @Spy
+    private RedisTrib redisTrib = new RedisTrib();
+
+    @Rule
+    public ExpectedException expectedEx = ExpectedException.none();
+
+    @Rule
+    public OutputCapture capture = new OutputCapture();
+
+    @Before
+    public void init() {
+        MockitoAnnotations.initMocks(this);
     }
+
+    @Test
+    public void getCreateClusterParams_invalid_replica_then_throw_exception() {
+    }
+
     /*
     @Value("${test.redis.normalCluster}")
     private String testRedisNormalCluster;

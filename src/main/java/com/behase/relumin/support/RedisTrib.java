@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Almost Clone of redis-trib.rb
+ * Almost clone of redis-trib.rb
  *
  * @author Ryosuke Hasebe
  */
