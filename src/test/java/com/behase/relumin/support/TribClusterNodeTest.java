@@ -234,7 +234,7 @@ public class TribClusterNodeTest {
 
         verify(jedis).clusterReplicate("masterNodeId");
         assertThat(capture.toString(), containsString("Replicate error"));
-        assertThat(tribClusterNode.isDirty(), is(false));
+        assertThat(tribClusterNode.isDirty(), is(true));
     }
 
     @Test

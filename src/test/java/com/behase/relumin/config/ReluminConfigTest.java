@@ -37,12 +37,9 @@ public class ReluminConfigTest {
     public void isBoolean() {
         assertThat(ReluminConfig.isBoolean(""), is(false));
         assertThat(ReluminConfig.isBoolean("true"), is(true));
-        assertThat(ReluminConfig.isBoolean("TRue"), is(true));
         assertThat(ReluminConfig.isBoolean("false"), is(true));
-        assertThat(ReluminConfig.isBoolean("falsE"), is(true));
         assertThat(ReluminConfig.isBoolean("hoge"), is(false));
     }
-
 
     @Test
     public void validate() {

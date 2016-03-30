@@ -1,6 +1,7 @@
 package com.behase.relumin;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.boot.test.WebIntegrationTest;
@@ -15,9 +16,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
-@ActiveProfiles("test")
 @WebIntegrationTest
 public class ApiTest {
+    @Test
+    public void test() {
+    }
 /*
     @Value("${test.redis.normalCluster}")
     private String testRedisNormalCluster;

@@ -1,20 +1,13 @@
 package com.behase.relumin.support;
 
-import com.behase.relumin.Application;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.runner.RunWith;
-import org.springframework.boot.test.SpringApplicationConfiguration;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import org.junit.Test;
 
 @Slf4j
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = Application.class)
-@ActiveProfiles("test")
 public class RedisTribTest {
+    @Test
+    public void test() {
+    }
     /*
     @Value("${test.redis.normalCluster}")
     private String testRedisNormalCluster;
