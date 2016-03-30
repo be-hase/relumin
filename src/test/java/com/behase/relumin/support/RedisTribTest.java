@@ -1,28 +1,11 @@
 package com.behase.relumin.support;
 
 import com.behase.relumin.Application;
-import com.behase.relumin.exception.InvalidParameterException;
-import com.behase.relumin.model.param.CreateClusterParam;
-import com.behase.relumin.util.JedisUtils;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.internal.util.reflection.Whitebox;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCluster;
-import redis.clients.jedis.JedisCluster.Reset;
-
-import java.util.Arrays;
-import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;

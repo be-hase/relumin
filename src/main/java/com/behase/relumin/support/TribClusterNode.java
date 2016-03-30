@@ -4,6 +4,7 @@ import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -17,14 +18,15 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Clone of redis-trib.rb
+ * Clone of redis-trib.rb (ClusterNode)
  *
  * @author Ryosuke Hasebe
  */
 @Slf4j
 public class TribClusterNode implements Closeable {
     private Jedis jedis;
-    private ClusterNode info;
+    private ClusterNode nodeInfo;
+    private Map<String, String> clusterInfo = Maps.newHashMap();
     private boolean dirty = false;
     private List<ClusterNode> friends = Lists.newArrayList();
     private Set<Integer> tmpSlots = Sets.newTreeSet();
@@ -32,18 +34,24 @@ public class TribClusterNode implements Closeable {
 
     public TribClusterNode(String hostAndPort) {
         String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
-        checkArgument(hostAndPortArray.length >= 2, "Invalid IP or Port. Use IP:Port format");
+        if (hostAndPortArray.length < 2) {
+            throw new InvalidParameterException("Invalid IP or Port. Use IP:Port format");
+        }
 
-        info = new ClusterNode();
-        info.setHostAndPort(hostAndPort);
+        nodeInfo = new ClusterNode();
+        nodeInfo.setHostAndPort(hostAndPort);
     }
 
     public Jedis getJedis() {
         return jedis;
     }
 
-    public ClusterNode getInfo() {
-        return info;
+    public ClusterNode getNodeInfo() {
+        return nodeInfo;
+    }
+
+    public Map<String, String> getClusterInfo() {
+        return clusterInfo;
     }
 
     public boolean isDirty() {
@@ -54,7 +62,7 @@ public class TribClusterNode implements Closeable {
         return friends;
     }
 
-    public Set<Integer> getTmpServedSlots() {
+    public Set<Integer> getTmpSlots() {
         return tmpSlots;
     }
 
@@ -62,12 +70,8 @@ public class TribClusterNode implements Closeable {
         return replicas;
     }
 
-    public String getServedSlots() {
-        return info.getServedSlots();
-    }
-
     public boolean hasFlag(String flag) {
-        return info.getFlags().contains(flag);
+        return nodeInfo.getFlags().contains(flag);
     }
 
     public void connect() {
@@ -80,13 +84,11 @@ public class TribClusterNode implements Closeable {
         }
 
         try {
-            jedis = createJedisSupport().getJedisByHostAndPort(info.getHostAndPort());
-            if (!"PONG".equalsIgnoreCase(jedis.ping())) {
-                throw new InvalidParameterException(String.format("Invalid PONG-message from Redis(%s).", info.getHostAndPort()));
-            }
+            jedis = createJedisSupport().getJedisByHostAndPort(nodeInfo.getHostAndPort());
+            jedis.ping();
         } catch (Exception e) {
             if (abort) {
-                throw new InvalidParameterException(String.format("Failed to connect to node(%s).", info.getHostAndPort()));
+                throw new InvalidParameterException(String.format("Failed to connect to node(%s).", nodeInfo.getHostAndPort()));
             }
             jedis = null;
         }
@@ -96,19 +98,20 @@ public class TribClusterNode implements Closeable {
         Map<String, String> infoResult = createJedisSupport().parseInfoResult(jedis.info());
         String clusterEnabled = infoResult.get("cluster_enabled");
         if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
-            throw new InvalidParameterException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()));
+            throw new InvalidParameterException(String.format("%s is not configured as a cluster node.", nodeInfo.getHostAndPort()));
         }
     }
 
     public void assertEmpty() {
         Map<String, String> infoResult = createJedisSupport().parseInfoResult(jedis.info());
         Map<String, String> clusterInfoResult = createJedisSupport().parseClusterInfoResult(jedis.clusterInfo());
+
         if (infoResult.get("db0") != null || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
             throw new InvalidParameterException(
                     String.format(
                             "%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) " +
                                     "or contains some key in database 0.",
-                            info.getHostAndPort()
+                            nodeInfo.getHostAndPort()
                     )
             );
         }
@@ -118,17 +121,19 @@ public class TribClusterNode implements Closeable {
         loadInfo(false);
     }
 
-    public void loadInfo(boolean getFriend) {
+    public void loadInfo(boolean getFriends) {
         connect();
 
-        String hostAndPort = info.getHostAndPort();
+        String hostAndPort = nodeInfo.getHostAndPort();
         List<ClusterNode> nodes = createJedisSupport().parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
         nodes.forEach(v -> {
             if (v.hasFlag("myself")) {
-                info = v;
-                info.setHostAndPort(hostAndPort);
+                nodeInfo = v;
+                nodeInfo.setHostAndPort(hostAndPort);
+                dirty = false;
+                clusterInfo = createJedisSupport().parseClusterInfoResult(jedis.clusterInfo());
             } else {
-                if (getFriend) {
+                if (getFriends) {
                     friends.add(v);
                 }
             }
@@ -136,37 +141,31 @@ public class TribClusterNode implements Closeable {
     }
 
     public void addTmpSlots(Collection<Integer> slots) {
-        if (slots.isEmpty()) {
-            return;
-        }
         tmpSlots.addAll(slots);
         dirty = true;
     }
 
     public void setAsReplica(String masterNodeId) {
-        info.setMasterNodeId(masterNodeId);
+        nodeInfo.setMasterNodeId(masterNodeId);
         dirty = true;
     }
 
     public void flushNodeConfig() {
         if (!dirty) {
+            log.debug("Dirty is false, so ignore.");
             return;
         }
-        if (StringUtils.isBlank(info.getMasterNodeId())) {
-            log.debug("this node is master. {}", getTmpServedSlots());
-            int[] intArray = new int[tmpSlots.size()];
-            int i = 0;
-            for (Integer item : tmpSlots) {
-                intArray[i] = item;
-                i++;
-            }
+
+        if (StringUtils.isBlank(nodeInfo.getMasterNodeId())) {
+            log.debug("this node is master.");
+            int[] intArray = tmpSlots.stream().mapToInt(i -> i).toArray();
             jedis.clusterAddSlots(intArray);
-            info.getServedSlotsSet().addAll(tmpSlots);
+            nodeInfo.getServedSlotsSet().addAll(tmpSlots);
             tmpSlots.clear();
         } else {
             log.debug("this node is replica");
             try {
-                jedis.clusterReplicate(info.getMasterNodeId());
+                jedis.clusterReplicate(nodeInfo.getMasterNodeId());
             } catch (Exception e) {
                 log.error("Replicate error.", e);
                 // If the cluster did not already joined it is possible that
@@ -176,9 +175,13 @@ public class TribClusterNode implements Closeable {
                 return;
             }
         }
+
         dirty = false;
     }
 
+    // Return a single string representing nodes and associated slots.
+    // TODO: remove slaves from config when slaves will be handled
+    // by Redis Cluster.
     public String getConfigSignature() {
         List<String> config = Lists.newArrayList();
 
@@ -190,7 +193,7 @@ public class TribClusterNode implements Closeable {
             for (int i = 8; i < lineArray.length; i++) {
                 slots.add(lineArray[i]);
             }
-            slots.stream().filter(v -> !StringUtils.startsWith(v, "[")).collect(Collectors.toList());
+            slots = slots.stream().filter(v -> !StringUtils.startsWith(v, "[")).collect(Collectors.toList());
 
             if (slots.size() > 0) {
                 Collections.sort(slots);
@@ -215,7 +218,7 @@ public class TribClusterNode implements Closeable {
 
     @Override
     public String toString() {
-        return info.getHostAndPort();
+        return nodeInfo.getHostAndPort();
     }
 
     @Override
@@ -231,6 +234,6 @@ public class TribClusterNode implements Closeable {
         }
 
         TribClusterNode other = (TribClusterNode) obj;
-        return StringUtils.equalsIgnoreCase(getInfo().getHostAndPort(), other.getInfo().getHostAndPort());
+        return StringUtils.equalsIgnoreCase(getNodeInfo().getHostAndPort(), other.getNodeInfo().getHostAndPort());
     }
 }

@@ -48,38 +48,13 @@ public class JedisSupport {
     }
 
     public Map<String, String> parseInfoResult(String result) {
-        Map<String, String> map = Maps.newLinkedHashMap();
+        Map<String, String> map = colonSeparatedTextToMap(result);
         map.put("_timestamp", String.valueOf(System.currentTimeMillis()));
-
-        String[] line = StringUtils.split(result, "\n");
-        for (String each : line) {
-            String[] eachArray = StringUtils.split(each, ":");
-            if (eachArray.length != 2) {
-                continue;
-            }
-            String key = StringUtils.trim(eachArray[0]);
-            String value = StringUtils.trim(eachArray[1]);
-            map.put(key, value);
-        }
-
         return map;
     }
 
     public Map<String, String> parseClusterInfoResult(String result) {
-        Map<String, String> map = Maps.newLinkedHashMap();
-
-        String[] line = StringUtils.split(result, "\n");
-        for (String each : line) {
-            String[] eachArray = StringUtils.split(each, ":");
-            if (eachArray.length != 2) {
-                continue;
-            }
-            String key = StringUtils.trim(eachArray[0]);
-            String value = StringUtils.trim(eachArray[1]);
-            map.put(key, value);
-        }
-
-        return map;
+        return colonSeparatedTextToMap(result);
     }
 
     public List<ClusterNode> parseClusterNodesResult(String result, String hostAndPort) {
@@ -269,5 +244,22 @@ public class JedisSupport {
         });
 
         return slots;
+    }
+
+    private Map<String, String> colonSeparatedTextToMap(String result) {
+        Map<String, String> map = Maps.newLinkedHashMap();
+
+        String[] line = StringUtils.split(result, "\n");
+        for (String each : line) {
+            String[] eachArray = StringUtils.split(each, ":");
+            if (eachArray.length != 2) {
+                continue;
+            }
+            String key = StringUtils.trim(eachArray[0]);
+            String value = StringUtils.trim(eachArray[1]);
+            map.put(key, value);
+        }
+
+        return map;
     }
 }
