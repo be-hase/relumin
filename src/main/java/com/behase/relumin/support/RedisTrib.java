@@ -49,7 +49,7 @@ public class RedisTrib implements Closeable {
 
         for (String hostAndPort : hostAndPorts) {
             hostAndPort = StringUtils.trim(hostAndPort);
-            TribClusterNode node = new TribClusterNode(hostAndPort);
+            TribClusterNode node = createTribClusterNode(hostAndPort);
             node.connect(true);
             node.assertCluster();
             node.loadInfo();
@@ -71,12 +71,9 @@ public class RedisTrib implements Closeable {
         params.forEach(param -> {
             int startSlot = Integer.valueOf(param.getStartSlotNumber());
             int endSlot = Integer.valueOf(param.getEndSlotNumber());
-            List<Integer> tmpSlots = Lists.newArrayList();
-            for (int i = startSlot; i <= endSlot; i++) {
-                tmpSlots.add(i);
-            }
+            List<Integer> tmpSlots = IntStream.rangeClosed(startSlot, endSlot).boxed().collect(Collectors.toList());
 
-            TribClusterNode masterNode = new TribClusterNode(param.getMaster());
+            TribClusterNode masterNode = createTribClusterNode(param.getMaster());
             masterNode.connect(true);
             masterNode.assertCluster();
             masterNode.loadInfo();
@@ -84,7 +81,7 @@ public class RedisTrib implements Closeable {
             addNodes(masterNode);
 
             param.getReplicas().forEach(replica -> {
-                TribClusterNode replicaNode = new TribClusterNode(replica);
+                TribClusterNode replicaNode = createTribClusterNode(replica);
                 replicaNode.connect(true);
                 replicaNode.assertCluster();
                 replicaNode.loadInfo();
@@ -100,18 +97,15 @@ public class RedisTrib implements Closeable {
         flushNodesConfig();
         log.info("Nodes configuration updated.");
         log.info("Assign a different config epoch to each node.");
-
-        // assign config epoch
         assignConfigEpoch();
-
+        log.info("Sending CLUSTER MEET messages to join the cluster.");
         joinCluster();
         // Give one second for the join to start, in order to avoid that
         // wait_cluster_join will find all the nodes agree about the config as
         // they are still empty with unassigned slots.
         Thread.sleep(1000);
         waitClusterJoin();
-        flushNodesConfig();
-
+        flushNodesConfig(); // Useful for the replicas.
         checkCluster();
 
         // Give one 3 second for gossip
@@ -185,9 +179,7 @@ public class RedisTrib implements Closeable {
         log.info("Source nodes : {}", sources.stream().map(v -> String.format("%s (%s)", v.getNodeInfo().getHostAndPort(), v.getNodeInfo().getNodeId())).collect(Collectors.toList()));
         log.info("Destination nodes : {}", String.format("%s (%s)", target.getNodeInfo().getHostAndPort(), target.getNodeInfo().getNodeId()));
         List<ReshardTable> reshardTables = computeReshardTable(sources, slotCount);
-        reshardTables.forEach(reshardTable -> {
-            moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), false, false);
-        });
+        reshardTables.forEach(reshardTable -> moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), null));
 
         // Give one 3 second for gossip
         Thread.sleep(3000);
@@ -241,9 +233,7 @@ public class RedisTrib implements Closeable {
             throw new InvalidParameterException(String.format("Cannot find the nodes which has slots(%s).", new JedisSupport().slotsDisplay(notFoundSlot)));
         }
 
-        reshardTables.forEach(reshardTable -> {
-            moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), false, false);
-        });
+        reshardTables.forEach(reshardTable -> moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), null));
 
         // Give one 3 second for gossip
         Thread.sleep(3000);
@@ -257,7 +247,7 @@ public class RedisTrib implements Closeable {
         checkCluster();
 
         // Add the new node
-        TribClusterNode newNode = new TribClusterNode(newHostAndPort);
+        TribClusterNode newNode = createTribClusterNode(newHostAndPort);
         newNode.connect(true);
         newNode.assertCluster();
         newNode.loadInfo();
@@ -298,7 +288,7 @@ public class RedisTrib implements Closeable {
         }
 
         // Add the new node
-        TribClusterNode newNode = new TribClusterNode(newHostAndPort);
+        TribClusterNode newNode = createTribClusterNode(newHostAndPort);
         newNode.connect(true);
         newNode.assertCluster();
         newNode.loadInfo();
@@ -577,19 +567,18 @@ public class RedisTrib implements Closeable {
         }
     }
 
-    /**
-     * Slot 'slot' was found to be in importing or migrating state in one or<br>
-     * more nodes. This function fixes this condition by migrating keys where<br>
-     * it seems more sensible.
-     *
-     * @param slot
-     */
+    // Slot 'slot' was found to be in importing or migrating state in one or
+    // more nodes. This function fixes this condition by migrating keys where
+    // it seems more sensible.
     void fixOpenSlot(int slot) {
         log.info("Fixing open slots. {}", slot);
 
-        TribClusterNode owner = getSlotOwner(slot);
-        if (owner == null) {
-            throw new ApiException(Constants.ERR_CODE_UNKNOWN, "Fix me, some work to do here.", HttpStatus.INTERNAL_SERVER_ERROR);
+        // Try to obtain the current slot owner, according to the current
+        // nodes configuration.
+        List<TribClusterNode> owners = getSlotOwners(slot);
+        TribClusterNode owner = null;
+        if (owners.size() == 1) {
+            owner = owners.get(0);
         }
 
         List<TribClusterNode> migrating = Lists.newArrayList();
@@ -602,55 +591,80 @@ public class RedisTrib implements Closeable {
                 migrating.add(node);
             } else if (node.getNodeInfo().getImporting().containsKey(Integer.valueOf(slot))) {
                 importing.add(node);
-            } else if (node.getJedis().clusterCountKeysInSlot(slot) > 0
-                    && !StringUtils.equalsIgnoreCase(node.getNodeInfo().getNodeId(), owner.getNodeInfo().getNodeId())) {
+            } else if (node.getJedis().clusterCountKeysInSlot(slot) > 0 && !node.equals(owner)) {
                 log.info("Found keys about slot {} in node {}", slot, node.getNodeInfo().getHostAndPort());
                 importing.add(node);
             }
         }
+        log.info("Set as migrating in: {}", migrating.stream().map(v -> v.getNodeInfo().getHostAndPort()).collect(Collectors.toList()));
+        log.info("Set as migrating in: {}", importing.stream().map(v -> v.getNodeInfo().getHostAndPort()).collect(Collectors.toList()));
 
-        log.info("Set as migrating in: {}", migrating.stream().map(v -> v.getNodeInfo().getHostAndPort()));
-        log.info("Set as migrating in: {}", importing.stream().map(v -> v.getNodeInfo().getHostAndPort()));
+        if (owner == null) {
+            log.info("Nobody claims ownership, selecting an owner.");
 
-        // Case 1: The slot is in migrating state in one slot, and in
-        //         importing state in 1 slot. That's trivial to address.
+            owner = getNodeWithMostKeysInSlot(nodes, slot);
+            if (owner == null) {
+                throw new ApiException(Constants.ERR_CODE_UNKNOWN, "Can't select a slot owner. Impossible to fix.", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            // # Use ADDSLOTS to assign the slot.
+            log.info("Configuring {} as the slot owner", owner.getNodeInfo().getHostAndPort());
+            owner.getJedis().clusterSetSlotStable(slot);
+            owner.getJedis().clusterAddSlots(slot);
+
+            // Remove the owner from the list of migrating/importing
+            // nodes.
+            migrating.remove(owner);
+            importing.remove(owner);
+        }
+
         if (migrating.size() == 1 && importing.size() == 1) {
-            moveSlot(migrating.get(0), importing.get(0), slot, true, false);
+            // Case 1: The slot is in migrating state in one slot, and in
+            // importing state in 1 slot. That's trivial to address.
+            moveSlot(migrating.get(0), importing.get(0), slot, Sets.newHashSet("fix"));
         } else if (migrating.size() == 0 && importing.size() > 0) {
+            // Case 2: There are multiple nodes that claim the slot as importing,
+            // they probably got keys about the slot after a restart so opened
+            // the slot. In this case we just move all the keys to the owner
+            // according to the configuration.
             log.info("Moving all the {} slot keys to its owner {}", slot, owner.getNodeInfo().getHostAndPort());
             for (TribClusterNode importingNode : importing) {
-                if (StringUtils.equalsIgnoreCase(importingNode.getNodeInfo().getNodeId(), owner.getNodeInfo().getNodeId())) {
+                if (importingNode.equals(owner)) {
                     continue;
                 }
-                moveSlot(importingNode, owner, slot, true, true);
-                log.info("Setting {} as STABLE in {}", slot, importingNode.getNodeInfo().getNodeId());
+                moveSlot(importingNode, owner, slot, Sets.newHashSet("fix", "cold"));
+                log.info("Setting {} as STABLE in {}", slot, importingNode.getNodeInfo().getHostAndPort());
                 importingNode.getJedis().clusterSetSlotStable(slot);
             }
+        } else if (importing.size() == 0 && migrating.size() == 1
+                && migrating.get(0).getJedis().clusterGetKeysInSlot(slot, 10).size() == 0) {
+            // Case 3: There are no slots claiming to be in importing state, but
+            // there is a migrating node that actually don't have any key. We
+            // can just close the slot, probably a reshard interrupted in the middle.
+            migrating.get(0).getJedis().clusterSetSlotStable(slot);
         } else {
-            throw new ApiException(Constants.ERR_CODE_UNKNOWN, "Sorry, we can't fix this slot yet (work in progress)", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new ApiException(Constants.ERR_CODE_UNKNOWN, "Sorry, can't fix this slot yet (work in progress).", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    /**
-     * Move slots between source and target nodes using MIGRATE.<br>
-     * Options:<br>
-     * :fix     -- We are moving in the context of a fix. Use REPLACE.<br>
-     * :cold    -- Move keys without opening / reconfiguring the nodes.<br>
-     *
-     * @param source
-     * @param target
-     * @param slot
-     * @param fix
-     * @param cold
-     */
-    void moveSlot(TribClusterNode source, TribClusterNode target, int slot, boolean fix, boolean cold) {
+    // Move slots between source and target nodes using MIGRATE.
+    //
+    // Options:
+    //     :fix     -- We are moving in the context of a fix. Use REPLACE.
+    //     :cold    -- Move keys without opening slots / reconfiguring the nodes.
+    //     :update  -- Update nodes.info[:slots] for source/target nodes.//
+    void moveSlot(TribClusterNode source, TribClusterNode target, int slot, Set<String> options) {
+        if (options == null) {
+            options = Sets.newHashSet();
+        }
+
         // We start marking the slot as importing in the destination node,
         // and the slot as migrating in the target host. Note that the order of
         // the operations is important, as otherwise a client may be redirected
         // to the target node that does not yet know it is importing this slot.
         log.info("Moving slot {} from {} to {}.", slot, source.getNodeInfo().getHostAndPort(), target.getNodeInfo().getHostAndPort());
 
-        if (!cold) {
+        if (!options.contains("cold")) {
             target.getJedis().clusterSetSlotImporting(slot, source.getNodeInfo().getNodeId());
             source.getJedis().clusterSetSlotMigrating(slot, target.getNodeInfo().getNodeId());
         }
@@ -660,12 +674,12 @@ public class RedisTrib implements Closeable {
             if (keys.size() == 0) {
                 break;
             }
-            keys.forEach(key -> {
+            for (String key : keys) {
                 try {
                     source.getJedis().migrate(target.getNodeInfo().getHost(), target.getNodeInfo().getPort(), key, 0, 15000);
                 } catch (Exception e) {
-                    if (fix && StringUtils.contains(e.getMessage(), "BUSYKEY")) {
-                        // TODO: i want to replcate. but jedis not have replace.
+                    if (options.contains("fix") && StringUtils.contains(e.getMessage(), "BUSYKEY")) {
+                        // TODO: I want to replcate. but jedis not have replace.
                         log.error("Error.", e);
                         throw new ApiException(Constants.ERR_CODE_UNKNOWN, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
                     } else {
@@ -673,20 +687,48 @@ public class RedisTrib implements Closeable {
                         throw new ApiException(Constants.ERR_CODE_UNKNOWN, e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                 }
-            });
+            }
         }
 
-        if (!cold) {
-            nodes.forEach(node -> {
-                node.getJedis().clusterSetSlotNode(slot, target.getNodeInfo().getNodeId());
-            });
+        // Set the new node as the owner of the slot in all the known nodes.
+        if (!options.contains("cold")) {
+            nodes.stream()
+                    .filter(node -> !node.hasFlag("slave"))
+                    .forEach(node -> node.getJedis().clusterSetSlotNode(slot, target.getNodeInfo().getNodeId()));
+        }
+
+        // Update the node logical config
+        if (options.contains("update")) {
+            source.getTmpSlots().remove(slot);
+            target.getTmpSlots().add(slot);
         }
     }
 
-    TribClusterNode getSlotOwner(int slot) {
-        return nodes.stream().filter(node -> {
-            return node.getNodeInfo().getServedSlotsSet().contains(slot);
-        }).findFirst().orElse(null);
+    List<TribClusterNode> getSlotOwners(int slot) {
+        List<TribClusterNode> owners = Lists.newArrayList();
+        nodes.stream()
+                .filter(node -> !node.hasFlag("slave"))
+                .filter(node -> node.getNodeInfo().getServedSlotsSet().contains(slot))
+                .forEach(node -> owners.add(node));
+        return owners;
+    }
+
+    TribClusterNode getNodeWithMostKeysInSlot(List<TribClusterNode> nodes, int slot) {
+        TribClusterNode best = null;
+        long bestNumKeys = 0;
+
+        for (TribClusterNode node : nodes) {
+            if (node.hasFlag("slave")) {
+                continue;
+            }
+            long numKeys = node.getJedis().clusterCountKeysInSlot(slot);
+            if (numKeys > bestNumKeys || best == null) {
+                best = node;
+                bestNumKeys = numKeys;
+            }
+        }
+
+        return best;
     }
 
     // TODO:
@@ -729,17 +771,14 @@ public class RedisTrib implements Closeable {
     //	}
 
     void flushNodesConfig() {
-        nodes.forEach(node -> {
-            node.flushNodeConfig();
-        });
+        nodes.forEach(node -> node.flushNodeConfig());
     }
 
-    @SuppressWarnings("unused")
     void assignConfigEpoch() {
         int configEpoch = 1;
         for (TribClusterNode node : nodes) {
             try {
-                //TODO: SET CONFIG EPOCH
+                // TODO: SET CONFIG EPOCH (But no implement on jedis)
             } catch (Exception e) {
             }
             configEpoch++;
@@ -846,8 +885,7 @@ public class RedisTrib implements Closeable {
                 last = first;
             }
 
-            Set<Integer> slots = Sets.newTreeSet();
-            IntStream.rangeClosed(first, last).forEach(v -> slots.add(v));
+            Set<Integer> slots = Sets.newTreeSet(IntStream.rangeClosed(first, last).boxed().collect(Collectors.toList()));
             log.info("Add slots to {}. first={}, last={}", masters.get(i), first, last);
             masters.get(i).addTmpSlots(slots);
 
@@ -904,14 +942,14 @@ public class RedisTrib implements Closeable {
             TribClusterNode master;
             Optional<Entry<TribClusterNode, List<TribClusterNode>>> entrySetNodeOp;
 
-            int sameHostOfMasterCount = (int)masters.stream()
+            int sameHostOfMasterCount = (int) masters.stream()
                     .filter(v -> StringUtils.equals(v.getNodeInfo().getHost(), extra.getNodeInfo().getHost()))
                     .count();
 
             entrySetNodeOp = replicasOfMaster.entrySet().stream()
                     .min((e1, e2) -> Integer.compare(e1.getValue().size(), e2.getValue().size()));
             int minSize = entrySetNodeOp.get().getValue().size();
-            int sameMinCount = (int)replicasOfMaster.entrySet().stream()
+            int sameMinCount = (int) replicasOfMaster.entrySet().stream()
                     .filter(v -> minSize == v.getValue().size())
                     .count();
 
@@ -969,7 +1007,7 @@ public class RedisTrib implements Closeable {
     void loadClusterInfoFromNode(String hostAndPort) {
         ValidationUtils.hostAndPort(hostAndPort);
 
-        TribClusterNode node = new TribClusterNode(hostAndPort);
+        TribClusterNode node = createTribClusterNode(hostAndPort);
         node.connect(true);
         node.assertCluster();
         node.loadInfo(true);
@@ -979,7 +1017,7 @@ public class RedisTrib implements Closeable {
             if (friend.hasFlag("noaddr") || friend.hasFlag("disconnected") || friend.hasFlag("fail")) {
                 continue;
             }
-            TribClusterNode friendTribNode = new TribClusterNode(friend.getHostAndPort());
+            TribClusterNode friendTribNode = createTribClusterNode(friend.getHostAndPort());
             friendTribNode.connect();
             if (friendTribNode.getJedis() == null) {
                 continue;
@@ -995,6 +1033,8 @@ public class RedisTrib implements Closeable {
         populateNodesReplicasInfo();
     }
 
+    // This function is called by load_cluster_info_from_node in order to
+    // add additional information to every node as a list of replicas.
     void populateNodesReplicasInfo() {
         // Populate the replicas field using the replicate field of slave
         // nodes.
@@ -1002,17 +1042,14 @@ public class RedisTrib implements Closeable {
             if (StringUtils.isNotBlank(node.getNodeInfo().getMasterNodeId())) {
                 TribClusterNode master = getNodeByNodeId(node.getNodeInfo().getMasterNodeId());
                 if (master == null) {
-                    throw new ApiException(
-                            Constants.ERR_CODE_UNKNOWN,
-                            String.format(
-                                    "%s claims to be slave of unknown node ID %s.",
-                                    node.getNodeInfo().getHostAndPort(),
-                                    node.getNodeInfo().getMasterNodeId()
-                            ),
-                            HttpStatus.INTERNAL_SERVER_ERROR
+                    log.warn(
+                            "{} claims to be slave of unknown node ID {}.",
+                            node.getNodeInfo().getHostAndPort(),
+                            node.getNodeInfo().getMasterNodeId()
                     );
+                } else {
+                    master.getReplicas().add(node);
                 }
-                master.getReplicas().add(node);
             }
         });
     }
