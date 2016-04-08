@@ -62,13 +62,13 @@ var ClusterSettingGeneral = React.createClass({
         var stopNotifyView;
         if (hasPermission) {
             mailToInputView = (
-                <input type='text' valueLink={this.linkState('mailTo')} onBlur={this.handleValidation('mailTo')} className='form-control' placeholder='to@hoge.com' />
+                <input type='text' valueLink={this.linkState('mailTo')} onBlur={this.handleValidation('mailTo')} className='form-control' placeholder='to@example.com' />
             );
             mailFromInputView = (
-                <input type='text' valueLink={this.linkState('mailFrom')} onBlur={this.handleValidation('mailFrom')} className='form-control' placeholder='from@hoge.com' />
+                <input type='text' valueLink={this.linkState('mailFrom')} onBlur={this.handleValidation('mailFrom')} className='form-control' placeholder='from@example.com' />
             );
             httpUrlInputView = (
-                <input type='text' valueLink={this.linkState('httpUrl')} onBlur={this.handleValidation('httpUrl')} className='form-control' placeholder='http://hoge.com/notify' />
+                <input type='text' valueLink={this.linkState('httpUrl')} onBlur={this.handleValidation('httpUrl')} className='form-control' placeholder='http://example.com/notify' />
             );
             stopNotifyView = (
                 <div style={{width: '0px'}}>
