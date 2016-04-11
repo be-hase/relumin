@@ -82,9 +82,9 @@ auth:
 
 notice:
   mail:
-    host: smtp.hoge.com
+    host: smtp.example.com
     port: 25
-    from: relumin-alert@hoge.com
+    from: relumin-alert@example.com
 
 scheduler:
   collectStaticsInfoMaxCount: 10000
