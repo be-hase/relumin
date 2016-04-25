@@ -82,7 +82,6 @@ var ClusterSlowLogs = React.createClass({
         );
     },
     handleChangeNodeSlowLog: function() {
-      console.log(NodeSlowLogStore.getSlowLogs(this.props.cluster.cluster_name))
         this.setState({
             slowlogs: NodeSlowLogStore.getSlowLogs(this.props.cluster.cluster_name)
         });
@@ -96,9 +95,6 @@ var ClusterSlowLogs = React.createClass({
             end: query.end,
             nodes: query.nodes
         };
-
-        console.log(requestData)
-
 
         if (this.state.loading) {
           return;
