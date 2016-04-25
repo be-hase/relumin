@@ -39,4 +39,8 @@ public class Constants {
 	public static String getNodeStaticsInfoRedisKey(String prefixKey, String clusterName, String nodeId) {
 		return Joiner.on(".").join(prefixKey, "cluster", clusterName, "node", nodeId, "staticsInfo").toString();
 	}
+
+	public static String getNodeSlowLogRedisKey(String prefixKey, String clusterName, String nodeId) {
+		return Joiner.on(".").join(prefixKey, "cluster", clusterName, "node", nodeId, "slowLog").toString();
+	}
 }

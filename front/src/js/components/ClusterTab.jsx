@@ -13,7 +13,7 @@ var ClusterTab = React.createClass({
         var clusterName = this.props.cluster.cluster_name;
         var list = [];
 
-        _.each(['Info', 'Monitoring', 'Setting'], function(val){
+        _.each(['Info', 'Monitoring', 'Slowlog', 'Setting'], function(val){
             var lowerVal = val.toLowerCase();
             var liClass = classSet({
                 'active': lowerVal === tab

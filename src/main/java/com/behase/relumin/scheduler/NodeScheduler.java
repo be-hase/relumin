@@ -38,6 +38,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import lombok.extern.slf4j.Slf4j;
+import redis.clients.util.Slowlog;
 
 @Slf4j
 @Component
@@ -97,11 +98,18 @@ public class NodeScheduler {
 						Map<String, String> staticsInfo = nodeService.getStaticsInfo(clusterNode);
 						staticsInfos.put(clusterNode, staticsInfo);
 
+                        List<Slowlog> slowLogs = nodeService.getSlowLog(clusterNode);
+
 						try (Jedis jedis = datastoreJedisPool.getResource()) {
 							String key = Constants.getNodeStaticsInfoRedisKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
 							jedis.lpush(key, mapper.writeValueAsString(staticsInfo));
 							jedis.ltrim(key, 0, collectStaticsInfoMaxCount - 1);
-						}
+
+                            String slowLogKey = Constants.getNodeSlowLogRedisKey(redisPrefixKey, clusterName, clusterNode.getNodeId());
+                            for (Slowlog slowLog : slowLogs) {
+                                jedis.lpush(slowLogKey, mapper.writeValueAsString(slowLog));
+                            }
+						}   
 					} catch (Exception e) {
 						log.error("collectStaticsIndo fail. clusterName={}, hostAndPort={}", clusterName, clusterNode.getHostAndPort(), e);
 					}

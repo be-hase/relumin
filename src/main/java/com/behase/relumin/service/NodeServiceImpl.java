@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.util.Slowlog;
 
 @Slf4j
 @Service
@@ -48,6 +49,23 @@ public class NodeServiceImpl implements NodeService {
 			return result;
 		}
 	}
+
+    @Override
+    public List<Slowlog> getSlowLog(ClusterNode clusterNode) {
+        try (Jedis jedis = JedisUtils.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
+            List<Slowlog> slowLogs = jedis.slowlogGet();
+
+            //log.info("getSlowLog length={}", String.valueOf(jedis.slowlogLen()));
+
+            return slowLogs;
+        }
+    }
+
+    @Override
+    public List<Map<String, String>> getSlowLogHistory(String clusterName, String nodeId) {
+        List<Map<String, String>> slowLogList = getSlowLogHistoryFromRedis(clusterName, nodeId);
+        return slowLogList;
+    }
 
 	@Override
 	public Map<String, List<List<Object>>> getStaticsInfoHistory(String clusterName, String nodeId,
@@ -209,6 +227,25 @@ public class NodeServiceImpl implements NodeService {
 
 		return filterGetStaticsInfoHistory(result, fields);
 	}
+
+    private List<Map<String, String>> getSlowLogHistoryFromRedis(String clusterName, String nodeId) {
+        List<Map<String, String>> result = Lists.newArrayList();
+
+        try (Jedis jedis = dataStoreJedisPool.getResource()) {
+            List<String> rawResult = jedis.lrange(Constants.getNodeSlowLogRedisKey(redisPrefixKey, clusterName, nodeId), 0, -1);
+            rawResult.forEach(v -> {
+                try {
+                    Map<String, String> map = mapper.readValue(v, new TypeReference<Map<String, Object>>() {
+                    });
+                    result.add(map);
+                } catch (Exception e) {
+                    log.warn("Failed to parse json.", e);
+                }
+            });
+        }
+
+        return result;
+    }
 
 	private List<Map<String, String>> filterGetStaticsInfoHistory(List<Map<String, String>> staticsInfos,
 			List<String> fields) {

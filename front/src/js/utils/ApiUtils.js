@@ -116,6 +116,24 @@ var ApiUtils = {
             _.assign(ajaxOptions, callbacks);
             return $.ajax(ajaxOptions);
         },
+        getNodeSlowlogs: function(clusterName, data, callbacks) {
+            var apiUrl = BASE_URL + '/api/cluster/' + clusterName + '/slowlogs';
+
+            if (!data.start) {
+                data.start = moment().subtract(24, 'h').format('x');
+            }
+            if (!data.end) {
+                data.end = moment().format('x');
+            }
+
+            var ajaxOptions = {
+                type: 'POST',
+                url: apiUrl,
+                data: data
+            };
+            _.assign(ajaxOptions, callbacks);
+            return $.ajax(ajaxOptions);
+        },
         getClusterNotice: function(clusterName, callbacks) {
             var apiUrl = BASE_URL + '/api/cluster/' + clusterName + '/notice';
 
