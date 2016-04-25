@@ -64,6 +64,27 @@ var ClusterActions = {
             autoRefresh: autoRefresh
         });
     },
+    getNodeSlowLog: function(clusterName, data, callbacks) {
+        callbacks = callbacks || {};
+
+        Utils.wrapSuccess(callbacks, function(data) {
+            AppDispatcher.dispatch({
+                actionType: AppConstants.GET_NODE_SLOWLOG,
+                clusterName: clusterName,
+                data: data
+            });
+        });
+
+        ApiUtils.Cluster.getNodeSlowlogs(clusterName, data, callbacks);
+    },
+    setNodeSlowLogQuery: function(clusterName, query) {
+      console.log("query", query);
+        AppDispatcher.dispatch({
+            actionType: AppConstants.SET_NODE_SLOWLOG_QUERY,
+            clusterName: clusterName,
+            data: query
+        });
+    },
     getClusterNotice: function(clusterName, callbacks) {
         callbacks = callbacks || {};
 
