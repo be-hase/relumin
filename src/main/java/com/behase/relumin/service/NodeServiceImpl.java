@@ -60,6 +60,13 @@ public class NodeServiceImpl implements NodeService {
             return slowLogs;
         }
     }
+
+    @Override
+    public List<Map<String, String>> getSlowLogHistory(String clusterName, String nodeId) {
+        List<Map<String, String>> slowLogList = getSlowLogHistoryFromRedis(clusterName, nodeId);
+        return slowLogList;
+    }
+
 	@Override
 	public Map<String, List<List<Object>>> getStaticsInfoHistory(String clusterName, String nodeId,
 			List<String> fields,

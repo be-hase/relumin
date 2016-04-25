@@ -14,5 +14,7 @@ public interface NodeService {
 	Map<String, List<List<Object>>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
 			long start, long end);
 
+    List<Map<String, String>> getSlowLogHistory(String clusterName, String nodeId);
+
 	void shutdown(String hostAndPort);
 }
