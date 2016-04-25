@@ -104,8 +104,6 @@ var ClusterSlowLogQuery = React.createClass({
         });
     },
     handleApplyDateRangePicker: function(event, picker) {
-        console.log(event);
-        console.log(picker);
         var ranges = Utils.getPickerRanges();
 
         var startDate = picker.startDate;

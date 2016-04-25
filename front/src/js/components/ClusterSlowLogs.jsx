@@ -34,7 +34,6 @@ var ClusterSlowLogs = React.createClass({
     componentWillUnmount: function() {
     },
     render: function() {
-        console.log(this.state);
         return (
             <div className="panel panel-default cluster-info-nodes-components">
                 <div className="panel-heading clearfix">
@@ -84,7 +83,6 @@ var ClusterSlowLogs = React.createClass({
         );
     },
     handleChangeNodeSlowLogs: function() {
-      console.log(123123);
         this.setState({
             slowlogs: NodeSlowLogsStore.getSlowLogs(this.props.cluster.cluster_name)
         });
