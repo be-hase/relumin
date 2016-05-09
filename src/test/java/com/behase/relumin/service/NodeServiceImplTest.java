@@ -13,11 +13,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -31,6 +33,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.*;
 
 @Slf4j
+@RunWith(MockitoJUnitRunner.class)
 public class NodeServiceImplTest {
     @InjectMocks
     @Spy
@@ -56,7 +59,6 @@ public class NodeServiceImplTest {
 
     @Before
     public void init() {
-        MockitoAnnotations.initMocks(this);
         Whitebox.setInternalState(service, "redisPrefixKey", "_relumin");
         doReturn(dataStoreJedis).when(dataStoreJedisPool).getResource();
     }

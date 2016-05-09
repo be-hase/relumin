@@ -11,10 +11,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
 
@@ -31,6 +32,7 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
 @Slf4j
+@RunWith(MockitoJUnitRunner.class)
 public class TribClusterNodeTest {
     @Spy
     private TribClusterNode tribClusterNode = new TribClusterNode("localhost:10000");
@@ -49,7 +51,6 @@ public class TribClusterNodeTest {
 
     @Before
     public void init() {
-        MockitoAnnotations.initMocks(this);
         doReturn(jedisSupport).when(tribClusterNode).createJedisSupport();
         doReturn(jedis).when(jedisSupport).getJedisByHostAndPort(anyString());
     }

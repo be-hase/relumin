@@ -5,9 +5,11 @@ import com.behase.relumin.model.ErrorResponse;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
+@RunWith(MockitoJUnitRunner.class)
 public class MyControllerAdviceTest {
     @InjectMocks
     @Spy
@@ -26,11 +29,6 @@ public class MyControllerAdviceTest {
 
     @Rule
     public OutputCapture capture = new OutputCapture();
-
-    @Before
-    public void init() {
-        MockitoAnnotations.initMocks(this);
-    }
 
     @Test
     public void allExceptionHandler() {

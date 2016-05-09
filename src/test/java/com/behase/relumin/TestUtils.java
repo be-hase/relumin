@@ -13,19 +13,9 @@ public class TestUtils {
         return new JedisSupport().getHostAndPorts(Lists.newArrayList(testRedisHost + ":10000-10005"));
     }
 
-//    public static String getRedisClusterHostAndPort(String testRedisHost, int index) {
-//        List<String> list = Lists.newArrayList(getRedisClusterHostAndPorts(testRedisHost));
-//        return list.get(index);
-//    }
-
     public static Set<String> getRedisStandAloneHostAndPorts(String testRedisHost) {
         return new JedisSupport().getHostAndPorts(Lists.newArrayList(testRedisHost + ":10010-10015"));
     }
-
-//    public static String getRedisStandAloneHostAndPort(String testRedisHost, int index) {
-//        List<String> list = Lists.newArrayList(getRedisStandAloneHostAndPorts(testRedisHost));
-//        return list.get(index);
-//    }
 
     public static void resetAllRedis(String testRedisHost) {
         // empty (and reset)

@@ -13,11 +13,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -37,6 +39,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 @Slf4j
+@RunWith(MockitoJUnitRunner.class)
 public class UserServiceImplTest {
     @InjectMocks
     @Spy
@@ -58,7 +61,6 @@ public class UserServiceImplTest {
 
     @Before
     public void init() {
-        MockitoAnnotations.initMocks(this);
         Whitebox.setInternalState(service, "redisPrefixKey", "_relumin");
         doReturn(dataStoreJedis).when(dataStoreJedisPool).getResource();
     }

@@ -3,9 +3,11 @@ package com.behase.relumin.controller;
 import com.behase.relumin.model.ErrorResponse;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -16,15 +18,11 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+@RunWith(MockitoJUnitRunner.class)
 public class MyErrorControllerTest {
     @InjectMocks
     @Spy
     private MyErrorController controller = new MyErrorController();
-
-    @Before
-    public void init() {
-        MockitoAnnotations.initMocks(this);
-    }
 
     @Test
     public void handleError_status_code_is_404_or_url_is_error_path_then_return_404_not_found() throws Exception {

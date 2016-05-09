@@ -137,11 +137,13 @@ public class RedisTrib implements Closeable {
             throw new ApiException(Constants.ERR_CODE_CLUSTER_HAS_ERRORS, "Please fix your cluster problems before resharding.", HttpStatus.BAD_REQUEST);
         }
 
+        // Get the target instance
         TribClusterNode target = getNodeByNodeId(toNodeId);
         if (target == null || target.hasFlag("slave")) {
-            throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "The specified node is not known or is not a master, please retry.", HttpStatus.BAD_REQUEST);
+            throw new InvalidParameterException("The specified node is not known or not a master, please retry.");
         }
 
+        // Get the target instance
         List<TribClusterNode> sources = Lists.newArrayList();
         if (StringUtils.equals("ALL", fromNodeIds)) {
             for (TribClusterNode node : nodes) {
@@ -149,9 +151,6 @@ public class RedisTrib implements Closeable {
                     continue;
                 }
                 if (node.hasFlag("slave")) {
-                    continue;
-                }
-                if (node.getNodeInfo().getServedSlotsSet().size() == 0) {
                     continue;
                 }
                 sources.add(node);
@@ -162,17 +161,16 @@ public class RedisTrib implements Closeable {
                 if (fromNode == null || fromNode.hasFlag("slave")) {
                     throw new InvalidParameterException(String.format("The specified node(%s) is not known or is not a master, please retry.", fromNodeId));
                 }
-                if (fromNode.getNodeInfo().getServedSlotsSet().size() == 0) {
-                    throw new InvalidParameterException(String.format("The specified node(%s) does not have slots, please retry.", fromNodeId));
-                }
                 sources.add(fromNode);
             }
         }
 
-        if (sources.stream().filter(source -> {
-            return StringUtils.equals(source.getNodeInfo().getNodeId(), target.getNodeInfo().getNodeId());
-        }).findAny().isPresent()) {
-            throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "Target node is also listed among the source nodes!", HttpStatus.BAD_REQUEST);
+        // Check if the destination node is the same of any source nodes.
+        if (sources.stream()
+                .filter(source -> StringUtils.equals(source.getNodeInfo().getNodeId(), target.getNodeInfo().getNodeId()))
+                .findAny()
+                .isPresent()) {
+            throw new InvalidParameterException("Target node is also listed among the source nodes!");
         }
 
         log.info("Ready to move {} slots.", slotCount);
@@ -538,10 +536,7 @@ public class RedisTrib implements Closeable {
 
     boolean isConfigConsistent() {
         Set<String> signatures = Sets.newHashSet();
-        nodes.forEach(node -> {
-            String signature = node.getConfigSignature();
-            signatures.add(signature);
-        });
+        nodes.forEach(node -> signatures.add(node.getConfigSignature()));
         return signatures.size() == 1;
     }
 
@@ -552,7 +547,8 @@ public class RedisTrib implements Closeable {
             if (node.getNodeInfo().getMigrating().size() > 0) {
                 clusterError(String.format("[Warning] Node %s has slots in migrating state. (%s).", node.getNodeInfo().getHostAndPort(), StringUtils.join(node.getNodeInfo().getMigrating().keySet(), ",")));
                 openSlots.addAll(node.getNodeInfo().getMigrating().keySet());
-            } else if (node.getNodeInfo().getImporting().size() > 0) {
+            }
+            if (node.getNodeInfo().getImporting().size() > 0) {
                 clusterError(String.format("[Warning] Node %s has slots in importing state (%s).", node.getNodeInfo().getHostAndPort(), StringUtils.join(node.getNodeInfo().getImporting().keySet(), ",")));
                 openSlots.addAll(node.getNodeInfo().getImporting().keySet());
             }
@@ -575,10 +571,12 @@ public class RedisTrib implements Closeable {
 
         // Try to obtain the current slot owner, according to the current
         // nodes configuration.
-        List<TribClusterNode> owners = getSlotOwners(slot);
-        TribClusterNode owner = null;
-        if (owners.size() == 1) {
-            owner = owners.get(0);
+        TribClusterNode owner = getSlotOwner(slot);
+
+        // If there is no slot owner, set as owner the slot with the biggest
+        // number of keys, among the set of migrating / importing nodes.
+        if (owner == null) {
+            throw new ApiException(Constants.ERR_CODE_UNKNOWN, "Fix me, some work to do here.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         List<TribClusterNode> migrating = Lists.newArrayList();
@@ -598,25 +596,6 @@ public class RedisTrib implements Closeable {
         }
         log.info("Set as migrating in: {}", migrating.stream().map(v -> v.getNodeInfo().getHostAndPort()).collect(Collectors.toList()));
         log.info("Set as migrating in: {}", importing.stream().map(v -> v.getNodeInfo().getHostAndPort()).collect(Collectors.toList()));
-
-        if (owner == null) {
-            log.info("Nobody claims ownership, selecting an owner.");
-
-            owner = getNodeWithMostKeysInSlot(nodes, slot);
-            if (owner == null) {
-                throw new ApiException(Constants.ERR_CODE_UNKNOWN, "Can't select a slot owner. Impossible to fix.", HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-            // # Use ADDSLOTS to assign the slot.
-            log.info("Configuring {} as the slot owner", owner.getNodeInfo().getHostAndPort());
-            owner.getJedis().clusterSetSlotStable(slot);
-            owner.getJedis().clusterAddSlots(slot);
-
-            // Remove the owner from the list of migrating/importing
-            // nodes.
-            migrating.remove(owner);
-            importing.remove(owner);
-        }
 
         if (migrating.size() == 1 && importing.size() == 1) {
             // Case 1: The slot is in migrating state in one slot, and in
@@ -704,13 +683,11 @@ public class RedisTrib implements Closeable {
         }
     }
 
-    List<TribClusterNode> getSlotOwners(int slot) {
-        List<TribClusterNode> owners = Lists.newArrayList();
-        nodes.stream()
+    TribClusterNode getSlotOwner(int slot) {
+        return nodes.stream()
                 .filter(node -> !node.hasFlag("slave"))
                 .filter(node -> node.getNodeInfo().getServedSlotsSet().contains(slot))
-                .forEach(node -> owners.add(node));
-        return owners;
+                .findFirst().orElse(null);
     }
 
     TribClusterNode getNodeWithMostKeysInSlot(List<TribClusterNode> nodes, int slot) {
@@ -732,43 +709,45 @@ public class RedisTrib implements Closeable {
     }
 
     // TODO:
-    //	void checkSlotsCoverage() {
-    //		log.info("Check slots coverage.");
-    //		Set<Integer> slots = coveredSlots();
-    //		if (slots.size() == Constants.ALL_SLOTS_SIZE) {
-    //			log.info("All 16384 slots covered.");
-    //		} else {
-    //			log.warn("Not all 16384 slots covered.");
-    //			if (fix) {
-    //				fixSlotsCoverage();
-    //			}
-    //		}
-    //	}
-    //
-    //	Set<Integer> coveredSlots() {
-    //		Set<Integer> slots = Sets.newTreeSet();
-    //		nodes.forEach(node -> {
-    //			slots.addAll(node.getNodeInfo().getServedSlotsSet());
-    //		});
-    //		return slots;
-    //	}
-    //
-    //	void fixSlotsCoverage() {
-    //		Set<Integer> notCovered = Sets.newTreeSet();
-    //		for (int i = 0; i < Constants.ALL_SLOTS_SIZE; i++) {
-    //			notCovered.add(i);
-    //		}
-    //		notCovered.removeAll(coveredSlots());
-    //		log.info("Fixing slots coverage.");
-    //		log.info("List of not covered slots: {}", StringUtils.join(notCovered, ","));
-    //
-    //		// For every slot, take action depending on the actual condition:
-    //		// 1) No node has keys for this slot.
-    //		// 2) A single node has keys for this slot.
-    //		// 3) Multiple nodes have keys for this slot.
-    //		Set<Integer> slots = Sets.newTreeSet();
-    //
-    //	}
+    /**
+    void checkSlotsCoverage() {
+        log.info("Check slots coverage.");
+        Set<Integer> slots = coveredSlots();
+        if (slots.size() == Constants.ALL_SLOTS_SIZE) {
+            log.info("All 16384 slots covered.");
+        } else {
+            log.warn("Not all 16384 slots covered.");
+            if (fix) {
+                fixSlotsCoverage();
+            }
+        }
+    }
+
+    Set<Integer> coveredSlots() {
+        Set<Integer> slots = Sets.newTreeSet();
+        nodes.forEach(node -> {
+            slots.addAll(node.getNodeInfo().getServedSlotsSet());
+        });
+        return slots;
+    }
+
+    void fixSlotsCoverage() {
+        Set<Integer> notCovered = Sets.newTreeSet();
+        for (int i = 0; i < Constants.ALL_SLOTS_SIZE; i++) {
+            notCovered.add(i);
+        }
+        notCovered.removeAll(coveredSlots());
+        log.info("Fixing slots coverage.");
+        log.info("List of not covered slots: {}", StringUtils.join(notCovered, ","));
+
+        // For every slot, take action depending on the actual condition:
+        // 1) No node has keys for this slot.
+        // 2) A single node has keys for this slot.
+        // 3) Multiple nodes have keys for this slot.
+        Set<Integer> slots = Sets.newTreeSet();
+
+    }
+     **/
 
     void flushNodesConfig() {
         nodes.forEach(node -> node.flushNodeConfig());
@@ -809,7 +788,13 @@ public class RedisTrib implements Closeable {
     void checkCreateParameters() {
         int masters = nodes.size() / (replicas + 1);
         if (masters < 3) {
-            throw new InvalidParameterException("Redis Cluster requires at least 3 master nodes.");
+            String errorMessage = String.format(
+                    "Redis Cluster requires at least 3 master nodes. " +
+                            "This is not possible with %s nodes and %s replicas per node. " +
+                            "At least %s nodes are required.",
+                    nodes.size(), replicas, 3 * (replicas + 1)
+            );
+            throw new InvalidParameterException(errorMessage);
         }
     }
 
@@ -1039,13 +1024,15 @@ public class RedisTrib implements Closeable {
         // Populate the replicas field using the replicate field of slave
         // nodes.
         nodes.forEach(node -> {
-            if (StringUtils.isNotBlank(node.getNodeInfo().getMasterNodeId())) {
-                TribClusterNode master = getNodeByNodeId(node.getNodeInfo().getMasterNodeId());
+            String masterNodeId = node.getNodeInfo().getMasterNodeId();
+            if (StringUtils.isNotBlank(masterNodeId)) {
+                TribClusterNode master = getNodeByNodeId(masterNodeId);
+                log.info("master={}, masterNodeId={}", master, masterNodeId);
                 if (master == null) {
                     log.warn(
                             "{} claims to be slave of unknown node ID {}.",
                             node.getNodeInfo().getHostAndPort(),
-                            node.getNodeInfo().getMasterNodeId()
+                            masterNodeId
                     );
                 } else {
                     master.getReplicas().add(node);

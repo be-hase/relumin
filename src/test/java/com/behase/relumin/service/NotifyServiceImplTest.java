@@ -10,11 +10,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
@@ -30,6 +32,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verify;
 
+@RunWith(MockitoJUnitRunner.class)
 public class NotifyServiceImplTest {
     @InjectMocks
     @Spy
@@ -92,7 +95,6 @@ public class NotifyServiceImplTest {
 
     @Before
     public void init() {
-        MockitoAnnotations.initMocks(this);
         Whitebox.setInternalState(service, "reluminHost", "localhost");
         Whitebox.setInternalState(service, "serverPort", "8080");
         Whitebox.setInternalState(service, "noticeMailFrom", "from@example.com");

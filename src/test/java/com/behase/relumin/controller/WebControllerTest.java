@@ -5,11 +5,13 @@ import com.behase.relumin.model.Role;
 import com.behase.relumin.service.UserService;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 
@@ -19,6 +21,7 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+@RunWith(MockitoJUnitRunner.class)
 public class WebControllerTest {
     @InjectMocks
     @Spy
@@ -29,7 +32,6 @@ public class WebControllerTest {
 
     @Before
     public void init() {
-        MockitoAnnotations.initMocks(this);
         Whitebox.setInternalState(controller, "buildNumber", "1");
         Whitebox.setInternalState(controller, "collectStaticsInfoIntervalMillis", "1");
         Whitebox.setInternalState(controller, "authEnabled", true);

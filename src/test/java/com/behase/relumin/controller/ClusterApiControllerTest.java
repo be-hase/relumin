@@ -16,10 +16,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.doReturn;
 
 @Slf4j
+@RunWith(MockitoJUnitRunner.class)
 public class ClusterApiControllerTest {
     @InjectMocks
     @Spy
@@ -51,11 +54,6 @@ public class ClusterApiControllerTest {
 
     @Rule
     public ExpectedException expectedEx = ExpectedException.none();
-
-    @Before
-    public void init() {
-        MockitoAnnotations.initMocks(this);
-    }
 
     @Test
     public void getClusterList_full_is_false_then_return_sorted_clusterNames() throws Exception {

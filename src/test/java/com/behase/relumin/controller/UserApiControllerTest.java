@@ -11,10 +11,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 @Slf4j
+@RunWith(MockitoJUnitRunner.class)
 public class UserApiControllerTest {
     @InjectMocks
     @Spy
@@ -40,11 +43,6 @@ public class UserApiControllerTest {
 
     @Rule
     public ExpectedException expectedEx = ExpectedException.none();
-
-    @Before
-    public void init() {
-        MockitoAnnotations.initMocks(this);
-    }
 
     @Test
     public void users() throws Exception {
