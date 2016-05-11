@@ -718,6 +718,111 @@ public class RedisTribTest {
         List<RedisTrib.ReshardTable> result = redisTrib.computeReshardTable(Lists.newArrayList(node1), 4);
     }
 
+    @Test
+    public void reshardClusterBySlots_toNodeId_is_blank() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+
+        redisTrib.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "");
+    }
+
+    @Test
+    public void reshardClusterBySlots_cluster_has_error() throws Exception {
+        expectedEx.expect(ApiException.class);
+        expectedEx.expectMessage(containsString("Please fix your cluster problems before resharding"));
+
+        doNothing().when(redisTrib).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(redisTrib).checkCluster();
+        Whitebox.setInternalState(redisTrib, "errors", Lists.newArrayList("error"));
+
+        redisTrib.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots_toNode_does_not_exist() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("The specified node is not known or is not a master"));
+
+        doNothing().when(redisTrib).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(redisTrib).checkCluster();
+        doReturn(null).when(redisTrib).getNodeByNodeId(anyString());
+
+        redisTrib.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots_toNode_is_slave() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("The specified node is not known or is not a master"));
+
+        TribClusterNode targetNode = mock(TribClusterNode.class);
+        doReturn(true).when(targetNode).hasFlag("slave");
+
+        doNothing().when(redisTrib).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(redisTrib).checkCluster();
+        doReturn(targetNode).when(redisTrib).getNodeByNodeId(anyString());
+
+        redisTrib.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots_notFoundSlot_exists() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Cannot find the nodes which has slots"));
+
+        TribClusterNode targetNode = mock(TribClusterNode.class);
+        doReturn(false).when(targetNode).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("targetNodeId")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(targetNode).getNodeInfo();
+
+        doNothing().when(redisTrib).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(redisTrib).checkCluster();
+        doReturn(targetNode).when(redisTrib).getNodeByNodeId(anyString());
+
+        redisTrib.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(2, 3, 4)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots() throws Exception {
+        TribClusterNode targetNode = mock(TribClusterNode.class);
+        doReturn(false).when(targetNode).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("targetNodeId")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(targetNode).getNodeInfo();
+
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(false).when(node1).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId1")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(3, 4)))
+                .build())
+                .when(node1).getNodeInfo();
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(true).when(node2).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId2")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(5, 6)))
+                .build())
+                .when(node2).getNodeInfo();
+
+        Whitebox.setInternalState(redisTrib, "nodes", Lists.newArrayList(targetNode, node1, node2));
+        doNothing().when(redisTrib).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(redisTrib).checkCluster();
+        doReturn(targetNode).when(redisTrib).getNodeByNodeId(anyString());
+        doNothing().when(redisTrib).moveSlot(any(), any(), anyInt(), anySet());
+
+        redisTrib.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(2, 3, 4)), "toNodeId");
+
+        verify(redisTrib).moveSlot(node1, targetNode, 3, null);
+        verify(redisTrib).moveSlot(node1, targetNode, 4, null);
+    }
+
+
 
     /*
     @Value("${test.redis.normalCluster}")

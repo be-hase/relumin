@@ -195,7 +195,7 @@ public class RedisTrib implements Closeable {
 
         TribClusterNode target = getNodeByNodeId(toNodeId);
         if (target == null || target.hasFlag("slave")) {
-            throw new ApiException(Constants.ERR_CODE_INVALID_PARAMETER, "The specified node is not known or is not a master, please retry.", HttpStatus.BAD_REQUEST);
+            throw new InvalidParameterException("The specified node is not known or is not a master, please retry.");
         }
 
         List<ReshardTable> reshardTables = Lists.newArrayList();
@@ -211,9 +211,6 @@ public class RedisTrib implements Closeable {
                     continue;
                 }
                 if (node.hasFlag("slave")) {
-                    continue;
-                }
-                if (node.getNodeInfo().getServedSlotsSet().size() == 0) {
                     continue;
                 }
                 if (node.getNodeInfo().getServedSlotsSet().contains(slot)) {
