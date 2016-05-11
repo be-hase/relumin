@@ -51,10 +51,7 @@ public class RedisTrib implements Closeable {
         for (String hostAndPort : hostAndPorts) {
             hostAndPort = StringUtils.trim(hostAndPort);
             TribClusterNode node = createTribClusterNode(hostAndPort);
-            node.connect(true);
-            node.assertCluster();
-            node.loadInfo();
-            node.assertEmpty();
+            validateClusterAndEmptyNode(node);
             addNodes(node);
         }
 
@@ -75,18 +72,12 @@ public class RedisTrib implements Closeable {
             List<Integer> tmpSlots = IntStream.rangeClosed(startSlot, endSlot).boxed().collect(Collectors.toList());
 
             TribClusterNode masterNode = createTribClusterNode(param.getMaster());
-            masterNode.connect(true);
-            masterNode.assertCluster();
-            masterNode.loadInfo();
-            masterNode.assertEmpty();
+            validateClusterAndEmptyNode(masterNode);
             addNodes(masterNode);
 
             param.getReplicas().forEach(replica -> {
                 TribClusterNode replicaNode = createTribClusterNode(replica);
-                replicaNode.connect(true);
-                replicaNode.assertCluster();
-                replicaNode.loadInfo();
-                replicaNode.assertEmpty();
+                validateClusterAndEmptyNode(replicaNode);
                 replicaNode.setAsReplica(masterNode.getNodeInfo().getNodeId());
                 addNodes(replicaNode);
             });
@@ -244,10 +235,7 @@ public class RedisTrib implements Closeable {
 
         // Add the new node
         TribClusterNode newNode = createTribClusterNode(newHostAndPort);
-        newNode.connect(true);
-        newNode.assertCluster();
-        newNode.loadInfo();
-        newNode.assertEmpty();
+        validateClusterAndEmptyNode(newNode);
         addNodes(newNode);
 
         // Send CLUSTER MEET command to the new node
@@ -285,10 +273,7 @@ public class RedisTrib implements Closeable {
 
         // Add the new node
         TribClusterNode newNode = createTribClusterNode(newHostAndPort);
-        newNode.connect(true);
-        newNode.assertCluster();
-        newNode.loadInfo();
-        newNode.assertEmpty();
+        validateClusterAndEmptyNode(newNode);
         addNodes(newNode);
 
         // Send CLUSTER MEET command to the new node
@@ -328,19 +313,19 @@ public class RedisTrib implements Closeable {
 
         // Send CLUSTER FORGET to all the nodes but the node to remove
         log.info("Sending CLUSTER FORGET messages to the cluster...");
-        nodes.stream().filter(v -> {
-            return !StringUtils.equalsIgnoreCase(v.getNodeInfo().getNodeId(), nodeId);
-        }).forEach(v -> {
-            if (StringUtils.isNotBlank(v.getNodeInfo().getMasterNodeId())
-                    && StringUtils.equalsIgnoreCase(v.getNodeInfo().getMasterNodeId(), nodeId)) {
-                // Reconfigure the slave to replicate with some other node
-                TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
-                log.info("new master={}, old master = {}", master.getNodeInfo().getNodeId(), nodeId);
-                log.info("{} as replica of {}", v.getNodeInfo().getNodeId(), master.getNodeInfo().getNodeId());
-                v.getJedis().clusterReplicate(master.getNodeInfo().getNodeId());
-            }
-            v.getJedis().clusterForget(nodeId);
-        });
+        nodes.stream()
+                .filter(v -> !StringUtils.equalsIgnoreCase(v.getNodeInfo().getNodeId(), nodeId))
+                .forEach(v -> {
+                    if (StringUtils.isNotBlank(v.getNodeInfo().getMasterNodeId())
+                            && StringUtils.equalsIgnoreCase(v.getNodeInfo().getMasterNodeId(), nodeId)) {
+                        // Reconfigure the slave to replicate with some other node
+                        TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
+                        log.info("new master={}, old master = {}", master.getNodeInfo().getNodeId(), nodeId);
+                        log.info("{} as replica of {}", v.getNodeInfo().getNodeId(), master.getNodeInfo().getNodeId());
+                        v.getJedis().clusterReplicate(master.getNodeInfo().getNodeId());
+                    }
+                    v.getJedis().clusterForget(nodeId);
+                });
 
         if (StringUtils.isNoneBlank(reset)) {
             if (StringUtils.equalsIgnoreCase(reset, "soft")) {
@@ -371,19 +356,19 @@ public class RedisTrib implements Closeable {
 
         // Send CLUSTER FORGET to all the nodes but the node to remove
         log.info("Sending CLUSTER FORGET messages to the cluster...");
-        nodes.stream().filter(v -> {
-            return !StringUtils.equalsIgnoreCase(v.getNodeInfo().getNodeId(), nodeId);
-        }).forEach(v -> {
-            if (StringUtils.isNotBlank(v.getNodeInfo().getMasterNodeId())
-                    && StringUtils.equalsIgnoreCase(v.getNodeInfo().getMasterNodeId(), nodeId)) {
-                // Reconfigure the slave to replicate with some other node
-                TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
-                log.info("new master={}, old master = {}", master.getNodeInfo().getNodeId(), nodeId);
-                log.info("{} as replica of {}", v.getNodeInfo().getNodeId(), master.getNodeInfo().getNodeId());
-                v.getJedis().clusterReplicate(master.getNodeInfo().getNodeId());
-            }
-            v.getJedis().clusterForget(nodeId);
-        });
+        nodes.stream()
+                .filter(v -> !StringUtils.equalsIgnoreCase(v.getNodeInfo().getNodeId(), nodeId))
+                .forEach(v -> {
+                    if (StringUtils.isNotBlank(v.getNodeInfo().getMasterNodeId())
+                            && StringUtils.equalsIgnoreCase(v.getNodeInfo().getMasterNodeId(), nodeId)) {
+                        // Reconfigure the slave to replicate with some other node
+                        TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
+                        log.info("new master={}, old master = {}", master.getNodeInfo().getNodeId(), nodeId);
+                        log.info("{} as replica of {}", v.getNodeInfo().getNodeId(), master.getNodeInfo().getNodeId());
+                        v.getJedis().clusterReplicate(master.getNodeInfo().getNodeId());
+                    }
+                    v.getJedis().clusterForget(nodeId);
+                });
 
         // Give one 3 second for gossip
         Thread.sleep(3000);
@@ -446,6 +431,13 @@ public class RedisTrib implements Closeable {
 
         // Give one 3 second for gossip
         Thread.sleep(3000);
+    }
+
+    void validateClusterAndEmptyNode(TribClusterNode newNode) {
+        newNode.connect(true);
+        newNode.assertCluster();
+        newNode.loadInfo();
+        newNode.assertEmpty();
     }
 
     TribClusterNode getMasterWithLeastReplicas() {
