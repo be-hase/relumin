@@ -228,8 +228,6 @@ public class RedisTribTest {
 
     @Test
     public void loadClusterInfoFromNode() {
-        doReturn(tribClusterNode).when(redisTrib).createTribClusterNode("localhost:10000");
-
         ClusterNode node1 = mock(ClusterNode.class);
         doReturn(false).when(node1).hasFlag(anyString());
         doReturn("localhost:10001").when(node1).getHostAndPort();
@@ -245,13 +243,15 @@ public class RedisTribTest {
         TribClusterNode tribClusterNode3 = mock(TribClusterNode.class);
         doReturn(null).when(tribClusterNode3).getJedis();
 
+        doReturn(tribClusterNode).when(redisTrib).createTribClusterNode("localhost:10000");
+        doReturn(tribClusterNode1).when(redisTrib).createTribClusterNode("localhost:10001");
+        doReturn(tribClusterNode3).when(redisTrib).createTribClusterNode("localhost:10003");
         doReturn(Lists.newArrayList(node1, node2, node3)).when(tribClusterNode).getFriends();
-
         doNothing().when(redisTrib).populateNodesReplicasInfo();
 
         redisTrib.loadClusterInfoFromNode("localhost:10000");
 
-        assertThat(redisTrib.getNodes().size(), is(1));
+        assertThat(redisTrib.getNodes().size(), is(2));
     }
 
     @Test
