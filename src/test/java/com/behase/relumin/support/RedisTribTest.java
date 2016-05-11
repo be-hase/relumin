@@ -22,6 +22,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -674,8 +675,49 @@ public class RedisTribTest {
 
     @Test
     public void computeReshardTable() {
-        // ここから
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId1")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(node1).getNodeInfo();
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId2")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(3, 4, 5)))
+                .build())
+                .when(node2).getNodeInfo();
+
+        TribClusterNode node3 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId3")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(6, 7, 8)))
+                .build())
+                .when(node3).getNodeInfo();
+
+        List<RedisTrib.ReshardTable> result = redisTrib.computeReshardTable(Lists.newArrayList(node1, node2, node3), 4);
+        assertThat(result.get(0), is(new RedisTrib.ReshardTable(node1, 0)));
+        assertThat(result.get(1), is(new RedisTrib.ReshardTable(node1, 1)));
+        assertThat(result.get(2), is(new RedisTrib.ReshardTable(node2, 3)));
+        assertThat(result.get(3), is(new RedisTrib.ReshardTable(node3, 6)));
     }
+
+    @Test
+    public void computeReshardTable_not_enough() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Total slot count which is sum of from nodes is not enough"));
+
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId1")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(node1).getNodeInfo();
+
+        List<RedisTrib.ReshardTable> result = redisTrib.computeReshardTable(Lists.newArrayList(node1), 4);
+    }
+
 
     /*
     @Value("${test.redis.normalCluster}")

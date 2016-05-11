@@ -4,7 +4,6 @@ import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import lombok.extern.slf4j.Slf4j;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -21,7 +20,6 @@ import java.util.stream.IntStream;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
-@Slf4j
 public class JedisSupportTest {
     @Spy
     private JedisSupport jedisSupport = new JedisSupport();
@@ -53,7 +51,6 @@ public class JedisSupportTest {
                 "redis_git_dirty:0";
 
         Map<String, String> result = jedisSupport.parseInfoResult(infoText);
-        log.info("result={}", result);
         assertThat(result, hasKey("_timestamp"));
         assertThat(result, hasEntry("redis_version", "3.0.3"));
         assertThat(result, hasEntry("redis_git_dirty", "0"));
@@ -67,7 +64,6 @@ public class JedisSupportTest {
                 "cluster_slots_ok:0";
 
         Map<String, String> result = jedisSupport.parseClusterInfoResult(clusterInfoText);
-        log.info("result={}", result);
         assertThat(result, hasEntry("cluster_state", "fail"));
         assertThat(result, hasEntry("cluster_slots_assigned", "0"));
         assertThat(result, hasEntry("cluster_slots_ok", "0"));
@@ -88,7 +84,6 @@ public class JedisSupportTest {
         List<ClusterNode> result;
 
         result = jedisSupport.parseClusterNodesResult(clusterNodesText, "");
-        log.info("result={}", result);
         assertThat(result.get(0).getNodeId(), is("7893f01887835a6e19b09ff663909fced0744926"));
         assertThat(result.get(0).getHost(), is("127.0.0.1"));
         assertThat(result.get(0).getFlags(), contains("myself", "master"));
@@ -106,7 +101,6 @@ public class JedisSupportTest {
         assertThat(result.get(1).getServedSlots(), is(""));
 
         result = jedisSupport.parseClusterNodesResult(clusterNodesText, "10.128.214.37:7001");
-        log.info("result={}", result);
         assertThat(result.get(0).getHost(), is("10.128.214.37"));
     }
 
@@ -183,7 +177,6 @@ public class JedisSupportTest {
     @Test
     public void getSlots() {
         Set<Integer> result = jedisSupport.getSlots(Lists.newArrayList("0-3", "5"));
-        log.info("result={}", result);
         assertThat(result, contains(0, 1, 2, 3, 5));
     }
 }

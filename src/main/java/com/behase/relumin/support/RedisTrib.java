@@ -9,6 +9,7 @@ import com.behase.relumin.util.ValidationUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -475,9 +476,7 @@ public class RedisTrib implements Closeable {
         //    perfect divisibility. Like we have 3 nodes and need to get 10
         //    slots, we take 4 from the first, and 3 from the rest. So the
         //    biggest is always the first.
-        sources.sort((o1, o2) -> {
-            return Integer.compare(o2.getNodeInfo().getServedSlotsSet().size(), o1.getNodeInfo().getServedSlotsSet().size());
-        });
+        sources.sort((o1, o2) -> Integer.compare(o2.getNodeInfo().getServedSlotsSet().size(), o1.getNodeInfo().getServedSlotsSet().size()));
         int sourceTotalSlot = sources.stream().mapToInt(source -> source.getNodeInfo().getServedSlotsSet().size()).sum();
         if (sourceTotalSlot < slotCount) {
             throw new InvalidParameterException(String.format("Total slot count which is sum of from nodes is not enough. Slot count is %s, But total slot count is %s.", slotCount, sourceTotalSlot));
@@ -487,8 +486,8 @@ public class RedisTrib implements Closeable {
         for (TribClusterNode source : sources) {
             // Every node will provide a number of slots proportional to the
             // slots it has assigned.
-            double n = (double) slotCount / (double) sourceTotalSlot
-                    * (double) source.getNodeInfo().getServedSlotsSet().size();
+            double n = (double)slotCount / (double)sourceTotalSlot
+                    * (double)source.getNodeInfo().getServedSlotsSet().size();
             if (i == 0) {
                 n = Math.ceil(n);
             } else {
@@ -1072,8 +1071,7 @@ public class RedisTrib implements Closeable {
         }
     }
 
-    @Getter
-    @Setter
+    @Data
     public static class ReshardTable {
         private TribClusterNode source;
         private int slot;
