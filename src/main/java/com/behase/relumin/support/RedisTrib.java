@@ -312,30 +312,16 @@ public class RedisTrib implements Closeable {
         }
 
         // Send CLUSTER FORGET to all the nodes but the node to remove
-        log.info("Sending CLUSTER FORGET messages to the cluster...");
-        nodes.stream()
-                .filter(v -> !StringUtils.equalsIgnoreCase(v.getNodeInfo().getNodeId(), nodeId))
-                .forEach(v -> {
-                    if (StringUtils.isNotBlank(v.getNodeInfo().getMasterNodeId())
-                            && StringUtils.equalsIgnoreCase(v.getNodeInfo().getMasterNodeId(), nodeId)) {
-                        // Reconfigure the slave to replicate with some other node
-                        TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
-                        log.info("new master={}, old master = {}", master.getNodeInfo().getNodeId(), nodeId);
-                        log.info("{} as replica of {}", v.getNodeInfo().getNodeId(), master.getNodeInfo().getNodeId());
-                        v.getJedis().clusterReplicate(master.getNodeInfo().getNodeId());
-                    }
-                    v.getJedis().clusterForget(nodeId);
-                });
+        forgotNode(nodeId);
 
-        if (StringUtils.isNoneBlank(reset)) {
-            if (StringUtils.equalsIgnoreCase(reset, "soft")) {
-                log.info("SOFT RESET the node.");
-                node.getJedis().clusterReset(Reset.SOFT);
-            } else if (StringUtils.equalsIgnoreCase(reset, "hard")) {
-                log.info("HARD RESET the node.");
-                node.getJedis().clusterReset(Reset.HARD);
-            }
+        if (StringUtils.equalsIgnoreCase(reset, "soft")) {
+            log.info("SOFT RESET the node.");
+            node.getJedis().clusterReset(Reset.SOFT);
+        } else if (StringUtils.equalsIgnoreCase(reset, "hard")) {
+            log.info("HARD RESET the node.");
+            node.getJedis().clusterReset(Reset.HARD);
         }
+
         if (shutdown) {
             log.info("SHUTDOWN the node.");
             node.getJedis().shutdown();
@@ -355,6 +341,13 @@ public class RedisTrib implements Closeable {
         loadClusterInfoFromNode(hostAndPort);
 
         // Send CLUSTER FORGET to all the nodes but the node to remove
+        forgotNode(nodeId);
+
+        // Give one 3 second for gossip
+        Thread.sleep(3000);
+    }
+
+    void forgotNode(String nodeId) {
         log.info("Sending CLUSTER FORGET messages to the cluster...");
         nodes.stream()
                 .filter(v -> !StringUtils.equalsIgnoreCase(v.getNodeInfo().getNodeId(), nodeId))
@@ -369,9 +362,6 @@ public class RedisTrib implements Closeable {
                     }
                     v.getJedis().clusterForget(nodeId);
                 });
-
-        // Give one 3 second for gossip
-        Thread.sleep(3000);
     }
 
     public void replicateNode(final String hostAndPort, final String masterNodeId)

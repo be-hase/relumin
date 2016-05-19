@@ -893,7 +893,28 @@ public class RedisTribTest {
     }
 
     @Test
-    public void deleteNodeOfCluster() {
-        // ここから
+    public void deleteNodeOfCluster_nodeId_does_not_exists() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("No such node ID"));
+
+        doNothing().when(redisTrib).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(redisTrib).getNodeByNodeId(anyString());
+
+        redisTrib.deleteNodeOfCluster("localhost:10080", "nodeId", null, false);
     }
+
+    @Test
+    public void deleteNodeOfCluster_not_empty_node() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("is not empty"));
+
+        doNothing().when(redisTrib).loadClusterInfoFromNode(anyString());
+        doReturn(tribClusterNode).when(redisTrib).getNodeByNodeId(anyString());
+        doReturn(ClusterNode.builder().servedSlotsSet(Sets.newHashSet(0)).build()).when(tribClusterNode).getNodeInfo();
+        doNothing().when(redisTrib).forgotNode(anyString());
+        doReturn(jedis).when(tribClusterNode).getJedis();
+
+        redisTrib.deleteNodeOfCluster("localhost:10080", "nodeId", null, false);
+    }
+
 }

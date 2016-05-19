@@ -140,7 +140,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
     }
 
     @Bean(destroyMethod = "close")
-    public FluentLogger clusterFluentLogger() {
+    public FluentLogger fluentLogger() {
         if (!outputMetricsFluentdEnabled || StringUtils.isBlank(outputMetricsFluentdHost)
                 || outputMetricsFluentdPort == 0) {
             return null;
