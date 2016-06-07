@@ -4,6 +4,7 @@ import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.LoginUser;
 import com.behase.relumin.service.LoggingOperationService;
 import com.behase.relumin.service.UserService;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,8 +93,6 @@ public class UserApiController {
 
         userService.deleteUser(username);
 
-        Map<String, Boolean> result = Maps.newHashMap();
-        result.put("isSuccess", true);
-        return result;
+        return ImmutableMap.of("isSuccess", true);
     }
 }

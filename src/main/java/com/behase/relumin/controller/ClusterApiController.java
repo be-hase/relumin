@@ -9,6 +9,7 @@ import com.behase.relumin.service.NodeService;
 import com.behase.relumin.util.ValidationUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
@@ -115,9 +116,7 @@ public class ClusterApiController {
 
         clusterService.deleteCluster(clusterName);
 
-        Map<String, Boolean> result = Maps.newHashMap();
-        result.put("isSuccess", true);
-        return result;
+        return ImmutableMap.of("isSuccess", true);
     }
 
     @RequestMapping(value = "/cluster/{clusterName}/metrics", method = {RequestMethod.GET, RequestMethod.POST})
