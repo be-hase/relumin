@@ -45,7 +45,7 @@ public class NotifyServiceImplTest {
     private ObjectMapper mapper = WebConfig.MAPPER;
 
     @Rule
-    public WireMockRule mockServer = new WireMockRule(20000);
+    public WireMockRule mockServer = new WireMockRule(30000);
 
     @Rule
     public ExpectedException expectedEx = ExpectedException.none();
