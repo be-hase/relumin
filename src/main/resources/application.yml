@@ -1,14 +1,7 @@
-server:
-  session-timeout: 600
-
 management:
   add-application-context-header: false
   security:
     enabled: false
-
-endpoints:
-  shutdown:
-    enabled: true
 
 spring:
   freemarker:
