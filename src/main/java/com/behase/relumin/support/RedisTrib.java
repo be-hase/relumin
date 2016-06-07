@@ -465,8 +465,8 @@ public class RedisTrib implements Closeable {
         for (TribClusterNode source : sources) {
             // Every node will provide a number of slots proportional to the
             // slots it has assigned.
-            double n = (double)slotCount / (double)sourceTotalSlot
-                    * (double)source.getNodeInfo().getServedSlotsSet().size();
+            double n = (double) slotCount / (double) sourceTotalSlot
+                    * (double) source.getNodeInfo().getServedSlotsSet().size();
             if (i == 0) {
                 n = Math.ceil(n);
             } else {
@@ -687,44 +687,45 @@ public class RedisTrib implements Closeable {
     }
 
     // TODO:
+
     /**
-    void checkSlotsCoverage() {
-        log.info("Check slots coverage.");
-        Set<Integer> slots = coveredSlots();
-        if (slots.size() == Constants.ALL_SLOTS_SIZE) {
-            log.info("All 16384 slots covered.");
-        } else {
-            log.warn("Not all 16384 slots covered.");
-            if (fix) {
-                fixSlotsCoverage();
-            }
-        }
-    }
-
-    Set<Integer> coveredSlots() {
-        Set<Integer> slots = Sets.newTreeSet();
-        nodes.forEach(node -> {
-            slots.addAll(node.getNodeInfo().getServedSlotsSet());
-        });
-        return slots;
-    }
-
-    void fixSlotsCoverage() {
-        Set<Integer> notCovered = Sets.newTreeSet();
-        for (int i = 0; i < Constants.ALL_SLOTS_SIZE; i++) {
-            notCovered.add(i);
-        }
-        notCovered.removeAll(coveredSlots());
-        log.info("Fixing slots coverage.");
-        log.info("List of not covered slots: {}", StringUtils.join(notCovered, ","));
-
-        // For every slot, take action depending on the actual condition:
-        // 1) No node has keys for this slot.
-        // 2) A single node has keys for this slot.
-        // 3) Multiple nodes have keys for this slot.
-        Set<Integer> slots = Sets.newTreeSet();
-
-    }
+     * void checkSlotsCoverage() {
+     * log.info("Check slots coverage.");
+     * Set<Integer> slots = coveredSlots();
+     * if (slots.size() == Constants.ALL_SLOTS_SIZE) {
+     * log.info("All 16384 slots covered.");
+     * } else {
+     * log.warn("Not all 16384 slots covered.");
+     * if (fix) {
+     * fixSlotsCoverage();
+     * }
+     * }
+     * }
+     * <p>
+     * Set<Integer> coveredSlots() {
+     * Set<Integer> slots = Sets.newTreeSet();
+     * nodes.forEach(node -> {
+     * slots.addAll(node.getNodeInfo().getServedSlotsSet());
+     * });
+     * return slots;
+     * }
+     * <p>
+     * void fixSlotsCoverage() {
+     * Set<Integer> notCovered = Sets.newTreeSet();
+     * for (int i = 0; i < Constants.ALL_SLOTS_SIZE; i++) {
+     * notCovered.add(i);
+     * }
+     * notCovered.removeAll(coveredSlots());
+     * log.info("Fixing slots coverage.");
+     * log.info("List of not covered slots: {}", StringUtils.join(notCovered, ","));
+     * <p>
+     * // For every slot, take action depending on the actual condition:
+     * // 1) No node has keys for this slot.
+     * // 2) A single node has keys for this slot.
+     * // 3) Multiple nodes have keys for this slot.
+     * Set<Integer> slots = Sets.newTreeSet();
+     * <p>
+     * }
      **/
 
     void flushNodesConfig() {

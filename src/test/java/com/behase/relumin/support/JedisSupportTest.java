@@ -22,7 +22,7 @@ import static org.junit.Assert.assertThat;
 
 public class JedisSupportTest {
     @Spy
-    private JedisSupport jedisSupport = new JedisSupport();
+    private JedisSupport tested = new JedisSupport();
 
     @Rule
     public ExpectedException expectedEx = ExpectedException.none();
@@ -32,25 +32,29 @@ public class JedisSupportTest {
 
     @Test
     public void getJedisByHostAndPort() {
-        assertThat(jedisSupport.getJedisByHostAndPort("localhost:10000", 2000), is(instanceOf(Jedis.class)));
-        assertThat(jedisSupport.getJedisByHostAndPort("localhost:10000"), is(instanceOf(Jedis.class)));
+        assertThat(tested.getJedisByHostAndPort("localhost:10000", 2000), is(instanceOf(Jedis.class)));
+        assertThat(tested.getJedisByHostAndPort("localhost:10000"), is(instanceOf(Jedis.class)));
     }
 
     @Test
     public void getJedisClusterByHostAndPort() {
-        assertThat(jedisSupport.getJedisClusterByHostAndPort("localhost:10000"), is(instanceOf(JedisCluster.class)));
-        assertThat(jedisSupport.getJedisClusterByHostAndPorts("localhost:10000,localhost:10001-10005"), is(instanceOf(JedisCluster.class)));
+        assertThat(tested.getJedisClusterByHostAndPort("localhost:10000"), is(instanceOf(JedisCluster.class)));
+        assertThat(tested.getJedisClusterByHostAndPorts("localhost:10000,localhost:10001-10005"), is(instanceOf(JedisCluster.class)));
     }
 
     @Test
     public void parseInfoResult() {
+        // given
         String infoText = "" +
                 "# Server\n" +
                 "redis_version:3.0.3\n" +
                 "redis_git_sha1:00000000\n" +
                 "redis_git_dirty:0";
 
-        Map<String, String> result = jedisSupport.parseInfoResult(infoText);
+        // when
+        Map<String, String> result = tested.parseInfoResult(infoText);
+
+        // then
         assertThat(result, hasKey("_timestamp"));
         assertThat(result, hasEntry("redis_version", "3.0.3"));
         assertThat(result, hasEntry("redis_git_dirty", "0"));
@@ -58,12 +62,16 @@ public class JedisSupportTest {
 
     @Test
     public void parseClusterInfoResult() {
+        // given
         String clusterInfoText = "" +
                 "cluster_state:fail\n" +
                 "cluster_slots_assigned:0\n" +
                 "cluster_slots_ok:0";
 
-        Map<String, String> result = jedisSupport.parseClusterInfoResult(clusterInfoText);
+        // when
+        Map<String, String> result = tested.parseClusterInfoResult(clusterInfoText);
+
+        // then
         assertThat(result, hasEntry("cluster_state", "fail"));
         assertThat(result, hasEntry("cluster_slots_assigned", "0"));
         assertThat(result, hasEntry("cluster_slots_ok", "0"));
@@ -71,6 +79,7 @@ public class JedisSupportTest {
 
     @Test
     public void parseClusterNodesResult() {
+        // given
         String clusterNodesText = "" +
                 "7893f01887835a6e19b09ff663909fced0744926 127.0.0.1:7001 myself,master - 0 0 1 connected 0-2000 2001-4094 4095 [93-<-292f8b365bb7edb5e285caf0b7e6ddc7265d2f4f] [77->-e7d1eecce10fd6bb5eb35b9f99a514335d9ba9ca]\n" +
                 "9bd5a779d5981cee7d561dc2bfc984ffbfc744d3 10.128.214.37:7002 slave 4e97c7f8fc08d2bb3e45571c4f001a7a347cbbe2 0 1459242326643 5 disconnected\n" +
@@ -83,7 +92,10 @@ public class JedisSupportTest {
 
         List<ClusterNode> result;
 
-        result = jedisSupport.parseClusterNodesResult(clusterNodesText, "");
+        // when
+        result = tested.parseClusterNodesResult(clusterNodesText, "");
+
+        // then
         assertThat(result.get(0).getNodeId(), is("7893f01887835a6e19b09ff663909fced0744926"));
         assertThat(result.get(0).getHost(), is("127.0.0.1"));
         assertThat(result.get(0).getFlags(), contains("myself", "master"));
@@ -100,7 +112,10 @@ public class JedisSupportTest {
         assertThat(result.get(0).getMigrating(), hasEntry(77, "e7d1eecce10fd6bb5eb35b9f99a514335d9ba9ca"));
         assertThat(result.get(1).getServedSlots(), is(""));
 
-        result = jedisSupport.parseClusterNodesResult(clusterNodesText, "10.128.214.37:7001");
+        // when
+        result = tested.parseClusterNodesResult(clusterNodesText, "10.128.214.37:7001");
+
+        // then
         assertThat(result.get(0).getHost(), is("10.128.214.37"));
     }
 
@@ -108,32 +123,42 @@ public class JedisSupportTest {
     public void slotsDisplay() {
         Set<Integer> slots = Sets.newTreeSet();
 
+        // given
         slots.clear();
-        assertThat(jedisSupport.slotsDisplay(slots), is(""));
+        // when, then
+        assertThat(tested.slotsDisplay(slots), is(""));
 
+        // given
         slots.clear();
         slots.add(10);
-        assertThat(jedisSupport.slotsDisplay(slots), is("10"));
+        // when, then
+        assertThat(tested.slotsDisplay(slots), is("10"));
 
+        // given
         slots.clear();
         IntStream.rangeClosed(0, 10).forEach(i -> slots.add(i));
         slots.add(50);
         IntStream.rangeClosed(100, 110).forEach(i -> slots.add(i));
         slots.add(200);
         slots.add(300);
-        assertThat(jedisSupport.slotsDisplay(slots), is("0-10,50,100-110,200,300"));
+        // when, then
+        assertThat(tested.slotsDisplay(slots), is("0-10,50,100-110,200,300"));
 
+        // given
         slots.clear();
         slots.add(50);
         IntStream.rangeClosed(100, 110).forEach(i -> slots.add(i));
-        assertThat(jedisSupport.slotsDisplay(slots), is("50,100-110"));
+        // when, then
+        assertThat(tested.slotsDisplay(slots), is("50,100-110"));
 
+        // given
         slots.clear();
         IntStream.rangeClosed(0, 10).forEach(i -> slots.add(i));
         slots.add(50);
         IntStream.rangeClosed(100, 110).forEach(i -> slots.add(i));
         slots.add(200);
-        assertThat(jedisSupport.slotsDisplay(slots), is("0-10,50,100-110,200"));
+        // when, then
+        assertThat(tested.slotsDisplay(slots), is("0-10,50,100-110,200"));
     }
 
     @Test
@@ -141,7 +166,7 @@ public class JedisSupportTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("Node is invalid"));
 
-        jedisSupport.getHostAndPorts(Lists.newArrayList("localhost:1000", "localhost"));
+        tested.getHostAndPorts(Lists.newArrayList("localhost:1000", "localhost"));
     }
 
     @Test
@@ -149,12 +174,12 @@ public class JedisSupportTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("start port must be equal or less than end port"));
 
-        jedisSupport.getHostAndPorts(Lists.newArrayList("localhost:1000", "localhost:2001-2000"));
+        tested.getHostAndPorts(Lists.newArrayList("localhost:1000", "localhost:2001-2000"));
     }
 
     @Test
     public void getHostAndPorts() {
-        Set<String> hostAndPorts = jedisSupport.getHostAndPorts(Lists.newArrayList("localhost:1000", "localhost:2000-2002"));
+        Set<String> hostAndPorts = tested.getHostAndPorts(Lists.newArrayList("localhost:1000", "localhost:2000-2002"));
         assertThat(hostAndPorts, contains("localhost:1000", "localhost:2000", "localhost:2001", "localhost:2002"));
     }
 
@@ -163,7 +188,7 @@ public class JedisSupportTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("Slot must be numeric"));
 
-        jedisSupport.getSlots(Lists.newArrayList("hoge-3"));
+        tested.getSlots(Lists.newArrayList("hoge-3"));
     }
 
     @Test
@@ -171,12 +196,12 @@ public class JedisSupportTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("Slot must be numeric"));
 
-        jedisSupport.getSlots(Lists.newArrayList("0-hoge"));
+        tested.getSlots(Lists.newArrayList("0-hoge"));
     }
 
     @Test
     public void getSlots() {
-        Set<Integer> result = jedisSupport.getSlots(Lists.newArrayList("0-3", "5"));
+        Set<Integer> result = tested.getSlots(Lists.newArrayList("0-3", "5"));
         assertThat(result, contains(0, 1, 2, 3, 5));
     }
 }

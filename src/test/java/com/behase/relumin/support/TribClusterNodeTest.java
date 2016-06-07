@@ -35,7 +35,7 @@ import static org.mockito.Mockito.*;
 @RunWith(MockitoJUnitRunner.class)
 public class TribClusterNodeTest {
     @Spy
-    private TribClusterNode tribClusterNode = new TribClusterNode("localhost:10000");
+    private TribClusterNode tested = new TribClusterNode("localhost:10000");
 
     @Mock
     private Jedis jedis;
@@ -51,12 +51,12 @@ public class TribClusterNodeTest {
 
     @Before
     public void init() {
-        doReturn(jedisSupport).when(tribClusterNode).createJedisSupport();
+        doReturn(jedisSupport).when(tested).createJedisSupport();
         doReturn(jedis).when(jedisSupport).getJedisByHostAndPort(anyString());
     }
 
     private void initConnect() {
-        tribClusterNode.connect();
+        tested.connect();
     }
 
     @Test
@@ -64,14 +64,17 @@ public class TribClusterNodeTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("Invalid IP or Port. Use IP:Port format"));
 
-        tribClusterNode = new TribClusterNode("");
+        // when
+        tested = new TribClusterNode("");
     }
 
     @Test
     public void constructor() {
-        tribClusterNode = new TribClusterNode("localhost:10000");
+        // when
+        tested = new TribClusterNode("localhost:10000");
 
-        assertThat(tribClusterNode.getNodeInfo().getHostAndPort(), is("localhost:10000"));
+        // then
+        assertThat(tested.getNodeInfo().getHostAndPort(), is("localhost:10000"));
     }
 
 
@@ -80,15 +83,20 @@ public class TribClusterNodeTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("Failed to connect to node"));
 
+        // given
         doThrow(Exception.class).when(jedis).ping();
 
-        tribClusterNode.connect(true);
+        // when
+        tested.connect(true);
     }
 
     @Test
     public void connect() throws Exception {
-        tribClusterNode.connect(true);
-        assertThat(tribClusterNode.getJedis(), is(not(nullValue())));
+        // when
+        tested.connect(true);
+
+        // then
+        assertThat(tested.getJedis(), is(not(nullValue())));
     }
 
     @Test
@@ -96,10 +104,12 @@ public class TribClusterNodeTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("is not configured as a cluster node"));
 
+        // given
         initConnect();
         doReturn(Maps.newHashMap()).when(jedisSupport).parseInfoResult(anyString());
 
-        tribClusterNode.assertCluster();
+        // when
+        tested.assertCluster();
     }
 
     @Test
@@ -107,10 +117,12 @@ public class TribClusterNodeTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("is not configured as a cluster node"));
 
+        // given
         initConnect();
         doReturn(ImmutableMap.of("cluster_enabled", "0")).when(jedisSupport).parseInfoResult(anyString());
 
-        tribClusterNode.assertCluster();
+        // when
+        tested.assertCluster();
     }
 
     @Test
@@ -118,11 +130,13 @@ public class TribClusterNodeTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("is not empty. Either the node already knows other nodes"));
 
+        // given
         initConnect();
         doReturn(ImmutableMap.of("db0", "aaa")).when(jedisSupport).parseInfoResult(anyString());
         doReturn(ImmutableMap.of("cluster_known_nodes", "1")).when(jedisSupport).parseClusterInfoResult(anyString());
 
-        tribClusterNode.assertEmpty();
+        // when
+        tested.assertEmpty();
     }
 
     @Test
@@ -130,24 +144,29 @@ public class TribClusterNodeTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("is not empty. Either the node already knows other nodes"));
 
+        // given
         initConnect();
         doReturn(Maps.newHashMap()).when(jedisSupport).parseInfoResult(anyString());
         doReturn(ImmutableMap.of("cluster_known_nodes", "0")).when(jedisSupport).parseClusterInfoResult(anyString());
 
-        tribClusterNode.assertEmpty();
+        // when
+        tested.assertEmpty();
     }
 
     @Test
     public void assertEmpty() {
+        // given
         initConnect();
         doReturn(Maps.newHashMap()).when(jedisSupport).parseInfoResult(anyString());
         doReturn(ImmutableMap.of("cluster_known_nodes", "1")).when(jedisSupport).parseClusterInfoResult(anyString());
 
-        tribClusterNode.assertEmpty();
+        // when
+        tested.assertEmpty();
     }
 
     @Test
     public void loadInfo_getFriends_true() {
+        // given
         List<ClusterNode> nodes = Lists.newArrayList(
                 ClusterNode.builder()
                         .nodeId("nodeId1")
@@ -165,15 +184,18 @@ public class TribClusterNodeTest {
         doReturn(nodes).when(jedisSupport).parseClusterNodesResult(anyString(), anyString());
         doReturn(ImmutableMap.of("cluster_state", "ok")).when(jedisSupport).parseClusterInfoResult(anyString());
 
-        tribClusterNode.loadInfo(true);
+        // when
+        tested.loadInfo(true);
 
-        assertThat(tribClusterNode.getNodeInfo().getNodeId(), is("nodeId1"));
-        assertThat(tribClusterNode.getFriends().get(0).getNodeId(), is("nodeId2"));
-        assertThat(tribClusterNode.getClusterInfo(), hasEntry("cluster_state", "ok"));
+        // then
+        assertThat(tested.getNodeInfo().getNodeId(), is("nodeId1"));
+        assertThat(tested.getFriends().get(0).getNodeId(), is("nodeId2"));
+        assertThat(tested.getClusterInfo(), hasEntry("cluster_state", "ok"));
     }
 
     @Test
     public void loadInfo_getFriends_false() {
+        // given
         List<ClusterNode> nodes = Lists.newArrayList(
                 ClusterNode.builder()
                         .nodeId("nodeId1")
@@ -190,75 +212,97 @@ public class TribClusterNodeTest {
         initConnect();
         doReturn(nodes).when(jedisSupport).parseClusterNodesResult(anyString(), anyString());
 
-        tribClusterNode.loadInfo();
+        // when
+        tested.loadInfo();
 
-        assertThat(tribClusterNode.getNodeInfo().getNodeId(), is("nodeId1"));
-        assertThat(tribClusterNode.getFriends(), is(empty()));
+        // then
+        assertThat(tested.getNodeInfo().getNodeId(), is("nodeId1"));
+        assertThat(tested.getFriends(), is(empty()));
     }
 
     @Test
     public void addTmpSlots() {
-        tribClusterNode.addTmpSlots(Lists.newArrayList());
-        tribClusterNode.addTmpSlots(Lists.newArrayList(1, 2, 3));
-        assertThat(tribClusterNode.getTmpSlots().size(), is(3));
-        assertThat(tribClusterNode.isDirty(), is(true));
+        // when
+        tested.addTmpSlots(Lists.newArrayList());
+        tested.addTmpSlots(Lists.newArrayList(1, 2, 3));
+
+        // then
+        assertThat(tested.getTmpSlots().size(), is(3));
+        assertThat(tested.isDirty(), is(true));
     }
 
     @Test
     public void setAsReplica() {
-        tribClusterNode.setAsReplica("masterNodeId");
+        // when
+        tested.setAsReplica("masterNodeId");
 
-        assertThat(tribClusterNode.getNodeInfo().getMasterNodeId(), is("masterNodeId"));
-        assertThat(tribClusterNode.isDirty(), is(true));
+        // then
+        assertThat(tested.getNodeInfo().getMasterNodeId(), is("masterNodeId"));
+        assertThat(tested.isDirty(), is(true));
     }
 
     @Test
     public void flushNodeConfig_node_is_master() {
+        // given
         initConnect();
-        tribClusterNode.addTmpSlots(Sets.newHashSet(3, 2, 1));
+        tested.addTmpSlots(Sets.newHashSet(3, 2, 1));
 
-        tribClusterNode.flushNodeConfig();
+        // when
+        tested.flushNodeConfig();
 
+        // then
         verify(jedis).clusterAddSlots(new int[]{1, 2, 3});
-        assertThat(tribClusterNode.getNodeInfo().getServedSlotsSet(), contains(1, 2, 3));
-        assertThat(tribClusterNode.getTmpSlots(), is(empty()));
-        assertThat(tribClusterNode.isDirty(), is(false));
+        assertThat(tested.getNodeInfo().getServedSlotsSet(), contains(1, 2, 3));
+        assertThat(tested.getTmpSlots(), is(empty()));
+        assertThat(tested.isDirty(), is(false));
     }
 
     @Test
     public void flushNodeConfig_node_is_replica_and_replicate_fail() {
+        // given
         initConnect();
-        tribClusterNode.setAsReplica("masterNodeId");
+        tested.setAsReplica("masterNodeId");
         doThrow(Exception.class).when(jedis).clusterReplicate(anyString());
 
-        tribClusterNode.flushNodeConfig();
+        // when
+        tested.flushNodeConfig();
 
+        // then
         verify(jedis).clusterReplicate("masterNodeId");
         assertThat(capture.toString(), containsString("Replicate error"));
-        assertThat(tribClusterNode.isDirty(), is(true));
+        assertThat(tested.isDirty(), is(true));
     }
 
     @Test
     public void flushNodeConfig_node_is_replica() {
+        // given
         initConnect();
-        tribClusterNode.setAsReplica("masterNodeId");
+        tested.setAsReplica("masterNodeId");
 
-        tribClusterNode.flushNodeConfig();
+        // when
+        tested.flushNodeConfig();
 
+        // then
         verify(jedis).clusterReplicate("masterNodeId");
-        assertThat(tribClusterNode.isDirty(), is(false));
+        assertThat(tested.isDirty(), is(false));
     }
 
     @Test
     public void flushNodeConfig_dirty_is_false_then_ignore() {
-        Whitebox.setInternalState(tribClusterNode, "dirty", false);
-        tribClusterNode.flushNodeConfig();
+        // given
+        Whitebox.setInternalState(tested, "dirty", false);
+
+        // when
+        tested.flushNodeConfig();
+
+        // then
         assertThat(capture.toString(), containsString("Dirty is false, so ignore"));
     }
 
 
     @Test
     public void getConfigSignature() {
+        // given
         String clusterNodesText = "" +
                 "7893f01887835a6e19b09ff663909fced0744926 127.0.0.1:7001 myself,master - 0 0 1 connected 0-2000 2001-4094 4095 [93-<-292f8b365bb7edb5e285caf0b7e6ddc7265d2f4f] [77->-e7d1eecce10fd6bb5eb35b9f99a514335d9ba9ca]\n" +
                 "9bd5a779d5981cee7d561dc2bfc984ffbfc744d3 10.128.214.37:7002 slave 4e97c7f8fc08d2bb3e45571c4f001a7a347cbbe2 0 1459242326643 5 disconnected\n" +
@@ -272,22 +316,27 @@ public class TribClusterNodeTest {
         initConnect();
         doReturn(clusterNodesText).when(jedis).clusterNodes();
 
-        String result = tribClusterNode.getConfigSignature();
+        // when
+        String result = tested.getConfigSignature();
+
+        // then
         String expected = "4e97c7f8fc08d2bb3e45571c4f001a7a347cbbe2:4096-8191|" +
                 "7893f01887835a6e19b09ff663909fced0744926:0-2000,2001-4094,4095|" +
                 "a4f318b3fb0affd5d130b29cb6161a7e225216b5:12288-16383|" +
                 "c3c0b2b7d7d50e339565de468e7ebd7db79a1ea5:8192-12287";
-        log.info("result={}", result);
         assertThat(result, is(expected));
     }
 
     @Test
     public void equals_test() {
-        tribClusterNode = new TribClusterNode("localhost:10000");
-        assertThat(tribClusterNode.equals(null), is(false));
-        assertThat(tribClusterNode.equals(""), is(false));
-        assertThat(tribClusterNode.equals(tribClusterNode), is(true));
-        assertThat(tribClusterNode.equals(new TribClusterNode("localhost:10000")), is(true));
-        assertThat(tribClusterNode.equals(new TribClusterNode("localhost:10001")), is(false));
+        // when
+        tested = new TribClusterNode("localhost:10000");
+
+        // given
+        assertThat(tested.equals(null), is(false));
+        assertThat(tested.equals(""), is(false));
+        assertThat(tested.equals(tested), is(true));
+        assertThat(tested.equals(new TribClusterNode("localhost:10000")), is(true));
+        assertThat(tested.equals(new TribClusterNode("localhost:10001")), is(false));
     }
 }
