@@ -26,7 +26,7 @@ public class Application extends WebMvcConfigurerAdapter {
     public static void main(String[] args) throws IOException {
         log.info("Starting Relumin...");
 
-        String configLocation = System.getProperty(CONFIG_LOCATION, "relumin-local-conf.yml");
+        String configLocation = System.getProperty(CONFIG_LOCATION);
         checkArgument(configLocation != null, "Specify config VM parameter.");
 
         ReluminConfig config = ReluminConfig.create(configLocation);

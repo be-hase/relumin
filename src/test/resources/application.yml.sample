@@ -29,7 +29,7 @@ management:
 
 redis:
   prefixKey: _relumin
-  host: 192.168.99.100
+  host: YOUR_DOCKER_HOST
   port: 9000
 
 auth:
@@ -63,4 +63,4 @@ outputMetrics:
 # FOR TEST SETTING
 test:
   redis:
-    host: 192.168.99.100
+    host: YOUR_DOCKER_HOST

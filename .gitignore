@@ -94,7 +94,8 @@ com_crashlytics_export_strings.xml
 .springBeans
 /repository/
 /logs/
-src/main/resources/application-local.yml
+src/main/resources/relumin-local-conf.yml
+src/test/resources/application.yml
 front/node_modules
 *.log
 front/build
