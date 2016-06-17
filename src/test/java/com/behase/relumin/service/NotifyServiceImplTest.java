@@ -63,7 +63,7 @@ public class NotifyServiceImplTest {
             .build();
     private Notice notice = Notice.builder()
             .mail(NoticeMail.builder().to("to1@example.com, , to2@example.com").build())
-            .http(NoticeHttp.builder().url("http://localhost:20000/callback").build())
+            .http(NoticeHttp.builder().url("http://localhost:30000/callback").build())
             .build();
     private List<NoticeJob> jobs = Lists.newArrayList(
             NoticeJob.builder()
