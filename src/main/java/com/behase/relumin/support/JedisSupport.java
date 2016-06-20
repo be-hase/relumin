@@ -76,12 +76,12 @@ public class JedisSupport {
                 if (StringUtils.startsWith(eachHostAndPort, ":")) {
                     clusterNode.setHostAndPort(hostAndPort);
                 } else {
-                    String[] eachHostAndPortArray = StringUtils.split(eachHostAndPort, ":");
-                    if ("127.0.0.1".equals(eachHostAndPortArray[0]) || "localhost".equals(eachHostAndPortArray[0])) {
-                        clusterNode.setHostAndPort(hostAndPort);
-                    } else {
-                        clusterNode.setHostAndPort(eachHostAndPort);
-                    }
+//                    String[] eachHostAndPortArray = StringUtils.split(eachHostAndPort, ":");
+//                    if ("127.0.0.1".equals(eachHostAndPortArray[0]) || "localhost".equals(eachHostAndPortArray[0])) {
+//                        clusterNode.setHostAndPort(hostAndPort);
+//                    } else {
+                    clusterNode.setHostAndPort(eachHostAndPort);
+//                    }
                 }
             }
 
