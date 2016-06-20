@@ -29,7 +29,7 @@ management:
 
 redis:
   prefixKey: _relumin
-  host: 127.0.0.1
+  host: 127.0.0.1 # travis's docker host
   port: 9000
 
 auth:
@@ -63,4 +63,4 @@ outputMetrics:
 # FOR TEST SETTING
 test:
   redis:
-    host: 127.0.0.1
+    host: 127.0.0.1 # travis's docker host

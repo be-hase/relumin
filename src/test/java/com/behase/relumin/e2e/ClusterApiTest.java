@@ -28,7 +28,6 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = Application.class)
-@ActiveProfiles("test")
 @WebIntegrationTest
 public class ClusterApiTest {
     @Value("${test.redis.host}")
@@ -146,5 +145,19 @@ public class ClusterApiTest {
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
         }
+
+        /**
+         * POST /api/cluster/{clusterName}/delete
+         */
+        {
+            MvcResult result = mockMvc.perform(
+                    post("/api/cluster/test2new/delete")
+            )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.isSuccess", is(true)))
+                    .andReturn();
+            log.debug("result={}", result.getResponse().getContentAsString());
+        }
+
     }
 }
