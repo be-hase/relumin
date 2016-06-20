@@ -31,9 +31,6 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 @SpringApplicationConfiguration(classes = Application.class)
 @WebIntegrationTest
 public class UserApiTest {
-    @Value("${test.redis.host}")
-    private String testRedisHost;
-
     @Autowired
     private TestHelper testHelper;
 
