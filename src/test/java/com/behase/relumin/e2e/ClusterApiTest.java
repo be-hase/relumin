@@ -57,11 +57,8 @@ public class ClusterApiTest {
 
     @Test
     public void test() throws Exception {
-        /**
-         * /create/{clusterName}
-         */
+        // given
         {
-            // given
             MvcResult result = mockMvc.perform(
                     get("/api/trib/create/params")
                             .param("replicas", "1")
@@ -69,29 +66,83 @@ public class ClusterApiTest {
             ).andReturn();
             String body = result.getResponse().getContentAsString();
 
-            // when, then
-            result = mockMvc.perform(
-                    post("/api/trib/create/test")
+            mockMvc.perform(
+                    post("/api/trib/create/test1")
                             .param("params", body)
                             .header(HttpHeaders.CONTENT_TYPE, "application/json")
             )
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.cluster_name", is("test")))
+                    .andExpect(jsonPath("$.cluster_name", is("test1")))
+                    .andExpect(jsonPath("$.status", is("ok")))
+                    .andReturn();
+        }
+
+        /**
+         * GET /api/cluster/{clusterName}
+         */
+        {
+            MvcResult result = mockMvc.perform(
+                    get("/api/cluster/test1")
+            )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.cluster_name", is("test1")))
                     .andExpect(jsonPath("$.status", is("ok")))
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
         }
 
         /**
-         * /create/{clusterName}
+         * POST /api/cluster/{clusterName}
          */
         {
             MvcResult result = mockMvc.perform(
-                    get("/api/trib/create/test")
+                    post("/api/cluster/test2").param("hostAndPort", testRedisHost + ":10000")
             )
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.cluster_name", is("test")))
+                    .andExpect(jsonPath("$.cluster_name", is("test2")))
                     .andExpect(jsonPath("$.status", is("ok")))
+                    .andReturn();
+            log.debug("result={}", result.getResponse().getContentAsString());
+        }
+
+        /**
+         * GET /api/clusters
+         */
+        {
+            MvcResult result = mockMvc.perform(
+                    get("/api/clusters")
+            )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0]", is("test1")))
+                    .andExpect(jsonPath("$[1]", is("test2")))
+                    .andReturn();
+            log.debug("result={}", result.getResponse().getContentAsString());
+        }
+
+        /**
+         * GET /api/clusters?full=true
+         */
+        {
+            MvcResult result = mockMvc.perform(
+                    get("/api/clusters?full=true")
+            )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].cluster_name", is("test1")))
+                    .andExpect(jsonPath("$[1].cluster_name", is("test2")))
+                    .andReturn();
+            log.debug("result={}", result.getResponse().getContentAsString());
+        }
+
+        /**
+         * POST /api/cluster/{clusterName}/change-cluster-name
+         */
+        {
+            MvcResult result = mockMvc.perform(
+                    post("/api/cluster/test2/change-cluster-name")
+                    .param("newClusterName", "test2new")
+            )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.cluster_name", is("test2new")))
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
         }
