@@ -10,6 +10,7 @@ machine:
 dependencies:
   override:
     - docker pull behase/relumin-test
+    - docker ps -a
 
 test:
   override:
