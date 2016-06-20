@@ -86,19 +86,19 @@ public class NodeServiceImpl implements NodeService {
 
     long getThresholdMillis(long start, long end) {
         long durationMillis = end - start;
-        if (durationMillis <= (long)1 * 24 * 60 * 60 * 1000) { // 1day
+        if (durationMillis <= (long) 1 * 24 * 60 * 60 * 1000) { // 1day
             return Long.MIN_VALUE;
-        } else if (durationMillis <= (long)7 * 24 * 60 * 60 * 1000) { // 7days
+        } else if (durationMillis <= (long) 7 * 24 * 60 * 60 * 1000) { // 7days
             return 5 * 60 * 1000; // 5 min
-        } else if (durationMillis <= (long)30 * 24 * 60 * 60 * 1000) { // 30 days
+        } else if (durationMillis <= (long) 30 * 24 * 60 * 60 * 1000) { // 30 days
             return 30 * 60 * 1000; // 30 min
-        } else if (durationMillis <= (long)60 * 24 * 60 * 60 * 1000) { // 60 days
+        } else if (durationMillis <= (long) 60 * 24 * 60 * 60 * 1000) { // 60 days
             return 1 * 60 * 60 * 1000; // 1 hour
-        } else if (durationMillis <= (long)120 * 24 * 60 * 60 * 1000) { // 120 days
+        } else if (durationMillis <= (long) 120 * 24 * 60 * 60 * 1000) { // 120 days
             return 2 * 60 * 60 * 1000; // 2 hours
-        } else if (durationMillis <= (long)180 * 24 * 60 * 60 * 1000) { // 180 days
+        } else if (durationMillis <= (long) 180 * 24 * 60 * 60 * 1000) { // 180 days
             return 6 * 60 * 60 * 1000; // 6 hours
-        } else if (durationMillis <= (long)365 * 24 * 60 * 60 * 1000) { // 1 years
+        } else if (durationMillis <= (long) 365 * 24 * 60 * 60 * 1000) { // 1 years
             return 12 * 60 * 60 * 1000; // 12 hours
         } else {
             return 24 * 60 * 60 * 1000; // 24 hours

@@ -2,12 +2,10 @@ package com.behase.relumin.controller;
 
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.model.ErrorResponse;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
-import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;

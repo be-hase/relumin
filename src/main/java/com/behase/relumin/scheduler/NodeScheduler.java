@@ -39,7 +39,7 @@ public class NodeScheduler {
     private ClusterService clusterService;
 
     @Autowired
-    private  NodeService nodeService;
+    private NodeService nodeService;
 
     @Autowired
     private JedisPool datastoreJedisPool;

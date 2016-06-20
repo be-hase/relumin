@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-	<include resource="logback-${log.type:-console}.xml" />
+    <include resource="logback-${log.type:-console}.xml"/>
 </configuration>

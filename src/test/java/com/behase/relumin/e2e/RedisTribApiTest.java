@@ -19,12 +19,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
-import redis.clients.jedis.Jedis;
 
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -118,13 +117,13 @@ public class RedisTribApiTest {
             MvcResult result = mockMvc.perform(
                     post("/api/trib/reshard")
                             .param("clusterName", "test1")
-                            .param("slotCount", "100")
+                            .param("slotCount", "50")
                             .param("fromNodeIds", "ALL")
                             .param("toNodeId", masterNode.getNodeId())
             )
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.cluster_name", is(nullValue())))
-                    .andExpect(jsonPath("$.nodes[0].slot_count", is(5561)))
+                    .andExpect(jsonPath("$.nodes[0].slot_count", is(greaterThan(5500))))
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
             cluster = mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);
@@ -139,12 +138,12 @@ public class RedisTribApiTest {
             MvcResult result = mockMvc.perform(
                     post("/api/trib/reshard-by-slots")
                             .param("clusterName", "test1")
-                            .param("slots", "16380-16383")
+                            .param("slots", "16333-16383")
                             .param("toNodeId", masterNode.getNodeId())
             )
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.cluster_name", is(nullValue())))
-                    .andExpect(jsonPath("$.nodes[0].slot_count", is(5565)))
+                    .andExpect(jsonPath("$.nodes[0].slot_count", is(greaterThan(5550))))
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
             cluster = mapper.readValue(result.getResponse().getContentAsString(), Cluster.class);

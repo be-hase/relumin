@@ -15,8 +15,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 /**
  * Almost clone of redis-trib.rb (ClusterNode)
  *

@@ -7,7 +7,6 @@ import com.behase.relumin.webconfig.WebConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.mapper.Mapper;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
 import org.junit.Rule;
@@ -16,7 +15,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -28,9 +26,7 @@ import redis.clients.jedis.JedisPool;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.anyList;
@@ -261,7 +257,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void getUser_with_users_username() throws Exception{
+    public void getUser_with_users_username() throws Exception {
         List<LoginUser> users = Lists.newArrayList(
                 new LoginUser("username1", "displayName1", "rawPassword", Role.VIEWER.getAuthority()),
                 new LoginUser("username2", "displayName2", "rawPassword", Role.VIEWER.getAuthority()),
@@ -272,7 +268,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void getUser_with_users_username_does_not_exist_then_throw_exception() throws Exception{
+    public void getUser_with_users_username_does_not_exist_then_throw_exception() throws Exception {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage("does not exist");
 
