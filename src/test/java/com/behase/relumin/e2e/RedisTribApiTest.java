@@ -110,7 +110,7 @@ public class RedisTribApiTest {
          * POST /api/trib/reshard
          */
         {
-            ClusterNode masterNode = getNode(cluster, testRedisHost + ":10000");
+            ClusterNode masterNode = cluster.getNodes().get(0);
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/reshard")
@@ -131,7 +131,7 @@ public class RedisTribApiTest {
          * POST /api/trib/reshard-by-slots
          */
         {
-            ClusterNode masterNode = getNode(cluster, testRedisHost + ":10000");
+            ClusterNode masterNode = cluster.getNodes().get(0);
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/reshard-by-slots")
@@ -152,7 +152,7 @@ public class RedisTribApiTest {
          * POST /api/trib/add-node
          */
         {
-            ClusterNode slaveNode = getNode(cluster, testRedisHost + ":10003");
+            ClusterNode slaveNode = cluster.getNodes().get(3);
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/delete-node")
@@ -183,8 +183,8 @@ public class RedisTribApiTest {
          * POST /api/trib/replicate
          */
         {
-            ClusterNode masterNode = getNode(cluster, testRedisHost + ":10000");
-            ClusterNode slaveNode = getNode(cluster, testRedisHost + ":10004");
+            ClusterNode masterNode = cluster.getNodes().get(0);
+            ClusterNode slaveNode = cluster.getNodes().get(4);
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/replicate")
@@ -205,7 +205,7 @@ public class RedisTribApiTest {
          * POST /api/trib/failover
          */
         {
-            ClusterNode slaveNode = getNode(cluster, testRedisHost + ":10003");
+            ClusterNode slaveNode = cluster.getNodes().get(3);
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/failover")
@@ -246,9 +246,5 @@ public class RedisTribApiTest {
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
         }
-    }
-
-    private ClusterNode getNode(Cluster cluster, String hostAndPort) {
-        return cluster.getNodes().stream().filter(v -> v.getHostAndPort().equals(hostAndPort)).findFirst().get();
     }
 }
