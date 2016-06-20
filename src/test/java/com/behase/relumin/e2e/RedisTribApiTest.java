@@ -20,9 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -112,7 +110,7 @@ public class RedisTribApiTest {
          * POST /api/trib/reshard
          */
         {
-            ClusterNode masterNode = cluster.getNodes().stream().filter(v -> v.hasFlag("master")).findFirst().get();
+            ClusterNode masterNode = getNode(cluster, testRedisHost + ":10000");
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/reshard")
@@ -133,7 +131,7 @@ public class RedisTribApiTest {
          * POST /api/trib/reshard-by-slots
          */
         {
-            ClusterNode masterNode = cluster.getNodes().stream().filter(v -> v.hasFlag("master")).findFirst().get();
+            ClusterNode masterNode = getNode(cluster, testRedisHost + ":10000");
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/reshard-by-slots")
@@ -154,7 +152,7 @@ public class RedisTribApiTest {
          * POST /api/trib/add-node
          */
         {
-            ClusterNode slaveNode = cluster.getNodes().stream().filter(v -> v.hasFlag("slave")).findFirst().get();
+            ClusterNode slaveNode = getNode(cluster, testRedisHost + ":10003");
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/delete-node")
@@ -185,9 +183,8 @@ public class RedisTribApiTest {
          * POST /api/trib/replicate
          */
         {
-            ClusterNode masterNode = cluster.getNodes().stream().filter(v -> v.hasFlag("master")).findFirst().get();
-            ClusterNode slaveNode = cluster.getNodes().stream()
-                    .filter(v -> v.hasFlag("slave") && !masterNode.getNodeId().equals(v.getMasterNodeId())).findFirst().get();
+            ClusterNode masterNode = getNode(cluster, testRedisHost + ":10000");
+            ClusterNode slaveNode = getNode(cluster, testRedisHost + ":10004");
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/replicate")
@@ -208,7 +205,7 @@ public class RedisTribApiTest {
          * POST /api/trib/failover
          */
         {
-            ClusterNode slaveNode = cluster.getNodes().stream().filter(v -> v.hasFlag("slave")).findFirst().get();
+            ClusterNode slaveNode = getNode(cluster, testRedisHost + ":10003");
 
             MvcResult result = mockMvc.perform(
                     post("/api/trib/failover")
@@ -249,5 +246,9 @@ public class RedisTribApiTest {
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
         }
+    }
+
+    private ClusterNode getNode(Cluster cluster, String hostAndPort) {
+        return cluster.getNodes().stream().filter(v -> v.getHostAndPort().equals(hostAndPort)).findFirst().get();
     }
 }
