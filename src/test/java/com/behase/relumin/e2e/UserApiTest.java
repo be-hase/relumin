@@ -40,9 +40,6 @@ public class UserApiTest {
     @Autowired
     private WebApplicationContext wac;
 
-    @Autowired
-    private ObjectMapper mapper;
-
     private MockMvc mockMvc;
 
     @Before
