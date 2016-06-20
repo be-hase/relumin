@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
 import java.io.IOException;
@@ -18,7 +18,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 @Configuration
 @EnableAutoConfiguration
 @EnableScheduling
-@EnableWebMvcSecurity
+@EnableWebSecurity
 @ComponentScan
 public class Application extends WebMvcConfigurerAdapter {
     private static final String CONFIG_LOCATION = "config";
