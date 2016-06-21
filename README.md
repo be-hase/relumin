@@ -1,3 +1,6 @@
+develop : [![CircleCI](https://circleci.com/gh/be-hase/relumin/tree/develop.svg?style=svg)](https://circleci.com/gh/be-hase/relumin/tree/develop) [![codecov](https://codecov.io/gh/be-hase/relumin/branch/develop/graph/badge.svg)](https://codecov.io/gh/be-hase/relumin)
+
+
 # Relumin (Redis cluster admin)
 
 ## What's Relumin ?
