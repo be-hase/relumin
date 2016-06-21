@@ -24,4 +24,5 @@ test:
     - mkdir -p $CIRCLE_TEST_REPORTS/junit
     - find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} $CIRCLE_TEST_REPORTS/junit/ \;
     - mkdir -p $CIRCLE_TEST_REPORTS/jacoco
-    - cp -r ./target/site/jacoco $CIRCLE_TEST_REPORTS/jacoco
+    - cp -r ~/relumin/target/site/jacoco $CIRCLE_TEST_REPORTS/jacoco
+    - bash <(curl -s https://codecov.io/bash)
