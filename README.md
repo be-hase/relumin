@@ -174,10 +174,15 @@ If this value is true, anonymous user can use relumin as VIEWER role.
 
 ## Contribute
 
-I'm now prepare for test environment. (Travis CI or Circle CI).  
-(Currentry test execute on my local vagrant env.)
+# For local developing
 
-Please wait...
+1. Build docker image. `docker build -t relumin/relumin-test .`
+2. Run docker. `docker run -d --net="host" -p 9000:9000 -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 -p 10004:10004 -p 10005:10005 -p 20000:20000 -p 20001:20001 -p 20002:20002 -p 20003:20003 -p 20004:20004 -p 20005:20005 -p 10010:10010 -p 10011:10011 -p 10012:10012 -p 10013:10013 -p 10014:10014 -p 10015:10015 relumin/relumin-test`
+3. Copy config files. `cp src/main/resources/relumin-local-conf.yml.sample src/main/resources/relumin-local-conf.yml`, `cp src/test/resources/application.yml.sample src/test/resources/application.yml`
+4. Replace "YOUR_DOCKER_HOST" of config files.
+5. Write your code.
+6. Run unit test. `mvn clean test`
+7. Run spring boot app. `mvn clean spring-boot:run -Dconfig=relumin-local-conf.yml`
 
 ## Milestone (Maybe...)
 
