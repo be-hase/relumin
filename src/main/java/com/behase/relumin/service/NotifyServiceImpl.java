@@ -118,7 +118,7 @@ public class NotifyServiceImpl implements NotifyService {
         Map<String, Object> body = Maps.newLinkedHashMap();
         body.put("clusterName", cluster.getClusterName());
         body.put("data", jobs);
-        body.put("summaryText", jobs);
+        body.put("summaryText", getSummaryText(cluster, jobs));
 
         Request.Post(httpUrl)
                 .connectTimeout(3000)
