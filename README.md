@@ -6,7 +6,7 @@ Relumin is a REdis cLUster adMIN tool.
 
 Main feature is ...
 
-* Visualize Redis cluser status
+* Visualize Redis cluster status
 * Operating Cluster
     * Add node, Resharding, Delete node, Replicate, Failover...etc
 * Visualize Redis node metrics as chart
@@ -48,13 +48,13 @@ https://github.com/be-hase/relumin/releases
 ### 2. Install Java8 on your server
 
 Install Java8 on your server.  
-I tested Oracle JDK.  
+( I tested Oracle JDK. )
 
 ### 3. Install Redis(not cluster) on your server
 
 Install Redis on your server.
 
-Redis is used for store meta data and metrics data.  
+Redis is used for store meta data and metrics data.
 
 Memory is expensive.
 So I will support MySQL. Prease wait...
@@ -64,7 +64,7 @@ So I will support MySQL. Prease wait...
 Please write config file.  
 Specify this config path when you start Relumin.
 
-Ex:
+Example:
 ```yaml
 host: 10.10.10.10
 
@@ -123,7 +123,7 @@ This is property table.
 
 Please start jar file.
 
-You can sepcify log parameter.
+You can specify log parameter.
 
 * log.type : console or file
 * log.level : DEBUG, INFO, WARN, ERROR... (logback's level)
@@ -133,7 +133,7 @@ You can sepcify log parameter.
 java -Dconfig=/path/your/config/relumin.yml -Dlog.type=file -Dlog.level=INFO -Dlog.dir=/path/your/logDir -jar relumin-0.0.1.jar > /dev/null 2>&1 &
 ```
 
-Relumin run on JVM, so you can specify JVM option.
+Relumin run on JVM, so you can specify JVM option. Like a below.
 
 ```bash
 JVM_OPT="-server -Dfile.encoding=UTF-8 -Xms2g -Xmx2g \
@@ -147,12 +147,9 @@ JVM_OPT="-server -Dfile.encoding=UTF-8 -Xms2g -Xmx2g \
 java -Dconfig=/path/your/config/relumin.yml -Dlog.type=file -Dlog.level=INFO -Dlog.dir=/path/your/logDir -jar relumin-0.0.1.jar > /dev/null 2>&1 &
 ```
 
-I will prepare control script.  
-Please wait...
-
 ## Authenticate and Authorize (Option)
 
-Relumin support easy authenticate&authorize.
+Relumin support role-based authenticate&authorize.
 
 ### Role
 
@@ -172,21 +169,25 @@ Please specify 'auth.enabled' false, and add RELUMIN_USER, and 'auth.enabled' tr
 
 ### Anonymous user
 
- You can configure whether anonymous user can access Relumin or not by specifying 'auth.allowAnonymous'.
- If this value is true, anonymous user can use relumin as VIEWER role.
+You can configure whether anonymous user can access Relumin or not by specifying 'auth.allowAnonymous'.
+If this value is true, anonymous user can use relumin as VIEWER role.
 
 ## Contribute
 
-I'm now prepare for test environment. (Travis CI or Circle CI).  
-(Currentry test execute on my local vagrant env.)
+### For local developing
 
-Please wait...
+1. Build docker image. `docker build -t relumin/relumin-test .`
+2. Run docker. `docker run -d --net="host" -p 9000:9000 -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 -p 10004:10004 -p 10005:10005 -p 20000:20000 -p 20001:20001 -p 20002:20002 -p 20003:20003 -p 20004:20004 -p 20005:20005 -p 10010:10010 -p 10011:10011 -p 10012:10012 -p 10013:10013 -p 10014:10014 -p 10015:10015 relumin/relumin-test`
+3. Copy config files. `cp src/main/resources/relumin-local-conf.yml.sample src/main/resources/relumin-local-conf.yml`, `cp src/test/resources/application.yml.sample src/test/resources/application.yml`
+4. Replace "YOUR_DOCKER_HOST" of config files.
+5. Write your code.
+6. Run unit test. `mvn clean test`
+7. Run spring boot app. `mvn clean spring-boot:run -Dconfig=relumin-local-conf.yml`
 
-## Milestone
+## Milestone (Maybe...)
 
 * Support share URL
 * Support MySQL for meta data and metrics data.
-* Support Standalone Redis (not cluster).
 
 ## Appendix
 

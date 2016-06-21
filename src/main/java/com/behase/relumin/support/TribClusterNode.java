@@ -1,236 +1,237 @@
 package com.behase.relumin.support;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import com.behase.relumin.exception.InvalidParameterException;
+import com.behase.relumin.model.ClusterNode;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import redis.clients.jedis.Jedis;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
-
-import redis.clients.jedis.Jedis;
-
-import com.behase.relumin.exception.InvalidParameterException;
-import com.behase.relumin.model.ClusterNode;
-import com.behase.relumin.util.JedisUtils;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Clone of redis-trib.rb
- * @author Ryosuke Hasebe
+ * Almost clone of redis-trib.rb (ClusterNode)
  *
+ * @author Ryosuke Hasebe
  */
 @Slf4j
 public class TribClusterNode implements Closeable {
-	private Jedis jedis;
-	private ClusterNode info;
-	private boolean dirty = false;
-	private List<ClusterNode> friends = Lists.newArrayList();
-	private Set<Integer> tmpSlots = Sets.newTreeSet();
-	private List<TribClusterNode> replicas = Lists.newArrayList();
+    private Jedis jedis;
+    private ClusterNode nodeInfo;
+    private Map<String, String> clusterInfo = Maps.newHashMap();
+    private boolean dirty;
+    private List<ClusterNode> friends = Lists.newArrayList();
+    private Set<Integer> tmpSlots = Sets.newTreeSet();
+    private List<TribClusterNode> replicas = Lists.newArrayList();
 
-	public TribClusterNode(String hostAndPort) {
-		String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
-		checkArgument(hostAndPortArray.length >= 2, "Invalid IP or Port. Use IP:Port format");
+    public TribClusterNode(String hostAndPort) {
+        String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
+        if (hostAndPortArray.length < 2) {
+            throw new InvalidParameterException("Invalid IP or Port. Use IP:Port format");
+        }
 
-		info = new ClusterNode();
-		info.setHostAndPort(hostAndPort);
-	}
+        nodeInfo = new ClusterNode();
+        nodeInfo.setHostAndPort(hostAndPort);
+    }
 
-	public List<ClusterNode> getFriends() {
-		return friends;
-	}
+    public Jedis getJedis() {
+        return jedis;
+    }
 
-	public String getServedSlots() {
-		return info.getServedSlots();
-	}
+    public ClusterNode getNodeInfo() {
+        return nodeInfo;
+    }
 
-	public Set<Integer> getTmpServedSlots() {
-		return tmpSlots;
-	}
+    public Map<String, String> getClusterInfo() {
+        return clusterInfo;
+    }
 
-	public boolean hasFlag(String flag) {
-		return info.getFlags().contains(flag);
-	}
+    public boolean isDirty() {
+        return dirty;
+    }
 
-	public void connect() {
-		connect(false);
-	}
+    public List<ClusterNode> getFriends() {
+        return friends;
+    }
 
-	public void connect(boolean abort) {
-		if (jedis != null) {
-			return;
-		}
+    public Set<Integer> getTmpSlots() {
+        return tmpSlots;
+    }
 
-		try {
-			jedis = JedisUtils.getJedisByHostAndPort(info.getHostAndPort());
-			if (!"PONG".equalsIgnoreCase(jedis.ping())) {
-				throw new InvalidParameterException(String.format("Invalid PONG-message from Redis(%s).", info.getHostAndPort()));
-			}
-		} catch (Exception e) {
-			if (abort) {
-				throw new InvalidParameterException(String.format("Failed to connect to node(%s).", info.getHostAndPort()));
-			}
-			jedis = null;
-		}
-	}
+    public List<TribClusterNode> getReplicas() {
+        return replicas;
+    }
 
-	public void assertCluster() {
-		Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
-		log.debug("cluster info={}", infoResult);
-		String clusterEnabled = infoResult.get("cluster_enabled");
-		if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
-			throw new InvalidParameterException(String.format("%s is not configured as a cluster node.", info.getHostAndPort()));
-		}
-	}
+    public boolean hasFlag(String flag) {
+        return nodeInfo.getFlags().contains(flag);
+    }
 
-	public void assertEmpty() {
-		Map<String, String> infoResult = JedisUtils.parseInfoResult(jedis.info());
-		Map<String, String> clusterInfoResult = JedisUtils.parseInfoResult(jedis.clusterInfo());
-		log.debug("cluster info={}", infoResult);
-		if (infoResult.get("db0") != null || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
-			throw new InvalidParameterException(String.format("%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.", info.getHostAndPort()));
-		}
-	}
+    public void connect() {
+        connect(false);
+    }
 
-	public void loadInfo() {
-		loadInfo(false);
-	}
+    public void connect(boolean abort) {
+        if (jedis != null) {
+            return;
+        }
 
-	public void loadInfo(boolean getFriend) {
-		connect();
+        try {
+            jedis = createJedisSupport().getJedisByHostAndPort(nodeInfo.getHostAndPort());
+            jedis.ping();
+        } catch (Exception e) {
+            if (abort) {
+                throw new InvalidParameterException(String.format("Failed to connect to node(%s).", nodeInfo.getHostAndPort()));
+            }
+            jedis = null;
+        }
+    }
 
-		String hostAndPort = info.getHostAndPort();
-		List<ClusterNode> nodes = JedisUtils.parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
-		nodes.forEach(v -> {
-			if (v.hasFlag("myself")) {
-				info = v;
-				info.setHostAndPort(hostAndPort);
-			} else if (getFriend) {
-				friends.add(v);
-			}
-		});
-	}
+    public void assertCluster() {
+        Map<String, String> infoResult = createJedisSupport().parseInfoResult(jedis.info());
+        String clusterEnabled = infoResult.get("cluster_enabled");
+        if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
+            throw new InvalidParameterException(String.format("%s is not configured as a cluster node.", nodeInfo.getHostAndPort()));
+        }
+    }
 
-	public void addTmpSlots(Collection<Integer> slots) {
-		if (slots.isEmpty()) {
-			return;
-		}
-		tmpSlots.addAll(slots);
-		dirty = true;
-	}
+    public void assertEmpty() {
+        Map<String, String> infoResult = createJedisSupport().parseInfoResult(jedis.info());
+        Map<String, String> clusterInfoResult = createJedisSupport().parseClusterInfoResult(jedis.clusterInfo());
 
-	public void setAsReplica(String masterNodeId) {
-		info.setMasterNodeId(masterNodeId);
-		dirty = true;
-	}
+        if (infoResult.get("db0") != null || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
+            throw new InvalidParameterException(
+                    String.format(
+                            "%s is not empty. Either the node already knows other nodes (check with CLUSTER NODES) " +
+                                    "or contains some key in database 0.",
+                            nodeInfo.getHostAndPort()
+                    )
+            );
+        }
+    }
 
-	public void flushNodeConfig() {
-		if (!dirty) {
-			return;
-		}
-		if (StringUtils.isBlank(info.getMasterNodeId())) {
-			log.debug("this node is master. {}", getTmpServedSlots());
-			int[] intArray = new int[tmpSlots.size()];
-			int i = 0;
-			for (Integer item : tmpSlots) {
-				intArray[i] = item;
-				i++;
-			}
-			jedis.clusterAddSlots(intArray);
-			info.getServedSlotsSet().addAll(tmpSlots);
-			tmpSlots.clear();
-		} else {
-			log.debug("this node is replica");
-			try {
-				jedis.clusterReplicate(info.getMasterNodeId());
-			} catch (Exception e) {
-				log.error("Replicate error.", e);
-				// If the cluster did not already joined it is possible that
-				// the slave does not know the master node yet. So on errors
-				// we return ASAP leaving the dirty flag set, to flush the
-				// config later.
-				return;
-			}
-		}
-		dirty = false;
-	}
+    public void loadInfo() {
+        loadInfo(false);
+    }
 
-	public String getConfigSignature() {
-		List<String> config = Lists.newArrayList();
+    public void loadInfo(boolean getFriends) {
+        connect();
 
-		String result = jedis.clusterNodes();
-		for (String line : StringUtils.split(result, "\n")) {
-			String[] lineArray = StringUtils.split(line);
+        String hostAndPort = nodeInfo.getHostAndPort();
+        List<ClusterNode> nodes = createJedisSupport().parseClusterNodesResult(jedis.clusterNodes(), hostAndPort);
+        nodes.forEach(v -> {
+            if (v.hasFlag("myself")) {
+                nodeInfo = v;
+                nodeInfo.setHostAndPort(hostAndPort);
+                dirty = false;
+                clusterInfo = createJedisSupport().parseClusterInfoResult(jedis.clusterInfo());
+            } else {
+                if (getFriends) {
+                    friends.add(v);
+                }
+            }
+        });
+    }
 
-			List<String> slots = Lists.newArrayList();
-			for (int i = 8; i < lineArray.length; i++) {
-				slots.add(lineArray[i]);
-			}
-			slots.stream().filter(v -> {
-				return !StringUtils.startsWith(v, "[");
-			}).collect(Collectors.toList());
+    public void addTmpSlots(Collection<Integer> slots) {
+        tmpSlots.addAll(slots);
+        dirty = true;
+    }
 
-			if (slots.size() > 0) {
-				Collections.sort(slots);
-				config.add(Joiner.on(":").join(lineArray[0], Joiner.on(",").join(slots)));
-			}
-		}
+    public void setAsReplica(String masterNodeId) {
+        nodeInfo.setMasterNodeId(masterNodeId);
+        dirty = true;
+    }
 
-		Collections.sort(config);
-		return Joiner.on("|").join(config);
-	}
+    public void flushNodeConfig() {
+        if (!dirty) {
+            log.debug("Dirty is false, so ignore.");
+            return;
+        }
 
-	public ClusterNode getInfo() {
-		return info;
-	}
+        if (StringUtils.isBlank(nodeInfo.getMasterNodeId())) {
+            log.debug("this node is master.");
+            int[] intArray = tmpSlots.stream().mapToInt(i -> i).toArray();
+            jedis.clusterAddSlots(intArray);
+            nodeInfo.getServedSlotsSet().addAll(tmpSlots);
+            tmpSlots.clear();
+        } else {
+            log.debug("this node is replica");
+            try {
+                jedis.clusterReplicate(nodeInfo.getMasterNodeId());
+            } catch (Exception e) {
+                log.error("Replicate error.", e);
+                // If the cluster did not already joined it is possible that
+                // the slave does not know the master node yet. So on errors
+                // we return ASAP leaving the dirty flag set, to flush the
+                // config later.
+                return;
+            }
+        }
 
-	public boolean isDirty() {
-		return dirty;
-	}
+        dirty = false;
+    }
 
-	public Jedis getJedis() {
-		return jedis;
-	}
+    // Return a single string representing nodes and associated slots.
+    // TODO: remove slaves from config when slaves will be handled
+    // by Redis Cluster.
+    public String getConfigSignature() {
+        List<String> config = Lists.newArrayList();
 
-	public List<TribClusterNode> getReplicas() {
-		return replicas;
-	}
+        String result = jedis.clusterNodes();
+        for (String line : StringUtils.split(result, "\n")) {
+            String[] lineArray = StringUtils.split(line);
 
-	@Override
-	public void close() throws IOException {
-		if (jedis != null) {
-			jedis.close();
-		}
-	}
+            List<String> slots = Lists.newArrayList();
+            for (int i = 8; i < lineArray.length; i++) {
+                slots.add(lineArray[i]);
+            }
+            slots = slots.stream().filter(v -> !StringUtils.startsWith(v, "[")).collect(Collectors.toList());
 
-	@Override
-	public String toString() {
-		return info.getHostAndPort();
-	}
+            if (slots.size() > 0) {
+                Collections.sort(slots);
+                config.add(Joiner.on(":").join(lineArray[0], Joiner.on(",").join(slots)));
+            }
+        }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if (obj == null) {
-			return false;
-		}
-		if (getClass() != obj.getClass()) {
-			return false;
-		}
+        Collections.sort(config);
+        return Joiner.on("|").join(config);
+    }
 
-		TribClusterNode other = (TribClusterNode)obj;
-		return StringUtils.equalsIgnoreCase(getInfo().getHostAndPort(), other.getInfo().getHostAndPort());
-	}
+    JedisSupport createJedisSupport() {
+        return new JedisSupport();
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (jedis != null) {
+            jedis.close();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return nodeInfo.getHostAndPort();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+
+        TribClusterNode other = (TribClusterNode) obj;
+        return StringUtils.equalsIgnoreCase(getNodeInfo().getHostAndPort(), other.getNodeInfo().getHostAndPort());
+    }
 }

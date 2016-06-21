@@ -1,0 +1,15 @@
+# FOR LOCAL DEVELOPING
+
+host: localhost
+
+auth:
+  enabled: false
+  allowAnonymous: true
+
+server:
+  port: 8080
+  monitorPort: 20080
+
+redis:
+  host: YOUR_DOCKER_HOST
+  port: 9000

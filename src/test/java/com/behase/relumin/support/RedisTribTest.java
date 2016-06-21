@@ -1,514 +1,1072 @@
 package com.behase.relumin.support;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.internal.util.reflection.Whitebox;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.SpringApplicationConfiguration;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCluster;
-import redis.clients.jedis.JedisCluster.Reset;
-
-import com.behase.relumin.Application;
+import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
+import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.param.CreateClusterParam;
-import com.behase.relumin.util.JedisUtils;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import lombok.extern.slf4j.Slf4j;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.runners.MockitoJUnitRunner;
+import org.springframework.boot.test.OutputCapture;
+import redis.clients.jedis.Jedis;
+
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anySet;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.*;
 
 @Slf4j
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = Application.class)
-@ActiveProfiles("test")
+@RunWith(MockitoJUnitRunner.class)
 public class RedisTribTest {
-	@Value("${test.redis.normalCluster}")
-	private String testRedisNormalCluster;
+    @Spy
+    private RedisTrib tested = new RedisTrib();
 
-	@Value("${test.redis.emptyCluster}")
-	private String testRedisEmptyCluster;
+    @Mock
+    private TribClusterNode tribClusterNode;
 
-	@Value("${test.redis.emptyClusterAll}")
-	private String testRedisEmptyClusterAll;
+    @Mock
+    private Jedis jedis;
 
-	@Value("${test.redis.normalStandAlone}")
-	private String testRedisNormalStandAlone;
+    @Rule
+    public ExpectedException expectedEx = ExpectedException.none();
 
-	@Value("${test.redis.normalStandAloneAll}")
-	private String testRedisNormalStandAloneAll;
+    @Rule
+    public OutputCapture capture = new OutputCapture();
 
-	@Value("${test.redis.emptyStandAlone}")
-	private String testRedisEmptyStandAlone;
+    @Before
+    public void init() {
+    }
 
-	@Value("${test.redis.emptyStandAloneAll}")
-	private String testRedisEmptyStandAloneAll;
+    @Test
+    public void getCreateClusterParams_invalid_replica_then_throw_exception() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Replicas must be equal or longer than 0"));
 
-	private RedisTrib redisTrib;
+        // when
+        tested.getCreateClusterParams(-1, Sets.newHashSet());
+    }
 
-	@Before
-	public void before() {
-		// normal cluster
-		try (JedisCluster jedisCluster = JedisUtils.getJedisClusterByHostAndPort(testRedisNormalCluster)) {
-			jedisCluster.set("hoge", "hoge");
-		} catch (Exception e) {
-		}
+    @Test
+    public void getCreateClusterParams() {
+        // given
+        doNothing().when(tested).checkCreateParameters();
+        doNothing().when(tested).allocSlots();
+        doReturn(Lists.newArrayList()).when(tested).getCreateClusterParams(anyInt(), anySet());
 
-		// empty cluster (and reset)
-		for (String item : StringUtils.split(testRedisEmptyClusterAll, ",")) {
-			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
-				try {
-					jedis.flushAll();
-				} catch (Exception e) {
-				}
-				try {
-					jedis.clusterReset(Reset.HARD);
-				} catch (Exception e) {
-				}
-			} catch (Exception e) {
-			}
-		}
+        // when
+        List<CreateClusterParam> result = tested.getCreateClusterParams(2, Sets.newHashSet());
 
-		for (String item : StringUtils.split(testRedisEmptyStandAloneAll, ",")) {
-			try (Jedis jedis = JedisUtils.getJedisByHostAndPort(item)) {
-				jedis.flushAll();
-			} catch (Exception e) {
-			}
-		}
-	}
+        // then
+        assertThat(result, is(empty()));
+    }
 
-	@After
-	public void after() throws Exception {
-		if (redisTrib != null) {
-			redisTrib.close();
-		}
-	}
+    @Test
+    public void checkCreateParameters_master_nodes_need_more_than_3() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Redis Cluster requires at least 3 master nodes"));
 
-	@Test
-	public void test() {
-	}
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(null, null, null));
+        Whitebox.setInternalState(tested, "replicas", 1);
 
-	@Test
-	public void buildCreateClusterParam1() throws Exception {
-		redisTrib = new RedisTrib();
-		Whitebox.setInternalState(redisTrib, "replicas", 1);
-		String[] hostAndPorts = {
-			"2.2.2.2:7", "2.2.2.2:8", "2.2.2.2:9", "2.2.2.2:10", "2.2.2.2:11", "2.2.2.2:12",
-			"2.2.2.2:1", "2.2.2.2:2", "2.2.2.2:3", "2.2.2.2:4", "2.2.2.2:5", "2.2.2.2:6",
-			"1.1.1.1:7", "1.1.1.1:8", "1.1.1.1:9", "1.1.1.1:10", "1.1.1.1:11", "1.1.1.1:12",
-			"1.1.1.1:1", "1.1.1.1:2", "1.1.1.1:3", "1.1.1.1:4", "1.1.1.1:5", "1.1.1.1:6",
-		};
-		for (String hostAndPort : hostAndPorts) {
-			TribClusterNode node = new TribClusterNode(hostAndPort);
-			node.getInfo().setNodeId("nodeId:" + hostAndPort);
-			redisTrib.addNodes(node);
-		}
+        // when
+        tested.checkCreateParameters();
+    }
 
-		redisTrib.allocSlots();
+    @Test
+    public void checkCreateParameters() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(null, null, null));
+        Whitebox.setInternalState(tested, "replicas", 0);
+        // when
+        tested.checkCreateParameters();
 
-		List<CreateClusterParam> params = redisTrib.buildCreateClusterParam();
-		CreateClusterParam param;
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(null, null, null, null));
+        Whitebox.setInternalState(tested, "replicas", 0);
+        // when
+        tested.checkCreateParameters();
 
-		assertThat(params.size(), is(12));
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(null, null, null, null, null, null));
+        Whitebox.setInternalState(tested, "replicas", 1);
+        // when
+        tested.checkCreateParameters();
 
-		param = params.get(0);
-		assertThat(param.getStartSlotNumber(), is("0"));
-		assertThat(param.getEndSlotNumber(), is("1364"));
-		assertThat(param.getMaster(), is("1.1.1.1:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("2.2.2.2:7")));
-		param = params.get(1);
-		assertThat(param.getStartSlotNumber(), is("1365"));
-		assertThat(param.getEndSlotNumber(), is("2729"));
-		assertThat(param.getMaster(), is("2.2.2.2:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:7")));
-		param = params.get(10);
-		assertThat(param.getStartSlotNumber(), is("13650"));
-		assertThat(param.getEndSlotNumber(), is("15014"));
-		assertThat(param.getMaster(), is("1.1.1.1:6"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("2.2.2.2:12")));
-		param = params.get(11);
-		assertThat(param.getStartSlotNumber(), is("15015"));
-		assertThat(param.getEndSlotNumber(), is("16383"));
-		assertThat(param.getMaster(), is("2.2.2.2:6"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:12")));
-	}
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(null, null, null, null, null, null, null));
+        Whitebox.setInternalState(tested, "replicas", 1);
+        // when
+        tested.checkCreateParameters();
+    }
 
-	@Test
-	public void buildCreateClusterParam2() throws Exception {
-		redisTrib = new RedisTrib();
-		Whitebox.setInternalState(redisTrib, "replicas", 2);
-		String[] hostAndPorts = {
-			"1.1.1.1:1", "1.1.1.1:2", "1.1.1.1:3", "1.1.1.1:4", "1.1.1.1:5", "1.1.1.1:6",
-			"1.1.1.1:7", "1.1.1.1:8", "1.1.1.1:9", "1.1.1.1:10", "1.1.1.1:11", "1.1.1.1:12",
-			"2.2.2.2:1", "2.2.2.2:2", "2.2.2.2:3", "2.2.2.2:4", "2.2.2.2:5", "2.2.2.2:6",
-			"2.2.2.2:7", "2.2.2.2:8", "2.2.2.2:9", "2.2.2.2:10", "2.2.2.2:11", "2.2.2.2:12",
-			"3.3.3.3:1", "3.3.3.3:2", "3.3.3.3:3", "3.3.3.3:4", "3.3.3.3:5", "3.3.3.3:6",
-			"3.3.3.3:7", "3.3.3.3:8", "3.3.3.3:9", "3.3.3.3:10", "3.3.3.3:11", "3.3.3.3:12",
-		};
-		for (String hostAndPort : hostAndPorts) {
-			TribClusterNode node = new TribClusterNode(hostAndPort);
-			node.getInfo().setNodeId("nodeId:" + hostAndPort);
-			redisTrib.addNodes(node);
-		}
+    @Test
+    public void allocSlots() {
+        // given
+        TribClusterNode node1 = new TribClusterNode("host1:1001");
+        node1.getNodeInfo().setNodeId("nodeId1");
+        TribClusterNode node2 = new TribClusterNode("host1:1002");
+        node2.getNodeInfo().setNodeId("nodeId2");
+        TribClusterNode node3 = new TribClusterNode("host2:1001");
+        node3.getNodeInfo().setNodeId("nodeId3");
+        TribClusterNode node4 = new TribClusterNode("host2:1002");
+        node4.getNodeInfo().setNodeId("nodeId4");
+        TribClusterNode node5 = new TribClusterNode("host3:1001");
+        node5.getNodeInfo().setNodeId("nodeId5");
+        TribClusterNode node6 = new TribClusterNode("host3:1002");
+        node6.getNodeInfo().setNodeId("nodeId6");
+        TribClusterNode node7 = new TribClusterNode("host4:1001");
+        node7.getNodeInfo().setNodeId("nodeId7");
 
-		redisTrib.allocSlots();
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(
+                node1, node2, node3, node4, node5, node6, node7
+        ));
+        Whitebox.setInternalState(tested, "replicas", 1);
 
-		List<CreateClusterParam> params = redisTrib.buildCreateClusterParam();
-		CreateClusterParam param;
+        // when
+        tested.allocSlots();
 
-		assertThat(params.size(), is(12));
+        // then
+        assertThat(node1.getTmpSlots().size(), is(5461));
+        assertThat(node2.getNodeInfo().getMasterNodeId(), is("nodeId3"));
+        assertThat(node3.getTmpSlots().size(), is(5461));
+        assertThat(node4.getNodeInfo().getMasterNodeId(), is("nodeId5"));
+        assertThat(node5.getTmpSlots().size(), is(5462));
+        assertThat(node6.getNodeInfo().getMasterNodeId(), is("nodeId1"));
+        assertThat(node7.getNodeInfo().getMasterNodeId(), is("nodeId1"));
+    }
 
-		param = params.get(0);
-		assertThat(param.getStartSlotNumber(), is("0"));
-		assertThat(param.getEndSlotNumber(), is("1364"));
-		assertThat(param.getMaster(), is("1.1.1.1:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("2.2.2.2:5", "3.3.3.3:5")));
-		param = params.get(1);
-		assertThat(param.getStartSlotNumber(), is("1365"));
-		assertThat(param.getEndSlotNumber(), is("2729"));
-		assertThat(param.getMaster(), is("2.2.2.2:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:5", "3.3.3.3:6")));
-		param = params.get(10);
-		assertThat(param.getStartSlotNumber(), is("13650"));
-		assertThat(param.getEndSlotNumber(), is("15014"));
-		assertThat(param.getMaster(), is("2.2.2.2:4"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:11", "3.3.3.3:12")));
-		param = params.get(11);
-		assertThat(param.getStartSlotNumber(), is("15015"));
-		assertThat(param.getEndSlotNumber(), is("16383"));
-		assertThat(param.getMaster(), is("3.3.3.3:4"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:12", "2.2.2.2:12")));
-	}
+    @Test
+    public void buildCreateClusterParam() {
+        // given
+        TribClusterNode node1 = new TribClusterNode("host1:1001");
+        node1.getNodeInfo().setNodeId("nodeId1");
+        TribClusterNode node2 = new TribClusterNode("host1:1002");
+        node2.getNodeInfo().setNodeId("nodeId2");
+        TribClusterNode node3 = new TribClusterNode("host2:1001");
+        node3.getNodeInfo().setNodeId("nodeId3");
+        TribClusterNode node4 = new TribClusterNode("host2:1002");
+        node4.getNodeInfo().setNodeId("nodeId4");
+        TribClusterNode node5 = new TribClusterNode("host3:1001");
+        node5.getNodeInfo().setNodeId("nodeId5");
+        TribClusterNode node6 = new TribClusterNode("host3:1002");
+        node6.getNodeInfo().setNodeId("nodeId6");
+        TribClusterNode node7 = new TribClusterNode("host4:1001");
+        node7.getNodeInfo().setNodeId("nodeId7");
 
-	@Test
-	public void buildCreateClusterParam3() throws Exception {
-		redisTrib = new RedisTrib();
-		Whitebox.setInternalState(redisTrib, "replicas", 1);
-		String[] hostAndPorts = {
-			"1.1.1.1:1", "1.1.1.1:2", "1.1.1.1:3", "1.1.1.1:4", "1.1.1.1:5", "1.1.1.1:6",
-			"2.2.2.2:1", "2.2.2.2:2", "2.2.2.2:3", "2.2.2.2:4", "2.2.2.2:5", "2.2.2.2:6",
-			"2.2.2.2:7", "2.2.2.2:8", "2.2.2.2:9", "2.2.2.2:10", "2.2.2.2:11", "2.2.2.2:12",
-			"3.3.3.3:1", "3.3.3.3:2", "3.3.3.3:3", "3.3.3.3:4", "3.3.3.3:5", "3.3.3.3:6",
-			"3.3.3.3:7", "3.3.3.3:8", "3.3.3.3:9", "3.3.3.3:10", "3.3.3.3:11", "3.3.3.3:12",
-		};
-		for (String hostAndPort : hostAndPorts) {
-			TribClusterNode node = new TribClusterNode(hostAndPort);
-			node.getInfo().setNodeId("nodeId:" + hostAndPort);
-			redisTrib.addNodes(node);
-		}
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(
+                node1, node2, node3, node4, node5, node6, node7
+        ));
+        Whitebox.setInternalState(tested, "replicas", 1);
 
-		redisTrib.allocSlots();
+        // when
+        tested.allocSlots();
+        List<CreateClusterParam> result = tested.buildCreateClusterParam();
 
-		List<CreateClusterParam> params = redisTrib.buildCreateClusterParam();
-		CreateClusterParam param;
+        // then
+        assertThat(result.get(0).getStartSlotNumber(), is("0"));
+        assertThat(result.get(0).getEndSlotNumber(), is("5460"));
+        assertThat(result.get(0).getMaster(), is("host1:1001"));
+        assertThat(result.get(0).getMasterNodeId(), is("nodeId1"));
+        assertThat(result.get(0).getReplicas(), contains("host3:1002", "host4:1001"));
+        assertThat(result.get(1).getStartSlotNumber(), is("5461"));
+        assertThat(result.get(1).getEndSlotNumber(), is("10921"));
+        assertThat(result.get(1).getMaster(), is("host2:1001"));
+        assertThat(result.get(1).getMasterNodeId(), is("nodeId3"));
+        assertThat(result.get(1).getReplicas(), hasItem("host1:1002"));
+        assertThat(result.get(2).getStartSlotNumber(), is("10922"));
+        assertThat(result.get(2).getEndSlotNumber(), is("16383"));
+        assertThat(result.get(2).getMaster(), is("host3:1001"));
+        assertThat(result.get(2).getMasterNodeId(), is("nodeId5"));
+        assertThat(result.get(2).getReplicas(), hasItem("host2:1002"));
+    }
 
-		assertThat(params.size(), is(15));
-		param = params.get(0);
-		assertThat(param.getStartSlotNumber(), is("0"));
-		assertThat(param.getEndSlotNumber(), is("1091"));
-		assertThat(param.getMaster(), is("1.1.1.1:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("2.2.2.2:6")));
-		param = params.get(1);
-		assertThat(param.getStartSlotNumber(), is("1092"));
-		assertThat(param.getEndSlotNumber(), is("2183"));
-		assertThat(param.getMaster(), is("2.2.2.2:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:6")));
-		param = params.get(13);
-		assertThat(param.getStartSlotNumber(), is("14196"));
-		assertThat(param.getEndSlotNumber(), is("15287"));
-		assertThat(param.getMaster(), is("2.2.2.2:5"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("3.3.3.3:12")));
-		param = params.get(14);
-		assertThat(param.getStartSlotNumber(), is("15288"));
-		assertThat(param.getEndSlotNumber(), is("16383"));
-		assertThat(param.getMaster(), is("3.3.3.3:5"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("2.2.2.2:12")));
-	}
+    @Test
+    public void createCluster() throws Exception {
+        // given
+        List<CreateClusterParam> params = Lists.newArrayList(
+                CreateClusterParam.builder()
+                        .startSlotNumber("0")
+                        .endSlotNumber("5460")
+                        .master("host1:1001")
+                        .masterNodeId("nodeId1")
+                        .replicas(Lists.newArrayList("host3:1002"))
+                        .build(),
+                CreateClusterParam.builder()
+                        .startSlotNumber("5461")
+                        .endSlotNumber("10921")
+                        .master("host2:1001")
+                        .masterNodeId("nodeId3")
+                        .replicas(Lists.newArrayList("host1:1002"))
+                        .build(),
+                CreateClusterParam.builder()
+                        .startSlotNumber("10922")
+                        .endSlotNumber("16383")
+                        .master("host3:1001")
+                        .masterNodeId("nodeId5")
+                        .replicas(Lists.newArrayList("host2:1002"))
+                        .build()
+        );
 
-	@Test
-	public void buildCreateClusterParam4() throws Exception {
-		redisTrib = new RedisTrib();
-		Whitebox.setInternalState(redisTrib, "replicas", 7);
-		String[] hostAndPorts = {
-			"1.1.1.1:1", "1.1.1.1:2", "1.1.1.1:3", "1.1.1.1:4", "1.1.1.1:5", "1.1.1.1:6",
-			"1.1.1.1:7", "1.1.1.1:8", "1.1.1.1:9", "1.1.1.1:10", "1.1.1.1:11", "1.1.1.1:12",
-			"2.2.2.2:1", "2.2.2.2:2", "2.2.2.2:3", "2.2.2.2:4", "2.2.2.2:5", "2.2.2.2:6",
-			"2.2.2.2:7", "2.2.2.2:8", "2.2.2.2:9", "2.2.2.2:10", "2.2.2.2:11", "2.2.2.2:12",
-			"3.3.3.3:1", "3.3.3.3:2", "3.3.3.3:3", "3.3.3.3:4", "3.3.3.3:5", "3.3.3.3:6",
-			"3.3.3.3:7", "3.3.3.3:8", "3.3.3.3:9", "3.3.3.3:10", "3.3.3.3:11", "3.3.3.3:12",
-		};
-		for (String hostAndPort : hostAndPorts) {
-			TribClusterNode node = new TribClusterNode(hostAndPort);
-			node.getInfo().setNodeId("nodeId:" + hostAndPort);
-			redisTrib.addNodes(node);
-		}
+        doReturn(tribClusterNode).when(tested).createTribClusterNode(anyString());
+        doReturn(new ClusterNode()).when(tribClusterNode).getNodeInfo();
+        doNothing().when(tested).validateClusterAndEmptyNode(any());
+        doNothing().when(tested).flushNodesConfig();
+        doNothing().when(tested).assignConfigEpoch();
+        doNothing().when(tested).joinCluster();
+        doNothing().when(tested).waitClusterJoin();
+        doReturn(Lists.newArrayList()).when(tested).checkCluster();
 
-		redisTrib.allocSlots();
+        // when, then
+        tested.createCluster(params);
+    }
 
-		List<CreateClusterParam> params = redisTrib.buildCreateClusterParam();
-		CreateClusterParam param;
+    @Test
+    public void checkCluster_with_host_and_port() {
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(Lists.newArrayList()).when(tested).checkCluster();
 
-		assertThat(params.size(), is(4));
-		param = params.get(0);
-		assertThat(param.getStartSlotNumber(), is("0"));
-		assertThat(param.getEndSlotNumber(), is("4095"));
-		assertThat(param.getMaster(), is("1.1.1.1:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:3", "1.1.1.1:4", "2.2.2.2:2", "2.2.2.2:3", "2.2.2.2:4", "3.3.3.3:2", "3.3.3.3:3", "3.3.3.3:11")));
-		param = params.get(1);
-		assertThat(param.getStartSlotNumber(), is("4096"));
-		assertThat(param.getEndSlotNumber(), is("8191"));
-		assertThat(param.getMaster(), is("2.2.2.2:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:5", "1.1.1.1:6", "1.1.1.1:12", "2.2.2.2:5", "2.2.2.2:6", "3.3.3.3:4", "3.3.3.3:5", "3.3.3.3:6")));
-		param = params.get(2);
-		assertThat(param.getStartSlotNumber(), is("8192"));
-		assertThat(param.getEndSlotNumber(), is("12287"));
-		assertThat(param.getMaster(), is("3.3.3.3:1"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:7", "1.1.1.1:8", "1.1.1.1:9", "2.2.2.2:7", "2.2.2.2:8", "2.2.2.2:12", "3.3.3.3:7", "3.3.3.3:8")));
-		param = params.get(3);
-		assertThat(param.getStartSlotNumber(), is("12288"));
-		assertThat(param.getEndSlotNumber(), is("16383"));
-		assertThat(param.getMaster(), is("1.1.1.1:2"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("1.1.1.1:10", "1.1.1.1:11", "2.2.2.2:9", "2.2.2.2:10", "2.2.2.2:11", "3.3.3.3:9", "3.3.3.3:10", "3.3.3.3:12")));
-	}
+        // when
+        List<String> result = tested.checkCluster("localhost:10080");
 
-	@Test
-	public void getCreateClusterParam() throws Exception {
-		redisTrib = new RedisTrib();
-		List<CreateClusterParam> result = redisTrib.getCreateClusterParams(1, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyClusterAll, ","))));
-		log.debug("getRecommendCreateClusterParam result = {}", result);
-		List<CreateClusterParam> params = redisTrib.buildCreateClusterParam();
+        // then
+        assertThat(result, is(empty()));
+    }
 
-		CreateClusterParam param;
-		param = params.get(0);
-		assertThat(param.getStartSlotNumber(), is("0"));
-		assertThat(param.getEndSlotNumber(), is("5460"));
-		assertThat(param.getMaster(), is("192.168.33.11:8000"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("192.168.33.11:8003")));
-		param = params.get(1);
-		assertThat(param.getStartSlotNumber(), is("5461"));
-		assertThat(param.getEndSlotNumber(), is("10921"));
-		assertThat(param.getMaster(), is("192.168.33.11:8001"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("192.168.33.11:8004")));
-		param = params.get(2);
-		assertThat(param.getStartSlotNumber(), is("10922"));
-		assertThat(param.getEndSlotNumber(), is("16383"));
-		assertThat(param.getMaster(), is("192.168.33.11:8002"));
-		assertThat(param.getReplicas(), is(Lists.newArrayList("192.168.33.11:8005")));
-	}
+    @Test
+    public void loadClusterInfoFromNode() {
+        // given
+        ClusterNode node1 = mock(ClusterNode.class);
+        doReturn(false).when(node1).hasFlag(anyString());
+        doReturn("localhost:10001").when(node1).getHostAndPort();
+        TribClusterNode tribClusterNode1 = mock(TribClusterNode.class);
+        doReturn(jedis).when(tribClusterNode1).getJedis();
 
-	@Test(expected = InvalidParameterException.class)
-	public void getCreateClusterParam_redis_is_not_cluster() throws Exception {
-		redisTrib = new RedisTrib();
-		redisTrib.getCreateClusterParams(0, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyStandAloneAll, ","))));
-	}
+        ClusterNode node2 = mock(ClusterNode.class);
+        doReturn(true).when(node2).hasFlag(anyString());
 
-	@Test(expected = InvalidParameterException.class)
-	public void getCreateClusterParam_redis_is_not_empty() throws Exception {
-		redisTrib = new RedisTrib();
-		redisTrib.getCreateClusterParams(0, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisNormalCluster, ","))));
-	}
+        ClusterNode node3 = mock(ClusterNode.class);
+        doReturn(false).when(node3).hasFlag(anyString());
+        doReturn("localhost:10003").when(node3).getHostAndPort();
+        TribClusterNode tribClusterNode3 = mock(TribClusterNode.class);
+        doReturn(null).when(tribClusterNode3).getJedis();
 
-	@Test(expected = InvalidParameterException.class)
-	public void getCreateClusterParam_not_enough_master() throws Exception {
-		redisTrib = new RedisTrib();
-		redisTrib.getCreateClusterParams(2, Sets.newTreeSet(Arrays.asList(StringUtils.split(testRedisEmptyClusterAll, ","))));
-	}
+        doReturn(tribClusterNode).when(tested).createTribClusterNode("localhost:10000");
+        doReturn(tribClusterNode1).when(tested).createTribClusterNode("localhost:10001");
+        doReturn(tribClusterNode3).when(tested).createTribClusterNode("localhost:10003");
+        doReturn(Lists.newArrayList(node1, node2, node3)).when(tribClusterNode).getFriends();
+        doNothing().when(tested).populateNodesReplicasInfo();
 
-	@Test
-	public void createCluster() throws Exception {
-		redisTrib = new RedisTrib();
+        // when
+        tested.loadClusterInfoFromNode("localhost:10000");
 
-		CreateClusterParam param1 = new CreateClusterParam();
-		param1.setStartSlotNumber("0");
-		param1.setEndSlotNumber("5000");
-		param1.setMaster("192.168.33.11:8000");
-		param1.setReplicas(Lists.newArrayList("192.168.33.11:8003"));
-		CreateClusterParam param2 = new CreateClusterParam();
-		param2.setStartSlotNumber("5001");
-		param2.setEndSlotNumber("10000");
-		param2.setMaster("192.168.33.11:8001");
-		param2.setReplicas(Lists.newArrayList("192.168.33.11:8004"));
-		CreateClusterParam param3 = new CreateClusterParam();
-		param3.setStartSlotNumber("10001");
-		param3.setEndSlotNumber("16383");
-		param3.setMaster("192.168.33.11:8002");
-		param3.setReplicas(Lists.newArrayList("192.168.33.11:8005"));
-		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+        // then
+        assertThat(tested.getNodes().size(), is(2));
+    }
 
-		redisTrib.createCluster(params);
-	}
+    @Test
+    public void populateNodesReplicasInfo() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, tribClusterNode));
 
-	@Test
-	public void loadClusterInfoFromNode() throws Exception {
-		createCluster();
+        ClusterNode clusterNode = mock(ClusterNode.class);
+        doReturn(clusterNode).when(tribClusterNode).getNodeInfo();
+        doReturn("masterNodeId1").doReturn("masterNodeId2").when(clusterNode).getMasterNodeId();
+        doReturn(tribClusterNode).when(tested).getNodeByNodeId("masterNodeId1");
+        doReturn(null).when(tested).getNodeByNodeId("masterNodeId2");
 
-		redisTrib = new RedisTrib();
-		redisTrib.loadClusterInfoFromNode(testRedisEmptyCluster);
+        // when
+        tested.populateNodesReplicasInfo();
 
-		List<TribClusterNode> nodes = redisTrib.getNodes();
-		nodes.sort((o1, o2) -> {
-			return o1.getInfo().getHostAndPort().compareTo(o2.getInfo().getHostAndPort());
-		});
+        // then
+        verify(tribClusterNode).getReplicas();
+    }
 
-		TribClusterNode node;
-		node = nodes.get(0);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8000"));
-		assertThat(node.getInfo().getServedSlots(), is("0-5000"));
-		node = nodes.get(1);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8001"));
-		assertThat(node.getInfo().getServedSlots(), is("5001-10000"));
-		node = nodes.get(4);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8004"));
-		assertThat(node.getInfo().getServedSlots(), is(""));
-		assertThat(node.getInfo().getMasterNodeId(), is(nodes.get(1).getInfo().getNodeId()));
-		node = nodes.get(5);
-		assertThat(node.getInfo().getHostAndPort(), is("192.168.33.11:8005"));
-		assertThat(node.getInfo().getServedSlots(), is(""));
-		assertThat(node.getInfo().getMasterNodeId(), is(nodes.get(2).getInfo().getNodeId()));
-	}
+    @Test
+    public void fixCluster() throws Exception {
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
 
-	@Test
-	public void reshardCluster() throws Exception {
-		CreateClusterParam param1 = new CreateClusterParam();
-		param1.setStartSlotNumber("0");
-		param1.setEndSlotNumber("5000");
-		param1.setMaster("192.168.33.11:8000");
-		param1.setReplicas(Lists.newArrayList("192.168.33.11:8003"));
-		CreateClusterParam param2 = new CreateClusterParam();
-		param2.setStartSlotNumber("5001");
-		param2.setEndSlotNumber("10000");
-		param2.setMaster("192.168.33.11:8001");
-		param2.setReplicas(Lists.newArrayList("192.168.33.11:8004"));
-		CreateClusterParam param3 = new CreateClusterParam();
-		param3.setStartSlotNumber("10001");
-		param3.setEndSlotNumber("16383");
-		param3.setMaster("192.168.33.11:8002");
-		param3.setReplicas(Lists.newArrayList("192.168.33.11:8005"));
-		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+        // when
+        tested.fixCluster("localhost:10080");
 
-		RedisTrib createTrib = new RedisTrib();
-		createTrib.createCluster(params);
+        // then
+        assertThat(Whitebox.getInternalState(tested, "fix"), is(true));
+        verify(tested).loadClusterInfoFromNode(anyString());
+        verify(tested).checkCluster();
+    }
 
-		redisTrib = new RedisTrib();
-		redisTrib.reshardCluster("192.168.33.11:8000", 2000, "ALL", createTrib.getNodeByHostAndPort("192.168.33.11:8000").getInfo().getNodeId());
+    @Test
+    public void flushNodesConfig() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, tribClusterNode));
 
-		createTrib.close();
-	}
+        // when
+        tested.flushNodesConfig();
 
-	@Test
-	public void addNode() throws Exception {
-		CreateClusterParam param1 = new CreateClusterParam();
-		param1.setStartSlotNumber("0");
-		param1.setEndSlotNumber("5000");
-		param1.setMaster("192.168.33.11:8000");
-		CreateClusterParam param2 = new CreateClusterParam();
-		param2.setStartSlotNumber("5001");
-		param2.setEndSlotNumber("10000");
-		param2.setMaster("192.168.33.11:8001");
-		CreateClusterParam param3 = new CreateClusterParam();
-		param3.setStartSlotNumber("10001");
-		param3.setEndSlotNumber("16383");
-		param3.setMaster("192.168.33.11:8002");
-		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+        // then
+        verify(tribClusterNode, times(2)).flushNodeConfig();
+    }
 
-		RedisTrib createTrib = new RedisTrib();
-		createTrib.createCluster(params);
+    @Test
+    public void assignConfigEpoch() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, tribClusterNode));
 
-		redisTrib = new RedisTrib();
-		redisTrib.addNodeIntoCluster("192.168.33.11:8000", "192.168.33.11:8003");
+        // when, then
+        tested.assignConfigEpoch();
+    }
 
-		createTrib.close();
-	}
+    @Test
+    public void joinCluster() {
+        // given
+        ClusterNode clusterNode = mock(ClusterNode.class);
 
-	@Test
-	public void addNodeAsReplicaRandomMaster() throws Exception {
-		CreateClusterParam param1 = new CreateClusterParam();
-		param1.setStartSlotNumber("0");
-		param1.setEndSlotNumber("5000");
-		param1.setMaster("192.168.33.11:8000");
-		CreateClusterParam param2 = new CreateClusterParam();
-		param2.setStartSlotNumber("5001");
-		param2.setEndSlotNumber("10000");
-		param2.setMaster("192.168.33.11:8001");
-		CreateClusterParam param3 = new CreateClusterParam();
-		param3.setStartSlotNumber("10001");
-		param3.setEndSlotNumber("16383");
-		param3.setMaster("192.168.33.11:8002");
-		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, tribClusterNode));
+        doReturn(clusterNode).when(tribClusterNode).getNodeInfo();
+        doReturn(jedis).when(tribClusterNode).getJedis();
+        doReturn("localhost").when(clusterNode).getHost();
+        doReturn(1000).when(clusterNode).getPort();
 
-		RedisTrib createTrib = new RedisTrib();
-		createTrib.createCluster(params);
+        // when
+        tested.joinCluster();
 
-		redisTrib = new RedisTrib();
-		redisTrib.addNodeIntoClusterAsReplica("192.168.33.11:8000", "192.168.33.11:8003", null);
+        // then
+        verify(tribClusterNode, times(1)).getJedis();
+    }
 
-		createTrib.close();
-	}
+    @Test
+    public void waitClusterJoin() throws Exception {
+        // given
+        doReturn(false).doReturn(true).when(tested).isConfigConsistent();
 
-	@Test
-	public void addNodeAsReplicaSpecifyMaster() throws Exception {
-		CreateClusterParam param1 = new CreateClusterParam();
-		param1.setStartSlotNumber("0");
-		param1.setEndSlotNumber("5000");
-		param1.setMaster("192.168.33.11:8000");
-		CreateClusterParam param2 = new CreateClusterParam();
-		param2.setStartSlotNumber("5001");
-		param2.setEndSlotNumber("10000");
-		param2.setMaster("192.168.33.11:8001");
-		CreateClusterParam param3 = new CreateClusterParam();
-		param3.setStartSlotNumber("10001");
-		param3.setEndSlotNumber("16383");
-		param3.setMaster("192.168.33.11:8002");
-		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+        // when
+        tested.waitClusterJoin();
 
-		RedisTrib createTrib = new RedisTrib();
-		createTrib.createCluster(params);
+        // then
+        verify(tested, times(2)).isConfigConsistent();
+    }
 
-		redisTrib = new RedisTrib();
-		redisTrib.addNodeIntoClusterAsReplica("192.168.33.11:8000", "192.168.33.11:8003", createTrib.getNodeByHostAndPort("192.168.33.11:8000").getInfo().getNodeId());
+    @Test
+    public void checkCluster() {
+        // given
+        doNothing().when(tested).checkConfigConsistency();
+        doNothing().when(tested).checkOpenSlots();
 
-		createTrib.close();
-	}
+        // when
+        List<String> result = tested.checkCluster();
 
-	@Test
-	public void deleteNode() throws Exception {
-		CreateClusterParam param1 = new CreateClusterParam();
-		param1.setStartSlotNumber("0");
-		param1.setEndSlotNumber("5000");
-		param1.setMaster("192.168.33.11:8000");
-		CreateClusterParam param2 = new CreateClusterParam();
-		param2.setStartSlotNumber("5001");
-		param2.setEndSlotNumber("10000");
-		param2.setMaster("192.168.33.11:8001");
-		CreateClusterParam param3 = new CreateClusterParam();
-		param3.setStartSlotNumber("10001");
-		param3.setEndSlotNumber("16383");
-		param3.setMaster("192.168.33.11:8002");
-		List<CreateClusterParam> params = Lists.newArrayList(param1, param2, param3);
+        // then
+        assertThat(result, is(empty()));
+    }
 
-		RedisTrib createTrib = new RedisTrib();
-		createTrib.createCluster(params);
+    @Test
+    public void checkConfigConsistency_error() {
+        // given
+        doReturn(false).when(tested).isConfigConsistent();
 
-		RedisTrib addRedisTrib = new RedisTrib();
-		addRedisTrib.addNodeIntoCluster("192.168.33.11:8000", "192.168.33.11:8003");
-		addRedisTrib.waitClusterJoin();
+        // when
+        tested.checkConfigConsistency();
 
-		redisTrib = new RedisTrib();
-		redisTrib.deleteNodeOfCluster("192.168.33.11:8000", addRedisTrib.getNodeByHostAndPort("192.168.33.11:8003").getInfo().getNodeId(), null, false);
+        // then
+        assertThat(tested.getErrors().size(), is(1));
+    }
 
-		addRedisTrib.close();
-		createTrib.close();
-	}
+    @Test
+    public void checkConfigConsistency() throws Exception {
+        // given
+        doReturn(true).when(tested).isConfigConsistent();
+
+        // when
+        tested.checkConfigConsistency();
+
+        // then
+        verify(tested, times(0)).clusterError(anyString());
+    }
+
+    @Test
+    public void isConfigConsistent_true() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, tribClusterNode));
+        doReturn("hoge").when(tribClusterNode).getConfigSignature();
+
+        // when
+        boolean result = tested.isConfigConsistent();
+
+        // then
+        assertThat(result, is(true));
+    }
+
+    @Test
+    public void isConfigConsistent_false() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, tribClusterNode));
+        doReturn("hoge").doReturn("bar").when(tribClusterNode).getConfigSignature();
+
+        // when
+        boolean result = tested.isConfigConsistent();
+
+        // then
+        assertThat(result, is(false));
+    }
+
+    @Test
+    public void checkOpenSlots_no_open_slots() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode));
+        doReturn(new ClusterNode()).when(tribClusterNode).getNodeInfo();
+
+        // when
+        tested.checkOpenSlots();
+
+        // then
+        assertThat(tested.getErrors(), is(empty()));
+    }
+
+    @Test
+    public void checkOpenSlots_open_slots_exists() {
+        // given
+        ClusterNode clusterNode = new ClusterNode();
+        clusterNode.setImporting(ImmutableMap.of(1, "nodeId1"));
+        clusterNode.setMigrating(ImmutableMap.of(2, "nodeId2"));
+
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode));
+        Whitebox.setInternalState(tested, "fix", true);
+        doReturn(clusterNode).when(tribClusterNode).getNodeInfo();
+        doNothing().when(tested).fixOpenSlot(anyInt());
+
+        // when
+        tested.checkOpenSlots();
+
+        // then
+        assertThat(tested.getErrors().size(), is(2));
+        verify(tested, times(2)).fixOpenSlot(anyInt());
+    }
+
+    @Test
+    public void getNodeWithMostKeysInSlot() {
+        // given
+        TribClusterNode mock1 = mock(TribClusterNode.class);
+        TribClusterNode mock2 = mock(TribClusterNode.class);
+        TribClusterNode mock3 = mock(TribClusterNode.class);
+
+        doReturn(jedis).when(mock2).getJedis();
+        doReturn(jedis).when(mock3).getJedis();
+
+        doReturn(true).when(mock1).hasFlag("slave");
+        doReturn(jedis).when(mock2).getJedis();
+        doReturn(jedis).when(mock3).getJedis();
+        doReturn(1l).doReturn(2l).when(jedis).clusterCountKeysInSlot(anyInt());
+
+        // when
+        TribClusterNode result = tested.getNodeWithMostKeysInSlot(Lists.newArrayList(mock1, mock2, mock3), 0);
+
+        // then
+        assertThat(result, is(mock3));
+    }
+
+    @Test
+    public void fixOpenSlot_owner_node_is_null_then_throw() {
+        expectedEx.expect(ApiException.class);
+        expectedEx.expectMessage(containsString("Fix me, some work to do here"));
+
+        // given
+        doReturn(null).when(tested).getSlotOwner(anyInt());
+
+        // then
+        tested.fixOpenSlot(0);
+    }
+
+    @Test
+    public void fixOpenSlot_else_case() {
+        expectedEx.expect(ApiException.class);
+        expectedEx.expectMessage(containsString("Sorry, can't fix this slot yet (work in progress)"));
+
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode));
+        doReturn(tribClusterNode).when(tested).getSlotOwner(anyInt());
+        doReturn(true).when(tribClusterNode).hasFlag(anyString());
+
+        // when
+        tested.fixOpenSlot(0);
+    }
+
+    @Test
+    public void fixOpenSlot_case1() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, tribClusterNode));
+        doReturn(tribClusterNode).when(tested).getSlotOwner(anyInt());
+        doReturn(false).when(tribClusterNode).hasFlag(anyString());
+        doReturn(ClusterNode.builder().migrating(ImmutableMap.of(0, "nodeId")).build())
+                .doReturn(ClusterNode.builder().migrating(ImmutableMap.of()).build())
+                .doReturn(ClusterNode.builder().importing(ImmutableMap.of(0, "nodeId")).build())
+                .when(tribClusterNode).getNodeInfo();
+        doNothing().when(tested).moveSlot(any(), any(), anyInt(), anySet());
+
+        // when
+        tested.fixOpenSlot(0);
+
+        // then
+        verify(tested).moveSlot(any(), any(), anyInt(), anySet());
+    }
+
+    @Test
+    public void fixOpenSlot_case2() {
+        // given
+        TribClusterNode otherTribClusterNode = mock(TribClusterNode.class);
+
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode, otherTribClusterNode));
+        doReturn(tribClusterNode).when(tested).getSlotOwner(anyInt());
+        doReturn(true).when(tribClusterNode).hasFlag(anyString());
+        doReturn(false).when(otherTribClusterNode).hasFlag(anyString());
+        doReturn(ClusterNode.builder().migrating(ImmutableMap.of()).build())
+                .doReturn(ClusterNode.builder().importing(ImmutableMap.of(0, "nodeId")).build())
+                .when(otherTribClusterNode).getNodeInfo();
+        doReturn(new ClusterNode()).when(tribClusterNode).getNodeInfo();
+        doNothing().when(tested).moveSlot(any(), any(), anyInt(), anySet());
+        doReturn(jedis).when(otherTribClusterNode).getJedis();
+
+        // when
+        tested.fixOpenSlot(0);
+
+        // then
+        verify(tested).moveSlot(any(), any(), anyInt(), anySet());
+        verify(jedis).clusterSetSlotStable(anyInt());
+    }
+
+    @Test
+    public void fixOpenSlot_case3() {
+        // given
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(tribClusterNode));
+        doReturn(tribClusterNode).when(tested).getSlotOwner(anyInt());
+        doReturn(false).when(tribClusterNode).hasFlag(anyString());
+        doReturn(ClusterNode.builder().migrating(ImmutableMap.of(0, "nodeId")).build())
+                .when(tribClusterNode).getNodeInfo();
+        doReturn(jedis).when(tribClusterNode).getJedis();
+        doReturn(Lists.newArrayList()).when(jedis).clusterGetKeysInSlot(anyInt(), anyInt());
+
+        // when
+        tested.fixOpenSlot(0);
+
+        // then
+        verify(jedis).clusterSetSlotStable(anyInt());
+    }
+
+    @Test
+    public void moveSlot_cold_off() {
+        // given
+        TribClusterNode source = mock(TribClusterNode.class);
+        TribClusterNode target = mock(TribClusterNode.class);
+
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(source, target));
+        doReturn(ClusterNode.builder().hostAndPort("localhost:10000").build()).when(source).getNodeInfo();
+        doReturn(ClusterNode.builder().hostAndPort("localhost:10001").build()).when(target).getNodeInfo();
+        doReturn(jedis).when(source).getJedis();
+        doReturn(jedis).when(target).getJedis();
+        doReturn(Lists.newArrayList("key1", "key2"))
+                .doReturn(Lists.newArrayList())
+                .when(jedis).clusterGetKeysInSlot(anyInt(), anyInt());
+
+        // when
+        tested.moveSlot(source, target, 0, null);
+
+        // then
+        verify(jedis).clusterSetSlotImporting(anyInt(), anyString());
+        verify(jedis).clusterSetSlotMigrating(anyInt(), anyString());
+        verify(jedis, times(2)).clusterSetSlotNode(anyInt(), anyString());
+    }
+
+    @Test
+    public void moveSlot_cold_on_and_update_on() {
+        // given
+        TribClusterNode source = mock(TribClusterNode.class);
+        TribClusterNode target = mock(TribClusterNode.class);
+
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(source, target));
+        doReturn(ClusterNode.builder().hostAndPort("localhost:10000").build()).when(source).getNodeInfo();
+        doReturn(ClusterNode.builder().hostAndPort("localhost:10001").build()).when(target).getNodeInfo();
+        doReturn(jedis).when(source).getJedis();
+        doReturn(jedis).when(target).getJedis();
+        doReturn(Lists.newArrayList("key1", "key2"))
+                .doReturn(Lists.newArrayList())
+                .when(jedis).clusterGetKeysInSlot(anyInt(), anyInt());
+
+        // when
+        tested.moveSlot(source, target, 0, Sets.newHashSet("cold", "update"));
+
+        // then
+        verify(source).getTmpSlots();
+        verify(target).getTmpSlots();
+    }
+
+    @Test
+    public void moveSlot_migrate_fail_then_throw_exception() {
+        expectedEx.expect(ApiException.class);
+
+        // given
+        TribClusterNode source = mock(TribClusterNode.class);
+        TribClusterNode target = mock(TribClusterNode.class);
+
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(source, target));
+        doReturn(ClusterNode.builder().hostAndPort("localhost:10000").build()).when(source).getNodeInfo();
+        doReturn(ClusterNode.builder().hostAndPort("localhost:10001").build()).when(target).getNodeInfo();
+        doReturn(jedis).when(source).getJedis();
+        doReturn(jedis).when(target).getJedis();
+        doReturn(Lists.newArrayList("key1", "key2"))
+                .doReturn(Lists.newArrayList())
+                .when(jedis).clusterGetKeysInSlot(anyInt(), anyInt());
+        doThrow(Exception.class).when(jedis).migrate(anyString(), anyInt(), anyString(), anyInt(), anyInt());
+
+        // then
+        tested.moveSlot(source, target, 0, Sets.newHashSet("cold", "update"));
+    }
+
+    @Test(expected = InvalidParameterException.class)
+    public void reshardCluster_invalid_slotCount() throws Exception {
+        tested.reshardCluster("localhost:10080", -1, "ALL", "toNodeId");
+    }
+
+    @Test(expected = InvalidParameterException.class)
+    public void reshardCluster_toNodeId_is_blank() throws Exception {
+        tested.reshardCluster("localhost:10080", 10, "ALL", "");
+    }
+
+    @Test(expected = InvalidParameterException.class)
+    public void reshardCluster_fromNodeId_is_blank() throws Exception {
+        tested.reshardCluster("localhost:10080", 10, "", "toNodeId");
+    }
+
+    @Test
+    public void reshardCluster_cluster_has_error() throws Exception {
+        expectedEx.expect(ApiException.class);
+        expectedEx.expectMessage(containsString("Please fix your cluster problems before resharding"));
+
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        Whitebox.setInternalState(tested, "errors", Lists.newArrayList("error"));
+
+        // when
+        tested.reshardCluster("localhost:10080", 10, "ALL", "toNodeId");
+    }
+
+    @Test
+    public void reshardCluster_ALL() throws Exception {
+        // given
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId1").build()).when(node1).getNodeInfo();
+        doReturn(true).when(node1).hasFlag("slave");
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId2").build()).when(node2).getNodeInfo();
+        doReturn(false).when(node2).hasFlag("slave");
+
+        TribClusterNode node3 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId3").build()).when(node3).getNodeInfo();
+        doReturn(false).when(node3).hasFlag("slave");
+
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(node1, node2, node3));
+        doReturn(Lists.newArrayList()).when(tested).computeReshardTable(anyList(), anyInt());
+
+        // when
+        tested.reshardCluster("localhost:10080", 10, "ALL", "nodeId2");
+
+        // then
+        verify(tested).computeReshardTable(Lists.newArrayList(node3), 10);
+    }
+
+    @Test
+    public void reshardCluster_specify_fromNodeIds_contains_slave() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("The specified node(nodeId1) is not known or is not a master, please retry"));
+
+        // given
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId1").build()).when(node1).getNodeInfo();
+        doReturn(true).when(node1).hasFlag("slave");
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId2").build()).when(node2).getNodeInfo();
+        doReturn(false).when(node2).hasFlag("slave");
+
+        TribClusterNode node3 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId3").build()).when(node3).getNodeInfo();
+        doReturn(false).when(node3).hasFlag("slave");
+
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(node1, node2, node3));
+        doReturn(Lists.newArrayList()).when(tested).computeReshardTable(anyList(), anyInt());
+
+        // when
+        tested.reshardCluster("localhost:10080", 10, "nodeId1,nodeId3", "nodeId2");
+
+        // then
+        verify(tested).computeReshardTable(Lists.newArrayList(node3), 10);
+    }
+
+    @Test
+    public void reshardCluster_specify_fromNodeIds_contains_toNodeId() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Target node is also listed among the source nodes"));
+
+        // given
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId1").build()).when(node1).getNodeInfo();
+        doReturn(false).when(node1).hasFlag("slave");
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId2").build()).when(node2).getNodeInfo();
+        doReturn(false).when(node2).hasFlag("slave");
+
+        TribClusterNode node3 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId3").build()).when(node3).getNodeInfo();
+        doReturn(false).when(node3).hasFlag("slave");
+
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(node1, node2, node3));
+        doReturn(Lists.newArrayList()).when(tested).computeReshardTable(anyList(), anyInt());
+
+        // when
+        tested.reshardCluster("localhost:10080", 10, "nodeId1,nodeId2,nodeId3", "nodeId2");
+
+        // then
+        verify(tested).computeReshardTable(Lists.newArrayList(node3), 10);
+    }
+
+    @Test
+    public void reshardCluster_specify_fromNodeIds() throws Exception {
+        // given
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId1").build()).when(node1).getNodeInfo();
+        doReturn(false).when(node1).hasFlag("slave");
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId2").build()).when(node2).getNodeInfo();
+        doReturn(false).when(node2).hasFlag("slave");
+
+        TribClusterNode node3 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder().nodeId("nodeId3").build()).when(node3).getNodeInfo();
+        doReturn(false).when(node3).hasFlag("slave");
+
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(node1, node2, node3));
+        doReturn(Lists.newArrayList()).when(tested).computeReshardTable(anyList(), anyInt());
+
+        // when
+        tested.reshardCluster("localhost:10080", 10, "nodeId1,nodeId3", "nodeId2");
+
+        // then
+        verify(tested).computeReshardTable(Lists.newArrayList(node1, node3), 10);
+    }
+
+    @Test
+    public void computeReshardTable() {
+        // given
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId1")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(node1).getNodeInfo();
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId2")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(3, 4, 5)))
+                .build())
+                .when(node2).getNodeInfo();
+
+        TribClusterNode node3 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId3")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(6, 7, 8)))
+                .build())
+                .when(node3).getNodeInfo();
+
+        // when
+        List<RedisTrib.ReshardTable> result = tested.computeReshardTable(Lists.newArrayList(node1, node2, node3), 4);
+
+        // then
+        assertThat(result.get(0), is(new RedisTrib.ReshardTable(node1, 0)));
+        assertThat(result.get(1), is(new RedisTrib.ReshardTable(node1, 1)));
+        assertThat(result.get(2), is(new RedisTrib.ReshardTable(node2, 3)));
+        assertThat(result.get(3), is(new RedisTrib.ReshardTable(node3, 6)));
+    }
+
+    @Test
+    public void computeReshardTable_not_enough() {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Total slot count which is sum of from nodes is not enough"));
+
+        // given
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId1")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(node1).getNodeInfo();
+
+        // when
+        List<RedisTrib.ReshardTable> result = tested.computeReshardTable(Lists.newArrayList(node1), 4);
+    }
+
+    @Test
+    public void reshardClusterBySlots_toNodeId_is_blank() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+
+        // when
+        tested.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "");
+    }
+
+    @Test
+    public void reshardClusterBySlots_cluster_has_error() throws Exception {
+        expectedEx.expect(ApiException.class);
+        expectedEx.expectMessage(containsString("Please fix your cluster problems before resharding"));
+
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        Whitebox.setInternalState(tested, "errors", Lists.newArrayList("error"));
+
+        // when
+        tested.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots_toNode_does_not_exist() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("The specified node is not known or is not a master"));
+
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        doReturn(null).when(tested).getNodeByNodeId(anyString());
+
+        // when
+        tested.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots_toNode_is_slave() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("The specified node is not known or is not a master"));
+
+        // given
+        TribClusterNode targetNode = mock(TribClusterNode.class);
+        doReturn(true).when(targetNode).hasFlag("slave");
+
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        doReturn(targetNode).when(tested).getNodeByNodeId(anyString());
+
+        // when
+        tested.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(0, 1, 2)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots_notFoundSlot_exists() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Cannot find the nodes which has slots"));
+
+        // given
+        TribClusterNode targetNode = mock(TribClusterNode.class);
+        doReturn(false).when(targetNode).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("targetNodeId")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(targetNode).getNodeInfo();
+
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        doReturn(targetNode).when(tested).getNodeByNodeId(anyString());
+
+        // when
+        tested.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(2, 3, 4)), "toNodeId");
+    }
+
+    @Test
+    public void reshardClusterBySlots() throws Exception {
+        // given
+        TribClusterNode targetNode = mock(TribClusterNode.class);
+        doReturn(false).when(targetNode).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("targetNodeId")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(0, 1, 2)))
+                .build())
+                .when(targetNode).getNodeInfo();
+
+        TribClusterNode node1 = mock(TribClusterNode.class);
+        doReturn(false).when(node1).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId1")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(3, 4)))
+                .build())
+                .when(node1).getNodeInfo();
+
+        TribClusterNode node2 = mock(TribClusterNode.class);
+        doReturn(true).when(node2).hasFlag("slave");
+        doReturn(ClusterNode.builder()
+                .nodeId("nodeId2")
+                .servedSlotsSet(Sets.newTreeSet(Sets.newHashSet(5, 6)))
+                .build())
+                .when(node2).getNodeInfo();
+
+        Whitebox.setInternalState(tested, "nodes", Lists.newArrayList(targetNode, node1, node2));
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        doReturn(targetNode).when(tested).getNodeByNodeId(anyString());
+        doNothing().when(tested).moveSlot(any(), any(), anyInt(), anySet());
+
+        // when
+        tested.reshardClusterBySlots("localhost:10080", Sets.newTreeSet(Sets.newHashSet(2, 3, 4)), "toNodeId");
+
+        // then
+        verify(tested).moveSlot(node1, targetNode, 3, null);
+        verify(tested).moveSlot(node1, targetNode, 4, null);
+    }
+
+    @Test
+    public void validateNewNode_newNode_is_not_connected() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("error"));
+
+        // given
+        doThrow(new InvalidParameterException("error")).when(tribClusterNode).connect(true);
+
+        // when
+        tested.validateClusterAndEmptyNode(tribClusterNode);
+    }
+
+    @Test
+    public void validateNewNode_newNode_is_not_cluster() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("error"));
+
+        // given
+        doNothing().when(tribClusterNode).connect(true);
+        doThrow(new InvalidParameterException("error")).when(tribClusterNode).assertCluster();
+
+        // when
+        tested.validateClusterAndEmptyNode(tribClusterNode);
+    }
+
+    @Test
+    public void validateNewNode_newNode_is_not_empty() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("error"));
+
+        // given
+        doNothing().when(tribClusterNode).connect(true);
+        doNothing().when(tribClusterNode).assertCluster();
+        doThrow(new InvalidParameterException("error")).when(tribClusterNode).assertEmpty();
+
+        // when
+        tested.validateClusterAndEmptyNode(tribClusterNode);
+    }
+
+    @Test
+    public void addNodeIntoCluster_invalid_newHostAndPort() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("Invalid parameter. Node is invalid."));
+
+        // when
+        tested.addNodeIntoCluster("localhost:10080", "aaaaaaaaaaa");
+    }
+
+    @Test
+    public void addNodeIntoClusterAsReplica_masterId_does_not_exists() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("No such master ID"));
+
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        doReturn(null).when(tested).getNodeByNodeId(anyString());
+
+        // when
+        tested.addNodeIntoClusterAsReplica("localhost:10080", "localhost:10081", "masterNodeId");
+    }
+
+    @Test
+    public void addNodeIntoClusterAsReplica_masterId_is_RANDOM() throws Exception {
+        // given
+        doReturn(ClusterNode.builder().hostAndPort("localhost:10000").build()).when(tribClusterNode).getNodeInfo();
+        doReturn(jedis).when(tribClusterNode).getJedis();
+
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).checkCluster();
+        doReturn(tribClusterNode).when(tested).getMasterWithLeastReplicas();
+        doReturn(tribClusterNode).when(tested).createTribClusterNode(anyString());
+        doReturn(tribClusterNode).when(tested).getNodeByHostAndPort(anyString());
+
+        // when
+        tested.addNodeIntoClusterAsReplica("localhost:10080", "localhost:10081", "RANDOM");
+
+        // then
+        verify(tested).getMasterWithLeastReplicas();
+    }
+
+    @Test
+    public void deleteNodeOfCluster_nodeId_does_not_exists() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("No such node ID"));
+
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(null).when(tested).getNodeByNodeId(anyString());
+
+        // when
+        tested.deleteNodeOfCluster("localhost:10080", "nodeId", null, false);
+    }
+
+    @Test
+    public void deleteNodeOfCluster_not_empty_node() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("is not empty"));
+
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doReturn(tribClusterNode).when(tested).getNodeByNodeId(anyString());
+        doReturn(ClusterNode.builder().servedSlotsSet(Sets.newHashSet(0)).build()).when(tribClusterNode).getNodeInfo();
+        doNothing().when(tested).forgotNode(anyString());
+        doReturn(jedis).when(tribClusterNode).getJedis();
+
+        // when
+        tested.deleteNodeOfCluster("localhost:10080", "nodeId", null, false);
+    }
+
+    @Test
+    public void deleteFailNodeOfCluster_nodeId() throws Exception {
+        // given
+        doNothing().when(tested).loadClusterInfoFromNode(anyString());
+        doNothing().when(tested).forgotNode(anyString());
+
+        // when
+        tested.deleteFailNodeOfCluster("localhost:10080", "nodeId");
+    }
 }

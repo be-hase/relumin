@@ -1,6 +1,21 @@
 # Reference : https://github.com/github/gitignore
 
 # ------------------------------
+# Local
+# ------------------------------
+.classpath
+.project
+.springBeans
+/repository/
+/logs/
+src/main/resources/relumin-local-conf.yml
+src/test/resources/application.yml
+front/node_modules
+*.log
+front/build
+.atomignore
+
+# ------------------------------
 # Java.gitignore
 # ------------------------------
 *.class
@@ -85,20 +100,6 @@ atlassian-ide-plugin.xml
 
 # Crashlytics plugin (for Android Studio and IntelliJ)
 com_crashlytics_export_strings.xml
-
-# ------------------------------
-# local
-# ------------------------------
-.classpath
-.project
-.springBeans
-/repository/
-/logs/
-src/main/resources/application-local.yml
-front/node_modules
-*.log
-front/build
-.atomignore
 
 # ------------------------------
 # OS generated files

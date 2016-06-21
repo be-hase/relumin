@@ -1,0 +1,66 @@
+#### Copy from main/resource/application.yml
+endpoints:
+  shutdown:
+    enabled: true
+
+spring:
+  freemarker:
+    charset: UTF-8
+
+security:
+  basic:
+    enabled: false
+
+build:
+  number: 6
+
+#### RELUMIN INTERNAL SETTING ###
+relumin:
+  host:
+
+server:
+  port: 0
+
+management:
+  port: 0
+  add-application-context-header: false
+  security:
+    enabled: false
+
+redis:
+  prefixKey: _relumin
+  host: 127.0.0.1 # travis's docker host
+  port: 9000
+
+auth:
+  enabled: false
+  allowAnonymous: false
+
+notice:
+  mail:
+    host:
+    port: 0
+    user:
+    password:
+    charset: UTF-8
+    from:
+
+scheduler:
+  refreshClustersIntervalMillis:0
+  collectStaticsInfoIntervalMillis:0
+  collectStaticsInfoMaxCount:10
+
+outputMetrics:
+  fluentd:
+    enabled: false
+    host:
+    port: 0
+    timeout: 3000
+    bufferCapacity: 1048576
+    tag: relumin
+    nodeTag: node
+
+# FOR TEST SETTING
+test:
+  redis:
+    host: 127.0.0.1 # travis's docker host
