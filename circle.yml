@@ -8,9 +8,12 @@ machine:
     - sudo service postgresql stop
 
 dependencies:
+  cache_directories:
+     - "~/docker"
   override:
-    - docker pull behase/relumin-test
-    - docker ps -a
+    - if [[ -e ~/docker/image.tar ]]; then docker load -i ~/docker/image.tar; fi
+    - docker build -t relumin/relumin-test .
+    - mkdir -p ~/docker; docker save relumin/relumin-test > ~/docker/image.tar
 
 test:
   override:
