@@ -13,9 +13,8 @@ COPY docker/install $HOME/install
 COPY docker/scripts $HOME/scripts
 
 # yum
-RUN yum -y update
 RUN yum -y groupinstall "Development Tools"
-RUN yum -y install vim python-setuptools wget tar
+RUN yum -y install python-setuptools wget tar
 
 # supervisor
 RUN easy_install supervisor
