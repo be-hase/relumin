@@ -62,6 +62,8 @@ public class JedisSupport {
 
     public List<ClusterNode> parseClusterNodesResult(String result, String hostAndPort) {
         List<ClusterNode> clusterNodes = Lists.newArrayList();
+        List<String> hostAndPortList = Splitter.on(":").trimResults().splitToList(hostAndPort);
+        String host = hostAndPortList.get(0);
 
         for (String resultLine : StringUtils.split(result, "\n")) {
             ClusterNode clusterNode = new ClusterNode();
@@ -76,12 +78,14 @@ public class JedisSupport {
                 if (StringUtils.startsWith(eachHostAndPort, ":")) {
                     clusterNode.setHostAndPort(hostAndPort);
                 } else {
-//                    String[] eachHostAndPortArray = StringUtils.split(eachHostAndPort, ":");
-//                    if ("127.0.0.1".equals(eachHostAndPortArray[0]) || "localhost".equals(eachHostAndPortArray[0])) {
-//                        clusterNode.setHostAndPort(hostAndPort);
-//                    } else {
-                    clusterNode.setHostAndPort(eachHostAndPort);
-//                    }
+                    List<String> eachHostAndPortList = Splitter.on(":").trimResults().splitToList(eachHostAndPort);
+                    String eachHost = eachHostAndPortList.get(0);
+                    String eachPort = eachHostAndPortList.get(1);
+                    if ("127.0.0.1".equals(eachHost) || "localhost".equals(eachHost)) {
+                        clusterNode.setHostAndPort(host + ":" + eachPort);
+                    } else {
+                        clusterNode.setHostAndPort(eachHostAndPort);
+                    }
                 }
             }
 

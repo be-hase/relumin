@@ -81,7 +81,7 @@ public class JedisSupportTest {
     public void parseClusterNodesResult() {
         // given
         String clusterNodesText = "" +
-                "7893f01887835a6e19b09ff663909fced0744926 192.168.99.100:7001 myself,master - 0 0 1 connected 0-2000 2001-4094 4095 [93-<-292f8b365bb7edb5e285caf0b7e6ddc7265d2f4f] [77->-e7d1eecce10fd6bb5eb35b9f99a514335d9ba9ca]\n" +
+                "7893f01887835a6e19b09ff663909fced0744926 127.0.0.1:7001 myself,master - 0 0 1 connected 0-2000 2001-4094 4095 [93-<-292f8b365bb7edb5e285caf0b7e6ddc7265d2f4f] [77->-e7d1eecce10fd6bb5eb35b9f99a514335d9ba9ca]\n" +
                 "9bd5a779d5981cee7d561dc2bfc984ffbfc744d3 192.168.99.100:7002 slave 4e97c7f8fc08d2bb3e45571c4f001a7a347cbbe2 0 1459242326643 5 disconnected\n" +
                 "c3c0b2b7d7d50e339565de468e7ebd7db79a1ea5 192.168.99.100:7003 master - 0 1459242325640 3 connected 8192-12287\n" +
                 "20e7c57506199c468b0672fda7b00d12a2d6a547 192.168.99.100:7004 slave a4f318b3fb0affd5d130b29cb6161a7e225216b5 0 1459242324639 6 connected\n" +
@@ -93,7 +93,7 @@ public class JedisSupportTest {
         List<ClusterNode> result;
 
         // when
-        result = tested.parseClusterNodesResult(clusterNodesText, "");
+        result = tested.parseClusterNodesResult(clusterNodesText, "192.168.99.100:7001");
 
         // then
         assertThat(result.get(0).getNodeId(), is("7893f01887835a6e19b09ff663909fced0744926"));
