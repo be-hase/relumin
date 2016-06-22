@@ -358,7 +358,7 @@ public class ClusterServiceImpl implements ClusterService {
     public PagerData<SlowLog> getClusterSlowLogHistory(String clusterName, long offset, long limit) {
         try (Jedis jedis = dataStoreJedisPool.getResource()) {
             String key = Constants.getClusterSlowLogRedisKey(redisPrefixKey, clusterName);
-            List<String> strs = jedis.lrange(key, offset, limit);
+            List<String> strs = jedis.lrange(key, offset, offset + limit - 1);
             long total = jedis.llen(key);
             List<SlowLog> slowLogs = strs.stream().map(v -> {
                 try {

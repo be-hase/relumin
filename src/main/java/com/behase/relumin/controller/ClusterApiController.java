@@ -193,7 +193,7 @@ public class ClusterApiController {
         return clusterService.getClusterNotice(clusterName);
     }
 
-    @RequestMapping(value = "/cluster/{clusterName}/slowlogs", method = {RequestMethod.GET})
+    @RequestMapping(value = "/cluster/{clusterName}/slowlog", method = {RequestMethod.GET})
     public PagerData<SlowLog> getSlowLogs(
             @PathVariable String clusterName,
             @RequestParam(defaultValue = "0") String offset,

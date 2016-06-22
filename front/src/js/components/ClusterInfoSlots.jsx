@@ -1,7 +1,4 @@
 var React = require('react');
-var Router = require('react-router');
-var classSet = React.addons.classSet;
-var $ = require('jquery');
 var Highcharts = require('react-highcharts');
 var _ = require('lodash');
 

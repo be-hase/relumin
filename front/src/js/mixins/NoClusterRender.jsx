@@ -1,5 +1,3 @@
-var React = require('react');
-
 var NoClusterRender = {
     renderNoCluster: function(clusterName, key) {
         return (

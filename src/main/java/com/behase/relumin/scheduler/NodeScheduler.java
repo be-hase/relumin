@@ -113,10 +113,18 @@ public class NodeScheduler {
                 });
 
                 // sort slowLog, and save
-                saveSlowLogs(slowLogs, clusterName);
+                try {
+                    saveSlowLogs(slowLogs, clusterName);
+                } catch (Exception e) {
+                    log.error("saveSlowLogs fail. clusterName={}", clusterName, e);
+                }
 
                 // Output metrics
-                outputMetrics(cluster, staticsInfos);
+                try {
+                    outputMetrics(cluster, staticsInfos);
+                } catch (Exception e) {
+                    log.error("outputMetrics fail. clusterName={}", clusterName, e);
+                }
 
                 // Notice
                 if (notice == null) {
@@ -142,7 +150,7 @@ public class NodeScheduler {
 
         String key = Constants.getClusterSlowLogRedisKey(redisPrefixKey, clusterName);
 
-        slowLogs.sort((i, k) -> Long.compare(k.getTimeStamp(), i.getTimeStamp()));
+        slowLogs.sort((i, k) -> Long.compare(i.getTimeStamp(), k.getTimeStamp()));
         List<String> slowLogStrList = slowLogs.stream().map(v -> {
             try {
                 return mapper.writeValueAsString(v);

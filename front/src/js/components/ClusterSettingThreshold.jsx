@@ -1,6 +1,4 @@
 var React = require('react');
-var Router = require('react-router');
-var classSet = React.addons.classSet;
 var $ = require('jquery');
 var _ = require('lodash');
 var Joi = require('joi');
@@ -70,7 +68,6 @@ var ClusterSettingThreshold = React.createClass({
         $(React.findDOMNode(this)).find('[data-toggle="tooltip"]').tooltip();
     },
     render: function() {
-        var _this = this;
         var me = UserStore.getMe();
         var hasPermission = !AUTH_ENABLED || me.role === 'RELUMIN_ADMIN';
 

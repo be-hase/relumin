@@ -8,6 +8,7 @@ module.exports = keyMirror({
     GET_CLUSTER: null,
     GET_CREATE_CLUSTER_PARAMS: null,
     CREATE_CLUSTER: null,
+    GET_CLUSTER_SLOWLOG: null,
     GET_NODE_METRICS: null,
     SET_NODE_METRICS_QUERY: null,
     SET_NODE_METRICS_QUERY_ONLY_AUTO_REFRESH: null,

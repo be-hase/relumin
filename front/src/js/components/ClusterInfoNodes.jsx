@@ -1,11 +1,7 @@
 var React = require('react');
-var Router = require('react-router');
 var classSet = React.addons.classSet;
 var $ = require('jquery');
 var _ = require('lodash');
-var ValidationMixin = require('react-validation-mixin');
-var Joi = require('joi');
-var Select = require('react-select');
 var moment = require('moment');
 
 var ClusterActions = require('../actions/ClusterActions');
@@ -66,27 +62,27 @@ var ClusterInfoNodes = React.createClass({
                 var action;
                 if (isDander || isWarning) {
                     action = [
-                        (<li><a href="#" onClick={function(event){ _this.handleClickDeleteDeadNode(event, node); }}>Delete from cluster</a></li>)
+                        (<li key="delete-from-cluster"><a href="#" onClick={function(event){ _this.handleClickDeleteDeadNode(event, node); }}>Delete from cluster</a></li>)
                     ];
                 } else {
                     if (isMaster) {
                         action = [
-                            (<li><a href="#" onClick={function(event){ _this.handleClickReshard(event, node); }}>Reshard by nodes</a></li>),
-                            (<li className="divider"></li>),
-                            (<li><a href="#" onClick={function(event){ _this.handleClickReshardBySlots(event, node); }}>Reshard by slots range</a></li>),
-                            (<li className="divider"></li>)
+                            (<li key="reshard-by-nodes"><a href="#" onClick={function(event){ _this.handleClickReshard(event, node); }}>Reshard by nodes</a></li>),
+                            (<li key="divider-reshard-by-nodes" className="divider"></li>),
+                            (<li key="reshard-by-slots-range"><a href="#" onClick={function(event){ _this.handleClickReshardBySlots(event, node); }}>Reshard by slots range</a></li>),
+                            (<li key="divider-reshard-by-slots-range" className="divider"></li>)
                         ];
                     } else {
                         action = [
-                            (<li><a href="#" onClick={function(event){ _this.handleClickFailover(event, node); }}>Failover</a></li>),
-                            (<li className="divider"></li>)
+                            (<li key="failover"><a href="#" onClick={function(event){ _this.handleClickFailover(event, node); }}>Failover</a></li>),
+                            (<li key="divider-failover" className="divider"></li>)
                         ];
                     }
-                    action.push((<li><a href="#" onClick={function(event){ _this.handleClickReplicate(event, node); }}>Replicate</a></li>));
-                    action.push((<li className="divider"></li>));
-                    action.push((<li><a href="#" onClick={function(event){ _this.handleClickDeleteNode(event, node); }}>Delete from cluster</a></li>));
-                    action.push((<li className="divider"></li>));
-                    action.push((<li><a href="#" onClick={function(event){ _this.handleClickShutdownNode(event, node); }}>Shutdown</a></li>));
+                    action.push((<li key="replicate"><a href="#" onClick={function(event){ _this.handleClickReplicate(event, node); }}>Replicate</a></li>));
+                    action.push((<li key="divider-replicate" className="divider"></li>));
+                    action.push((<li key="delete-from-cluster"><a href="#" onClick={function(event){ _this.handleClickDeleteNode(event, node); }}>Delete from cluster</a></li>));
+                    action.push((<li key="divider-delete-from-cluster" className="divider"></li>));
+                    action.push((<li key="shutdown"><a href="#" onClick={function(event){ _this.handleClickShutdownNode(event, node); }}>Shutdown</a></li>));
                 }
                 
                 nodeAction = (

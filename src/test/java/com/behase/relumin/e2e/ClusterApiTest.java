@@ -222,11 +222,11 @@ public class ClusterApiTest {
         }
 
         /**
-         * GET /api/cluster/{clusterName}/slowlogs
+         * GET /api/cluster/{clusterName}/slowlog
          */
         {
             MvcResult result = mockMvc.perform(
-                    get("/api/cluster/test1/slowlogs")
+                    get("/api/cluster/test1/slowlog")
             )
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.offset", is(0)))

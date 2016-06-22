@@ -1,11 +1,8 @@
 var React = require('react');
-var Router = require('react-router');
-var classSet = React.addons.classSet;
 var $ = require('jquery');
 var Highcharts = require('react-highcharts');
 var _ = require('lodash');
 var Spinner = require('react-spinkit');
-var moment = require('moment');
 var numeral = require('numeral');
 
 var ClusterActions = require('../actions/ClusterActions');
@@ -184,7 +181,7 @@ var ClusterMonitoring = React.createClass({
                 }
             },
             tooltip: {
-                xDateFormat: '%Y/%m/%d %H:%M',
+                xDateFormat: '%Y/%m/%d %H:%M:%S',
                 pointFormatter: function() {
                     return '<span style="color:'+this.color+'">\u25CF</span> ' + this.series.name + ' : <b>' + numeral(this.y).format('0,0.[0000]') + '</b><br/>';
                 }
