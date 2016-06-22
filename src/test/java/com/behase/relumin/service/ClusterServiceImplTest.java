@@ -2,10 +2,7 @@ package com.behase.relumin.service;
 
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
-import com.behase.relumin.model.Cluster;
-import com.behase.relumin.model.ClusterNode;
-import com.behase.relumin.model.Notice;
-import com.behase.relumin.model.SlotInfo;
+import com.behase.relumin.model.*;
 import com.behase.relumin.support.JedisSupport;
 import com.behase.relumin.webconfig.WebConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -567,5 +564,28 @@ public class ClusterServiceImplTest {
         );
         log.info("result={}", result);
         assertThat(result, is(ImmutableMap.of("nodeId1", staticsInfoHistory, "nodeId2", staticsInfoHistory)));
+    }
+
+    @Test
+    public void getClusterSlowLogHistory() throws Exception {
+        // given
+        List<String> strList = Lists.newArrayList(
+                mapper.writeValueAsString(SlowLog.builder().id(3L).timeStamp(3L).build()),
+                mapper.writeValueAsString(SlowLog.builder().id(2L).timeStamp(2L).build()),
+                mapper.writeValueAsString(SlowLog.builder().id(1L).timeStamp(1L).build())
+        );
+        doReturn(strList).when(dataStoreJedis).lrange(anyString(), anyLong(), anyLong());
+        doReturn(10L).when(dataStoreJedis).llen(anyString());
+
+        // when
+        PagerData<SlowLog> pagerData = service.getClusterSlowLogHistory("clusterName", 0L, 3L);
+        log.info("result={}", mapper.writeValueAsString(pagerData));
+
+        assertThat(pagerData.getOffset(), is(0L));
+        assertThat(pagerData.getLimit(), is(3L));
+        assertThat(pagerData.getTotal(), is(10L));
+        assertThat(pagerData.getData().size(), is(3));
+        assertThat(pagerData.getCurrentPage(), is(1L));
+        assertThat(pagerData.getLastPage(), is(4L));
     }
 }

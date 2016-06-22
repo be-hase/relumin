@@ -163,20 +163,6 @@ public class NodeServiceImplTest {
     }
 
     @Test
-    public void tmp() {
-        List<SlowLog> slowLogs = Lists.newArrayList(
-                SlowLog.builder().id(1L).timeStamp(1L).build(),
-                SlowLog.builder().id(2L).timeStamp(2L).build(),
-                SlowLog.builder().id(3L).timeStamp(3L).build(),
-                SlowLog.builder().id(4L).timeStamp(4L).build(),
-                SlowLog.builder().id(5L).timeStamp(5L).build()
-        );
-        slowLogs.sort((i, k) -> Long.compare(k.getTimeStamp(), i.getTimeStamp()));
-        log.info("slowLogs={}", slowLogs);
-    }
-
-
-    @Test
     public void getThresholdMillis() {
         // smaller than or equal to 1 day
         assertThat(service.getThresholdMillis(0, (long) 1 * 24 * 60 * 60 * 1000), is(Long.MIN_VALUE));

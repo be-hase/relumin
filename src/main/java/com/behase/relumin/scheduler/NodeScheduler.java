@@ -113,20 +113,7 @@ public class NodeScheduler {
                 });
 
                 // sort slowLog, and save
-                String key = Constants.getClusterSlowLogRedisKey(redisPrefixKey, clusterName);
-                slowLogs.sort((i, k) -> Long.compare(k.getTimeStamp(), i.getTimeStamp()));
-                List<String> slowLogStrList = slowLogs.stream().map(v -> {
-                    try {
-                        return mapper.writeValueAsString(v);
-                    } catch (JsonProcessingException ignore) {
-                        return null;
-                    }
-                }).filter(v -> v != null).collect(Collectors.toList());
-
-                try (Jedis jedis = datastoreJedisPool.getResource()) {
-                    jedis.lpush(key, slowLogStrList.toArray(new String[slowLogs.size()]));
-                    jedis.ltrim(key, 0, collectSlowLogMaxCount - 1);
-                }
+                saveSlowLogs(slowLogs, clusterName);
 
                 // Output metrics
                 outputMetrics(cluster, staticsInfos);
@@ -146,6 +133,28 @@ public class NodeScheduler {
             }
         });
         log.info("collectStaticsInfo finish");
+    }
+
+    void saveSlowLogs(List<SlowLog> slowLogs, String clusterName) {
+        if (slowLogs.size() == 0) {
+            return;
+        }
+
+        String key = Constants.getClusterSlowLogRedisKey(redisPrefixKey, clusterName);
+
+        slowLogs.sort((i, k) -> Long.compare(k.getTimeStamp(), i.getTimeStamp()));
+        List<String> slowLogStrList = slowLogs.stream().map(v -> {
+            try {
+                return mapper.writeValueAsString(v);
+            } catch (JsonProcessingException ignore) {
+                return null;
+            }
+        }).filter(v -> v != null).collect(Collectors.toList());
+
+        try (Jedis jedis = datastoreJedisPool.getResource()) {
+            jedis.lpush(key, slowLogStrList.toArray(new String[slowLogs.size()]));
+            jedis.ltrim(key, 0, collectSlowLogMaxCount - 1);
+        }
     }
 
     void outputMetrics(Cluster cluster, Map<ClusterNode, Map<String, String>> staticsInfos) {

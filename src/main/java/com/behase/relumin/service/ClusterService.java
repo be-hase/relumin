@@ -1,8 +1,6 @@
 package com.behase.relumin.service;
 
-import com.behase.relumin.model.Cluster;
-import com.behase.relumin.model.ClusterNode;
-import com.behase.relumin.model.Notice;
+import com.behase.relumin.model.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,4 +36,6 @@ public interface ClusterService {
 
     Map<String, Map<String, List<List<Object>>>> getClusterStaticsInfoHistory(String clusterName, List<String> nodes,
                                                                               List<String> fields, long start, long end);
+
+    PagerData<SlowLog> getClusterSlowLogHistory(String clusterName, long offset, long limit);
 }

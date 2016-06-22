@@ -3,6 +3,8 @@ package com.behase.relumin.controller;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.Notice;
+import com.behase.relumin.model.PagerData;
+import com.behase.relumin.model.SlowLog;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.LoggingOperationService;
 import com.behase.relumin.service.NodeService;
@@ -132,12 +134,12 @@ public class ClusterApiController {
         try {
             startLong = Long.valueOf(start);
         } catch (Exception e) {
-            throw new InvalidParameterException("start is must be number.");
+            throw new InvalidParameterException("start must be number.");
         }
         try {
             endLong = Long.valueOf(end);
         } catch (Exception e) {
-            throw new InvalidParameterException("end is must be number.");
+            throw new InvalidParameterException("end must be number.");
         }
 
         List<String> nodesList = Lists.newArrayList();
@@ -189,5 +191,27 @@ public class ClusterApiController {
 
         clusterService.setClusterNotice(clusterName, noticeObj);
         return clusterService.getClusterNotice(clusterName);
+    }
+
+    @RequestMapping(value = "/cluster/{clusterName}/slowlogs", method = {RequestMethod.GET})
+    public PagerData<SlowLog> getSlowLogs(
+            @PathVariable String clusterName,
+            @RequestParam(defaultValue = "0") String offset,
+            @RequestParam(defaultValue = "1000") String limit
+    ) {
+        long offsetLong;
+        long limitLong;
+        try {
+            offsetLong = Long.valueOf(offset);
+        } catch (Exception e) {
+            throw new InvalidParameterException("offset must be number.");
+        }
+        try {
+            limitLong = Long.valueOf(limit);
+        } catch (Exception e) {
+            throw new InvalidParameterException("limit must be number.");
+        }
+
+        return clusterService.getClusterSlowLogHistory(clusterName, offsetLong, limitLong);
     }
 }

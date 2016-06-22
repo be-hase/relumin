@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -216,6 +217,24 @@ public class ClusterApiTest {
             )
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$." + nodeId + ".used_memory").isArray())
+                    .andReturn();
+            log.debug("result={}", result.getResponse().getContentAsString());
+        }
+
+        /**
+         * GET /api/cluster/{clusterName}/slowlogs
+         */
+        {
+            MvcResult result = mockMvc.perform(
+                    get("/api/cluster/test1/slowlogs")
+            )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.offset", is(0)))
+                    .andExpect(jsonPath("$.limit", is(1000)))
+                    .andExpect(jsonPath("$.current_page", is(1)))
+                    .andExpect(jsonPath("$.last_page", is(1)))
+                    .andExpect(jsonPath("$.prev_page", is(nullValue())))
+                    .andExpect(jsonPath("$.next_page", is(nullValue())))
                     .andReturn();
             log.debug("result={}", result.getResponse().getContentAsString());
         }
