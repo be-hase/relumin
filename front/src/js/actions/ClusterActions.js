@@ -107,6 +107,19 @@ var ClusterActions = {
         });
 
         ApiUtils.Cluster.changeClusterName(clusterName, data, callbacks);
+    },
+    getSlowLog: function(clusterName, data, callbacks) {
+        callbacks = callbacks || {};
+
+        Utils.wrapSuccess(callbacks, function(data) {
+            AppDispatcher.dispatch({
+                actionType: AppConstants.GET_CLUSTER_SLOWLOG,
+                clusterName: clusterName,
+                data: data
+            });
+        });
+
+        ApiUtils.Cluster.getSlowLog(clusterName, data, callbacks);
     }
 };
 

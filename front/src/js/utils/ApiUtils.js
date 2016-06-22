@@ -157,6 +157,17 @@ var ApiUtils = {
             };
             _.assign(ajaxOptions, callbacks);
             return $.ajax(ajaxOptions);
+        },
+        getSlowLog: function(clusterName, data, callbacks) {
+            var apiUrl = BASE_URL + '/api/cluster/' + clusterName + '/slowlog';
+
+            var ajaxOptions = {
+                type: 'GET',
+                url: apiUrl,
+                data: data
+            };
+            _.assign(ajaxOptions, callbacks);
+            return $.ajax(ajaxOptions);
         }
     },
     Trib: {

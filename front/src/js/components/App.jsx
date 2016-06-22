@@ -3,7 +3,6 @@ var Router = require('react-router');
 var RouteHandler = Router.RouteHandler;
 var NotificationSystem = require('react-notification-system');
 var Spinner = require('react-spinkit');
-var $ = require('jquery');
 
 var HeaderSidebar = require('./HeaderSidebar');
 var RegistClusterModal = require('./RegistClusterModal');

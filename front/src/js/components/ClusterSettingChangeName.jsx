@@ -2,7 +2,6 @@ var React = require('react/addons');
 var ValidationMixin = require('react-validation-mixin');
 var Joi = require('joi');
 var Router = require('react-router');
-var classSet = React.addons.classSet;
 var $ = require('jquery');
 var _ = require('lodash');
 

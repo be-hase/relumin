@@ -2,8 +2,10 @@ package com.behase.relumin.service;
 
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.ClusterNode;
+import com.behase.relumin.model.SlowLog;
 import com.behase.relumin.support.JedisSupport;
 import com.behase.relumin.webconfig.WebConfig;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -22,6 +24,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.boot.test.OutputCapture;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.util.Slowlog;
 
 import java.util.List;
 import java.util.Map;
@@ -142,6 +145,21 @@ public class NodeServiceImplTest {
                         Lists.newArrayList(8L, 8.0)
                 ))
         ));
+    }
+
+    @Test
+    public void getSlowLog() {
+        // given
+        Jedis jedis = mock(Jedis.class);
+        doReturn(jedis).when(jedisSupport).getJedisByHostAndPort(anyString());
+        List<Slowlog> slowlogs = Lists.newArrayList(mock(Slowlog.class), mock(Slowlog.class));
+        doReturn(slowlogs).when(jedis).slowlogGet();
+
+        // when
+        List<SlowLog> result = service.getSlowLogAndReset(new ClusterNode());
+
+        // then
+        assertThat(result.size(), is(2));
     }
 
     @Test

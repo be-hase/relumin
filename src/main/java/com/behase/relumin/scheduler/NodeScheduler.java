@@ -11,6 +11,7 @@ import com.behase.relumin.model.NoticeJob.ResultValue;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.NodeService;
 import com.behase.relumin.service.NotifyService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -30,6 +31,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -57,6 +59,10 @@ public class NodeScheduler {
             "}")
     private long collectStaticsInfoMaxCount;
 
+    @Value("${scheduler.collectSlowLogMaxCount:" + SchedulerConfig.DEFAULT_COLLECT_SLOW_LOG_MAX_COUNT +
+            "}")
+    private long collectSlowLogMaxCount;
+
     @Value("${redis.prefixKey}")
     private String redisPrefixKey;
 
@@ -83,11 +89,15 @@ public class NodeScheduler {
                 Cluster cluster = clusterService.getCluster(clusterName);
                 List<ClusterNode> clusterNodes = cluster.getNodes();
                 Map<ClusterNode, Map<String, String>> staticsInfos = Maps.newConcurrentMap();
+                List<SlowLog> slowLogs = Lists.newArrayList();
 
+                // collect statics and slowLog
                 clusterNodes.parallelStream().forEach(clusterNode -> {
                     try {
                         Map<String, String> staticsInfo = nodeService.getStaticsInfo(clusterNode);
                         staticsInfos.put(clusterNode, staticsInfo);
+
+                        slowLogs.addAll(nodeService.getSlowLogAndReset(clusterNode));
 
                         try (Jedis jedis = datastoreJedisPool.getResource()) {
                             log.debug("Save staticsInfo to redis.");
@@ -102,8 +112,19 @@ public class NodeScheduler {
                     }
                 });
 
+                // sort slowLog, and save
+                try {
+                    saveSlowLogs(slowLogs, clusterName);
+                } catch (Exception e) {
+                    log.error("saveSlowLogs fail. clusterName={}", clusterName, e);
+                }
+
                 // Output metrics
-                outputMetrics(cluster, staticsInfos);
+                try {
+                    outputMetrics(cluster, staticsInfos);
+                } catch (Exception e) {
+                    log.error("outputMetrics fail. clusterName={}", clusterName, e);
+                }
 
                 // Notice
                 if (notice == null) {
@@ -120,6 +141,28 @@ public class NodeScheduler {
             }
         });
         log.info("collectStaticsInfo finish");
+    }
+
+    void saveSlowLogs(List<SlowLog> slowLogs, String clusterName) {
+        if (slowLogs.size() == 0) {
+            return;
+        }
+
+        String key = Constants.getClusterSlowLogRedisKey(redisPrefixKey, clusterName);
+
+        slowLogs.sort((i, k) -> Long.compare(i.getTimeStamp(), k.getTimeStamp()));
+        List<String> slowLogStrList = slowLogs.stream().map(v -> {
+            try {
+                return mapper.writeValueAsString(v);
+            } catch (JsonProcessingException ignore) {
+                return null;
+            }
+        }).filter(v -> v != null).collect(Collectors.toList());
+
+        try (Jedis jedis = datastoreJedisPool.getResource()) {
+            jedis.lpush(key, slowLogStrList.toArray(new String[slowLogs.size()]));
+            jedis.ltrim(key, 0, collectSlowLogMaxCount - 1);
+        }
     }
 
     void outputMetrics(Cluster cluster, Map<ClusterNode, Map<String, String>> staticsInfos) {

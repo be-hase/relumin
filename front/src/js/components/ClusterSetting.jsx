@@ -1,8 +1,4 @@
 var React = require('react');
-var Router = require('react-router');
-var classSet = React.addons.classSet;
-var $ = require('jquery');
-var _ = require('lodash');
 var moment = require('moment');
 
 var ClusterActions = require('../actions/ClusterActions');
@@ -20,8 +16,6 @@ var ClusterSetting = React.createClass({
         };
     },
     componentDidMount: function() {
-        var _this = this;
-
         ClusterNoticeStore.addChangeListener(this.handleChangeClusterNotice);
 
         ClusterActions.getClusterNotice(this.props.cluster.cluster_name);

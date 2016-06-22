@@ -7,9 +7,9 @@ var _data = {};
 
 var CHANGE_EVENT = 'change';
 
-var NodeMetricsStore = assign({}, EventEmitter.prototype, {
-    getNodeMetrics: function(clusterName) {
-        return _data[clusterName];
+var ClusterSlowLogStore = assign({}, EventEmitter.prototype, {
+    getSlowLog: function(clusterName, pageNo) {
+        return _data[clusterName + '-' + pageNo];
     },
     emitChange: function() {
         this.emit(CHANGE_EVENT);
@@ -24,15 +24,15 @@ var NodeMetricsStore = assign({}, EventEmitter.prototype, {
 
 AppDispatcher.register(function(action) {
     switch(action.actionType) {
-        case AppConstants.GET_NODE_METRICS:
+        case AppConstants.GET_CLUSTER_SLOWLOG:
             var newData = {};
-            newData[action.clusterName] = action.data;
+            newData[action.clusterName + '-' + action.data.current_page] = action.data;
             _data = newData;
-            NodeMetricsStore.emitChange();
+            ClusterSlowLogStore.emitChange();
             break;
         default:
-            // no operation
+        // no operation
     }
 });
 
-module.exports = NodeMetricsStore;
+module.exports = ClusterSlowLogStore;

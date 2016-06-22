@@ -1,5 +1,4 @@
 var React = require('react');
-var Router = require('react-router');
 
 var CreateClusterForm = require('../components/CreateClusterForm');
 var GetCreateClusterParamsForm = require('../components/getCreateClusterParamsForm');

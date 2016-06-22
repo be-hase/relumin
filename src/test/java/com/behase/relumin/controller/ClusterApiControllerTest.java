@@ -3,6 +3,8 @@ package com.behase.relumin.controller;
 import com.behase.relumin.exception.InvalidParameterException;
 import com.behase.relumin.model.Cluster;
 import com.behase.relumin.model.Notice;
+import com.behase.relumin.model.PagerData;
+import com.behase.relumin.model.SlowLog;
 import com.behase.relumin.service.ClusterService;
 import com.behase.relumin.service.LoggingOperationService;
 import com.behase.relumin.service.NodeService;
@@ -36,7 +38,7 @@ import static org.mockito.Mockito.doReturn;
 public class ClusterApiControllerTest {
     @InjectMocks
     @Spy
-    private ClusterApiController controller = new ClusterApiController();
+    private ClusterApiController tested = new ClusterApiController();
 
     @Mock
     private ClusterService clusterService;
@@ -59,7 +61,7 @@ public class ClusterApiControllerTest {
                 .when(clusterService)
                 .getClusters();
 
-        List<String> result = (List<String>) controller.getClusterList("");
+        List<String> result = (List<String>) tested.getClusterList("");
         log.info("result={}", result);
         assertThat(result, contains("test1", "test2"));
     }
@@ -87,7 +89,7 @@ public class ClusterApiControllerTest {
                 .when(clusterService)
                 .getCluster("test1");
 
-        List<Cluster> result = (List<Cluster>) controller.getClusterList("true");
+        List<Cluster> result = (List<Cluster>) tested.getClusterList("true");
         log.info("result={}", result);
         assertThat(result.get(0).getClusterName(), is("test1"));
         assertThat(result.get(1).getClusterName(), is("test2"));
@@ -103,7 +105,7 @@ public class ClusterApiControllerTest {
                 .when(clusterService)
                 .getCluster("test1");
 
-        Cluster result = controller.getCluster("test1");
+        Cluster result = tested.getCluster("test1");
         log.info("result={}", result);
         assertThat(result.getClusterName(), is("test1"));
     }
@@ -111,7 +113,7 @@ public class ClusterApiControllerTest {
     @Test(expected = InvalidParameterException.class)
     public void setCluster_clusterName_exist_then_throw_exception() throws Exception {
         doReturn(true).when(clusterService).existsClusterName("test1");
-        controller.setCluster(null, "test1", "localhost:10000");
+        tested.setCluster(null, "test1", "localhost:10000");
     }
 
     @Test
@@ -125,7 +127,7 @@ public class ClusterApiControllerTest {
                 .when(clusterService)
                 .getCluster("test1");
 
-        Cluster result = controller.setCluster(null, "test1", "localhost:10000");
+        Cluster result = tested.setCluster(null, "test1", "localhost:10000");
         log.info("result={}", result);
         assertThat(result.getClusterName(), is("test1"));
     }
@@ -140,14 +142,14 @@ public class ClusterApiControllerTest {
                 .when(clusterService)
                 .getCluster("test2");
 
-        Cluster result = controller.changeClusterName(null, "test1", "test2");
+        Cluster result = tested.changeClusterName(null, "test1", "test2");
         log.info("result={}", result);
         assertThat(result.getClusterName(), is("test2"));
     }
 
     @Test
     public void deleteClusterByPost() throws Exception {
-        Map<String, Boolean> result = controller.deleteClusterByPost(null, "test1");
+        Map<String, Boolean> result = tested.deleteClusterByPost(null, "test1");
         log.info("result={}", result);
         assertThat(result.get("isSuccess"), is(true));
     }
@@ -155,17 +157,17 @@ public class ClusterApiControllerTest {
     @Test
     public void getMetrics_start_is_not_number_then_throw_exception() throws Exception {
         expectedEx.expect(InvalidParameterException.class);
-        expectedEx.expectMessage(containsString("start is must be number"));
+        expectedEx.expectMessage(containsString("start must be number"));
 
-        controller.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "hoge", "100");
+        tested.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "hoge", "100");
     }
 
     @Test
     public void getMetrics_end_is_not_number_then_throw_exception() throws Exception {
         expectedEx.expect(InvalidParameterException.class);
-        expectedEx.expectMessage(containsString("end is must be number"));
+        expectedEx.expectMessage(containsString("end must be number"));
 
-        controller.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "100", "hoge");
+        tested.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "100", "hoge");
     }
 
     @Test
@@ -173,7 +175,7 @@ public class ClusterApiControllerTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("nodes is empty."));
 
-        controller.getMetrics("test1", "", "used_memory,instantaneous_ops_per_sec", "100", "200");
+        tested.getMetrics("test1", "", "used_memory,instantaneous_ops_per_sec", "100", "200");
     }
 
     @Test
@@ -181,14 +183,14 @@ public class ClusterApiControllerTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("fields is empty."));
 
-        controller.getMetrics("test1", "node1,node2", "", "100", "200");
+        tested.getMetrics("test1", "node1,node2", "", "100", "200");
     }
 
     @Test
     public void getMetrics() throws Exception {
         doReturn(Maps.newHashMap()).when(clusterService).getClusterStaticsInfoHistory(anyString(), anyList(), anyList(), anyLong(), anyLong());
 
-        Object result = controller.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "100", "200");
+        Object result = tested.getMetrics("test1", "node1,node2", "used_memory,instantaneous_ops_per_sec", "100", "200");
         log.info("result={}", result);
         assertThat(result, is(Maps.newHashMap()));
     }
@@ -197,7 +199,7 @@ public class ClusterApiControllerTest {
     public void getClusterNotice_notice_is_null_then_return_empty_notice() throws Exception {
         doReturn(null).when(clusterService).getClusterNotice("test1");
 
-        Notice result = controller.getClusterNotice("test1");
+        Notice result = tested.getClusterNotice("test1");
         log.info("result={}", result);
         assertThat(result, is(new Notice()));
     }
@@ -208,7 +210,7 @@ public class ClusterApiControllerTest {
 
         doReturn(notice).when(clusterService).getClusterNotice("test1");
 
-        Notice result = controller.getClusterNotice("test1");
+        Notice result = tested.getClusterNotice("test1");
         log.info("result={}", result);
         assertThat(result, is(sameInstance(notice)));
     }
@@ -218,7 +220,7 @@ public class ClusterApiControllerTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("notice must not be blank"));
 
-        controller.setClusterNotice(null, "test1", "");
+        tested.setClusterNotice(null, "test1", "");
     }
 
     @Test
@@ -226,7 +228,7 @@ public class ClusterApiControllerTest {
         expectedEx.expect(InvalidParameterException.class);
         expectedEx.expectMessage(containsString("notice is invalid format."));
 
-        controller.setClusterNotice(null, "test1", "hoge");
+        tested.setClusterNotice(null, "test1", "hoge");
     }
 
     @Test
@@ -235,8 +237,37 @@ public class ClusterApiControllerTest {
 
         doReturn(notice).when(clusterService).getClusterNotice("test1");
 
-        Notice result = controller.setClusterNotice(null, "test1", "{}");
+        Notice result = tested.setClusterNotice(null, "test1", "{}");
         log.info("result={}", result);
         assertThat(result, is(sameInstance(notice)));
+    }
+
+    @Test
+    public void getSlowLogs_offset_is_not_numeric() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("offset must be number."));
+
+        tested.getSlowLogs("clusterName", "hoge", "10");
+    }
+
+    @Test
+    public void getSlowLogs_limit_is_not_numeric() throws Exception {
+        expectedEx.expect(InvalidParameterException.class);
+        expectedEx.expectMessage(containsString("limit must be number."));
+
+        tested.getSlowLogs("clusterName", "0", "hoge");
+    }
+
+    @Test
+    public void getSlowLogs() {
+        // given
+        PagerData<SlowLog> pagerData = new PagerData(0L, 10L, 10L, Lists.newArrayList());
+        doReturn(pagerData).when(clusterService).getClusterSlowLogHistory(anyString(), anyLong(), anyLong());
+
+        // when
+        PagerData<SlowLog> result = tested.getSlowLogs("clusterName", "0", "10");
+
+        // then
+        assertThat(result, is(pagerData));
     }
 }

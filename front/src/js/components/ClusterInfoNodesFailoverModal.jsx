@@ -1,9 +1,6 @@
 var React = require('react');
-var Router = require('react-router');
-var classSet = React.addons.classSet;
 var $ = require('jquery');
 var _ = require('lodash');
-var Select = require('react-select');
 
 var TribActions = require('../actions/TribActions');
 var Utils = require('../utils/Utils');

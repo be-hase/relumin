@@ -3,10 +3,7 @@ package com.behase.relumin.service;
 import com.behase.relumin.Constants;
 import com.behase.relumin.exception.ApiException;
 import com.behase.relumin.exception.InvalidParameterException;
-import com.behase.relumin.model.Cluster;
-import com.behase.relumin.model.ClusterNode;
-import com.behase.relumin.model.Notice;
-import com.behase.relumin.model.SlotInfo;
+import com.behase.relumin.model.*;
 import com.behase.relumin.support.JedisSupport;
 import com.behase.relumin.util.ValidationUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -355,5 +352,23 @@ public class ClusterServiceImpl implements ClusterService {
         });
 
         return result;
+    }
+
+    @Override
+    public PagerData<SlowLog> getClusterSlowLogHistory(String clusterName, long offset, long limit) {
+        try (Jedis jedis = dataStoreJedisPool.getResource()) {
+            String key = Constants.getClusterSlowLogRedisKey(redisPrefixKey, clusterName);
+            List<String> strs = jedis.lrange(key, offset, offset + limit - 1);
+            long total = jedis.llen(key);
+            List<SlowLog> slowLogs = strs.stream().map(v -> {
+                try {
+                    return mapper.readValue(v, SlowLog.class);
+                } catch (IOException e) {
+                    return null;
+                }
+            }).filter(v -> v != null).collect(Collectors.toList());
+
+            return new PagerData(offset, limit, total, slowLogs);
+        }
     }
 }
