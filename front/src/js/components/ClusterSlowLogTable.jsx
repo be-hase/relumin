@@ -28,7 +28,7 @@ var ClusterSlowLogTable = React.createClass({
                             <tr>
                                 <th>timestamp</th>
                                 <th>host:port</th>
-                                <th>exec time</th>
+                                <th>exec time<br/>(microseconds)</th>
                                 <th>command</th>
                             </tr>
                         </thead>

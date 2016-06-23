@@ -12,4 +12,4 @@ security:
     enabled: false
 
 build:
-  number: 7
+  number: 8

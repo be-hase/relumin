@@ -64,7 +64,7 @@ var ClusterSlowLogGraph = React.createClass({
             },
             yAxis: {
                 title: {
-                    text: 'exec time (ms)'
+                    text: 'exec time (microseconds)'
                 }
             },
             legend: {
