@@ -113,7 +113,7 @@ This is property table.
 | scheduler.refreshClustersIntervalMillis | 120000 |  | Interval(milliseconds) of refresh meta data of Redis cluster. <br> Recommend default. |
 | scheduler.collectStaticsInfoIntervalMillis | 120000 |  | Interval(milliseconds) of collect metrics data. If threshold condition is satisfied, send notice. |
 | scheduler.collectStaticsInfoMaxCount | 1500 |  | Save count of metrics data. <br> If you want save latest 1 week, you specify "5040". <br><br> (60 * 24 * 7) / 2 = 5040 |
-| scheduler.collectSlowLogMaxCount | 1500 |  | Save count of slowlog. <br> If you want save latest 1 week, you specify "5040". <br><br> (60 * 24 * 7) / 2 = 5040 |
+| scheduler.collectSlowLogMaxCount | 1500 |  | Save count of slowlog. |
 | outputMetrics.fluentd.enabled | false |  | If you want to forward metris data into fluentd, specify true. |
 | outputMetrics.fluentd.host |  |  | Host of Fluentd. |
 | outputMetrics.fluentd.port |  |  | Port of Fluentd. |
