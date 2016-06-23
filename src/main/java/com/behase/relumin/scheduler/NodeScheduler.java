@@ -97,7 +97,9 @@ public class NodeScheduler {
                         Map<String, String> staticsInfo = nodeService.getStaticsInfo(clusterNode);
                         staticsInfos.put(clusterNode, staticsInfo);
 
-                        slowLogs.addAll(nodeService.getSlowLogAndReset(clusterNode));
+                        if (collectSlowLogMaxCount > 0) {
+                            slowLogs.addAll(nodeService.getSlowLogAndReset(clusterNode));
+                        }
 
                         try (Jedis jedis = datastoreJedisPool.getResource()) {
                             log.debug("Save staticsInfo to redis.");

@@ -89,7 +89,7 @@ public class NodeServiceImpl implements NodeService {
     @Override
     public List<SlowLog> getSlowLogAndReset(ClusterNode clusterNode) {
         try (Jedis jedis = jedisSupport.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
-            List<Slowlog> slowLogs = jedis.slowlogGet();
+            List<Slowlog> slowLogs = jedis.slowlogGet(100);
             jedis.slowlogReset();
 
             return slowLogs.stream()
