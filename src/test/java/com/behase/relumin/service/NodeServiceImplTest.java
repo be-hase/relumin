@@ -153,7 +153,7 @@ public class NodeServiceImplTest {
         Jedis jedis = mock(Jedis.class);
         doReturn(jedis).when(jedisSupport).getJedisByHostAndPort(anyString());
         List<Slowlog> slowlogs = Lists.newArrayList(mock(Slowlog.class), mock(Slowlog.class));
-        doReturn(slowlogs).when(jedis).slowlogGet();
+        doReturn(slowlogs).when(jedis).slowlogGet(anyInt());
 
         // when
         List<SlowLog> result = service.getSlowLogAndReset(new ClusterNode());
