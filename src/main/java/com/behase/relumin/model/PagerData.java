@@ -39,30 +39,14 @@ public class PagerData<T> {
         return data.size();
     }
 
-    /**
-     * ひとつ前のpageがあるかどうか
-     *
-     * @return
-     */
     public boolean hasPrevPage() {
         return hasPage(currentPage - 1);
     }
 
-    /**
-     * ひとつ後のpageがあるかどうか
-     *
-     * @return
-     */
     public boolean hasNextPage() {
         return hasPage(currentPage + 1);
     }
 
-    /**
-     * 指定したpageがあるかどうか
-     *
-     * @param page
-     * @return
-     */
     public boolean hasPage(long page) {
         if (page <= 0) {
             return false;
