@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
 
 @Slf4j
@@ -296,9 +297,9 @@ public class TribClusterNodeTest {
         tested.flushNodeConfig();
 
         // then
-        assertThat(capture.toString(), containsString("Dirty is false, so ignore"));
+        verify(jedis, never()).clusterAddSlots(any());
+        verify(jedis, never()).clusterReplicate(anyString());
     }
-
 
     @Test
     public void getConfigSignature() {

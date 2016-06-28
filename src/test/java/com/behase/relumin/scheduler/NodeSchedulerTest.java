@@ -28,9 +28,9 @@ import redis.clients.jedis.JedisPool;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
@@ -103,10 +103,8 @@ public class NodeSchedulerTest {
 
         nodeScheduler.collectStaticsInfo();
 
-//        String output = capture.toString();
-//        assertThat(output, containsString("Save staticsInfo to redis"));
-//        assertThat(output, containsString("No notice setting"));
-//        assertThat(output, containsString("NOTIFY"));
+        String output = capture.toString();
+        assertThat(output, containsString("NOTIFY"));
     }
 
     @Test
@@ -155,7 +153,7 @@ public class NodeSchedulerTest {
         );
 
         nodeScheduler.outputMetrics(new Cluster(), staticsInfos);
-        assertThat(capture.toString(), containsString("Logging on fluentd"));
+        verify(fluentLogger, times(2)).log(anyString(), any());
     }
 
     @Test
