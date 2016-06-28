@@ -84,7 +84,7 @@ public class NotifyServiceImpl implements NotifyService {
         }
 
         String from = StringUtils.trim(StringUtils.defaultIfBlank(notice.getMail().getFrom(), noticeMailFrom));
-        List<String> toList = Splitter.on(",").trimResults().omitEmptyStrings().splitToList(notice.getMail().getTo());
+        List<String> toList = Splitter.on(",").trimResults().omitEmptyStrings().splitToList(StringUtils.defaultString(notice.getMail().getTo()));
         String[] to = toList.toArray(new String[toList.size()]);
 
         if (StringUtils.isBlank(from)) {
