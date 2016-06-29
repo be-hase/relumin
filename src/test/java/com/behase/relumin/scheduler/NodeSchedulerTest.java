@@ -118,6 +118,7 @@ public class NodeSchedulerTest {
                 SlowLog.builder().id(1L).timeStamp(1L).build()
         );
         Jedis jedis = mock(Jedis.class);
+        doReturn(new PagerData<SlowLog>(0, 5, 0, Lists.newArrayList())).when(clusterService).getClusterSlowLogHistory(anyString(), anyLong(), anyLong());
         doReturn(null).when(jedis).lpush(anyString(), any());
         doReturn(jedis).when(datastoreJedisPool).getResource();
 
