@@ -87,10 +87,9 @@ public class NodeServiceImpl implements NodeService {
     }
 
     @Override
-    public List<SlowLog> getSlowLogAndReset(ClusterNode clusterNode) {
+    public List<SlowLog> getSlowLog(ClusterNode clusterNode) {
         try (Jedis jedis = jedisSupport.getJedisByHostAndPort(clusterNode.getHostAndPort())) {
             List<Slowlog> slowLogs = jedis.slowlogGet(100);
-            jedis.slowlogReset();
 
             return slowLogs.stream()
                     .map(v -> SlowLog.builder()

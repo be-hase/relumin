@@ -12,7 +12,7 @@ public interface NodeService {
     Map<String, List<List<Object>>> getStaticsInfoHistory(String clusterName, String nodeId, List<String> fields,
                                                           long start, long end);
 
-    List<SlowLog> getSlowLogAndReset(ClusterNode clusterNode);
+    List<SlowLog> getSlowLog(ClusterNode clusterNode);
 
     void shutdown(String hostAndPort);
 }

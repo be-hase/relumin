@@ -155,7 +155,7 @@ public class NodeServiceImplTest {
         doReturn(slowlogs).when(jedis).slowlogGet(anyInt());
 
         // when
-        List<SlowLog> result = service.getSlowLogAndReset(new ClusterNode());
+        List<SlowLog> result = service.getSlowLog(new ClusterNode());
 
         // then
         assertThat(result.size(), is(2));
