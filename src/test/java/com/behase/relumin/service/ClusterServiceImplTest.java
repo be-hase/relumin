@@ -336,13 +336,7 @@ public class ClusterServiceImplTest {
         service.refreshClusters();
 
         String output = capture.toString();
-        assertThat(output, containsString("refresh start"));
-        assertThat(output, containsString("refresh cluster. clusterName : hoge"));
-        assertThat(output, containsString("existOnRedisNodeIds : [nodeId3, nodeId2, nodeId1]"));
-        assertThat(output, containsString("realNodeIds : [nodeId2, nodeId1]"));
-        assertThat(output, containsString("extra NodeIds : [nodeId3]"));
         assertThat(output, containsString("delete extra data node. key : _relumin.cluster.hoge.node.nodeId3.staticsInfo"));
-        assertThat(output, containsString("refresh end"));
     }
 
     @Test

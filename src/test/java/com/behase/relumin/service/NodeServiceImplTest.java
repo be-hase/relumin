@@ -5,7 +5,6 @@ import com.behase.relumin.model.ClusterNode;
 import com.behase.relumin.model.SlowLog;
 import com.behase.relumin.support.JedisSupport;
 import com.behase.relumin.webconfig.WebConfig;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
