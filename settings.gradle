@@ -4,3 +4,8 @@ include 'relumin-server'
 
 include 'relumin-metrics:core'
 include 'relumin-metrics:jdbc'
+
+include 'relumin-notify:core'
+include 'relumin-notify:http'
+include 'relumin-notify:line'
+include 'relumin-notify:mail'
