@@ -1,0 +1,6 @@
+rootProject.name = 'relumin'
+
+include 'relumin-server'
+
+include 'relumin-metrics:core'
+include 'relumin-metrics:jdbc'

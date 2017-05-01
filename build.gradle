@@ -1,0 +1,81 @@
+buildscript {
+    ext {
+        repos = {
+            mavenLocal()
+            mavenCentral()
+            maven { url 'http://repo.maven.apache.org/maven2' }
+            maven { url 'http://repo.spring.io/plugins-release' }
+            maven { url 'https://plugins.gradle.org/m2/' }
+        }
+    }
+
+    repositories repos
+
+    dependencies {
+        classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.5.3.RELEASE'
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.1.RELEASE'
+        classpath "net.rdrei.android.buildtimetracker:gradle-plugin:0.9.0"
+    }
+}
+
+apply plugin: 'build-time-tracker'
+
+buildtimetracker {
+    reporters {
+        summary {
+            ordered true
+        }
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven'
+    apply plugin: 'idea'
+    apply plugin: 'eclipse'
+
+    apply plugin: 'checkstyle'
+
+    apply plugin: 'io.spring.dependency-management'
+
+    group = 'com.be_hase.relumin'
+    version = '1.0.0-SNAPSHOT'
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-parameters" << "-Xdiags:verbose"
+    }
+
+    repositories repos
+
+    checkstyle {
+        toolVersion = '7.6.1'
+        configFile = file("${rootProject.rootDir}/checkstyle/checkstyle.xml")
+        ignoreFailures true
+        sourceSets = [project.sourceSets.main] // ignore test code checkstyle
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom 'io.spring.platform:platform-bom:Brussels-RELEASE'
+        }
+        dependencies {
+            // except spring platform-bom library versions
+            [
+                    'org.projectlombok:lombok:1.16.16',
+            ].each { dependency it }
+        }
+    }
+
+    dependencies {
+        compile 'org.springframework.boot:spring-boot-starter'
+        compileOnly "org.springframework.boot:spring-boot-configuration-processor"
+        testCompile 'org.springframework.boot:spring-boot-starter-test'
+
+        compileOnly 'org.projectlombok:lombok'
+        testCompileOnly 'org.projectlombok:lombok'
+    }
+}
+

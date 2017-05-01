@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/core/core.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/core/core.iml" group="relumin-metrics/core" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/core/core_main.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/core/core_main.iml" group="relumin-metrics/core" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/core/core_test.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/core/core_test.iml" group="relumin-metrics/core" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/jdbc/jdbc.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/jdbc/jdbc.iml" group="relumin-metrics/jdbc" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/jdbc/jdbc_main.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/jdbc/jdbc_main.iml" group="relumin-metrics/jdbc" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/jdbc/jdbc_test.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/jdbc/jdbc_test.iml" group="relumin-metrics/jdbc" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/relumin-metrics.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/relumin-metrics.iml" group="relumin-metrics" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/relumin-metrics_main.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/relumin-metrics_main.iml" group="relumin-metrics" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-metrics/relumin-metrics_test.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-metrics/relumin-metrics_test.iml" group="relumin-metrics" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-server/relumin-server.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-server/relumin-server.iml" group="relumin-server" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-server/relumin-server_main.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-server/relumin-server_main.iml" group="relumin-server" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/relumin-server/relumin-server_test.iml" filepath="$PROJECT_DIR$/.idea/modules/relumin-server/relumin-server_test.iml" group="relumin-server" />
+    </modules>
+  </component>
+</project>
