@@ -1,0 +1,9 @@
+string: string
+int: 1
+map:
+  key1: val1
+  key2: 2
+  nest-map:
+    key1: val1
+    key2: 2
+hoge.bar: hogeBar

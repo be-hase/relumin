@@ -1,6 +1,15 @@
 apply plugin: 'org.springframework.boot'
 
 dependencies {
+    compile 'org.springframework.boot:spring-boot-starter-web'
     compile 'org.springframework.boot:spring-boot-starter-freemarker'
     compile 'org.springframework.boot:spring-boot-starter-security'
+
+    compile 'com.google.guava:guava'
+    compile 'org.apache.commons:commons-lang3'
+
+    compile 'biz.paluch.redis:lettuce'
+
+    compile 'org.jetbrains.xodus:xodus-openAPI'
+    compile 'org.jetbrains.xodus:xodus-entity-store'
 }

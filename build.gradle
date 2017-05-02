@@ -64,7 +64,15 @@ subprojects {
         dependencies {
             // except spring platform-bom library versions
             [
+                    // lombok
                     'org.projectlombok:lombok:1.16.16',
+
+                    // xodus
+                    'org.jetbrains.xodus:xodus-openAPI:1.0.4',
+                    'org.jetbrains.xodus:xodus-entity-store:1.0.4',
+
+                    // lettuce
+                    'biz.paluch.redis:lettuce:4.3.2.Final',
             ].each { dependency it }
         }
     }

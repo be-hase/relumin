@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id=":relumin-notify:mail" external.linked.project.path="$MODULE_DIR$/../../../../relumin-notify/mail" external.root.project.path="$MODULE_DIR$/../../../.." external.system.id="GRADLE" external.system.module.group="com.be_hase.relumin" external.system.module.version="1.0.0-SNAPSHOT" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../../relumin-notify/mail">
+      <excludeFolder url="file://$MODULE_DIR$/../../../../relumin-notify/mail/.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/../../../../relumin-notify/mail/build" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
