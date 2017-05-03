@@ -15,5 +15,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReluminProperties {
-    private String metaDataDir = "~/.reluminMeta";
+    private String metaDataDir;
 }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+  <property name="FILE_LOG_PATTERN" value="${log.pattern.file:-%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } --- [%t] %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
+  <property name="LOG_DIR" value="${log.dir:-logs}"/>
+
+  <appender name="FileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <encoder>
+      <pattern>${FILE_LOG_PATTERN}</pattern>
+    </encoder>
+    <file>${LOG_DIR}/relumin.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/relumin.%d{yyyy-MM-dd}.log</fileNamePattern>
+      <maxHistory>${log.history:-30}</maxHistory>
+    </rollingPolicy>
+  </appender>
+
+  <appender name="logging_operation" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <encoder>
+      <pattern>${FILE_LOG_PATTERN}</pattern>
+    </encoder>
+    <file>${LOG_DIR}/relumin_operation.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/relumin_operation.%d{yyyy-MM-dd}.log</fileNamePattern>
+      <maxHistory>${log.history:-30}</maxHistory>
+    </rollingPolicy>
+  </appender>
+
+  <logger name="com.be_hase.relumin" level="${log.level:-INFO}"/>
+  <logger name="logging_operation" level="INFO">
+    <appender-ref ref="logging_operation"/>
+  </logger>
+
+  <root level="WARN">
+    <appender-ref ref="FileAppender"/>
+  </root>
+</included>

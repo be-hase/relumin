@@ -10,13 +10,6 @@
   "properties": [
     {
       "sourceType": "com.be_hase.relumin.properties.ReluminProperties",
-      "defaultValue": "~\/.reluminMeta",
-      "name": "relumin.meta-data-dir",
-      "type": "java.lang.String"
-    },
-    {
-      "sourceType": "com.be_hase.relumin.properties.ReluminProperties",
-      "defaultValue": "~\/.reluminMeta",
       "name": "relumin.meta-data-dir",
       "type": "java.lang.String"
     }

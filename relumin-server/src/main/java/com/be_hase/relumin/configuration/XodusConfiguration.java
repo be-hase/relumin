@@ -1,5 +1,8 @@
 package com.be_hase.relumin.configuration;
 
+import java.io.File;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,8 +19,10 @@ public class XodusConfiguration {
 
     @Bean
     public PersistentEntityStore metaDataPersistentEntityStore() {
-        PersistentEntityStore entityStore = PersistentEntityStores.newInstance(
-                reluminProperties.getMetaDataDir());
+        final String dir = StringUtils.defaultIfBlank(
+                reluminProperties.getMetaDataDir(),
+                System.getProperty("user.home") + File.separator + ".reluminMetaData");
+        PersistentEntityStore entityStore = PersistentEntityStores.newInstance(dir);
         return entityStore;
     }
 }

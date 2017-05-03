@@ -14,6 +14,7 @@ buildscript {
     dependencies {
         classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.5.3.RELEASE'
         classpath 'io.spring.gradle:dependency-management-plugin:1.0.1.RELEASE'
+        classpath 'io.spring.gradle:propdeps-plugin:0.0.8'
         classpath "net.rdrei.android.buildtimetracker:gradle-plugin:0.9.0"
     }
 }
@@ -33,6 +34,11 @@ subprojects {
     apply plugin: 'maven'
     apply plugin: 'idea'
     apply plugin: 'eclipse'
+
+    apply plugin: 'propdeps'
+    apply plugin: 'propdeps-maven'
+    apply plugin: 'propdeps-idea'
+    apply plugin: 'propdeps-eclipse'
 
     apply plugin: 'checkstyle'
 
@@ -85,5 +91,7 @@ subprojects {
         compileOnly 'org.projectlombok:lombok'
         testCompileOnly 'org.projectlombok:lombok'
     }
+
+    compileJava.dependsOn(processResources)
 }
 
