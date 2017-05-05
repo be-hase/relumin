@@ -141,7 +141,7 @@ public class RedisSupportTest {
     public void getSlotsInvalidStartAndEndThrowException() {
         assertThatThrownBy(() -> target.getSlots(Lists.newArrayList("3-1")))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("'3-1' is invalid format.");
+                .hasMessage("'3-1' is invalid format. start slot must be equal or less than end slot.");
     }
 
     @Test

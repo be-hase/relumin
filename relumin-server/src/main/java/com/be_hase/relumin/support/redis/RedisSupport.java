@@ -205,7 +205,7 @@ public class RedisSupport {
 
             if (start > end) {
                 throw new IllegalArgumentException(
-                        String.format("'%s' is invalid. start slot must be equal or less than end slot.", v));
+                        String.format("'%s' is invalid format. start slot must be equal or less than end slot.", v));
             }
             for (int i = start; i <= end; i++) {
                 slots.add(i);
