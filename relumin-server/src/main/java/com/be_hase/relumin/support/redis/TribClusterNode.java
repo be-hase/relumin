@@ -165,9 +165,9 @@ public class TribClusterNode implements AutoCloseable {
         if (StringUtils.isBlank(node.getMasterNodeId())) {
             log.debug("this node is master.");
             final int[] intArray = tmpSlots.stream().mapToInt(i -> i).toArray();
-            redisCommands.clusterAddSlots(intArray);
             node.getServedSlotsSet().addAll(tmpSlots);
             tmpSlots.clear();
+            redisCommands.clusterAddSlots(intArray);
         } else {
             log.debug("this node is replica");
             try {

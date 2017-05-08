@@ -648,7 +648,7 @@ public class RedisTrib implements AutoCloseable {
     // Options:
     //     :fix     -- We are moving in the context of a fix. Use REPLACE.
     //     :cold    -- Move keys without opening slots / reconfiguring the nodes.
-    //     :update  -- Update nodes.info[:slots] for source/target nodes.//
+    //     :update  -- Update nodes.info[:slots] for source/target nodes.
     void moveSlot(final TribClusterNode source, final TribClusterNode target, final int slot,
                   Set<String> options) {
         if (options == null) {
@@ -920,7 +920,7 @@ public class RedisTrib implements AutoCloseable {
         ips.putAll(nodes.stream()
                         .collect(Collectors.groupingBy(v -> v.getNode().getHost(), Collectors.toList())));
         // sort hostNodes
-        for (Map.Entry<String, List<TribClusterNode>> e : ips.entrySet()) {
+        for (final Map.Entry<String, List<TribClusterNode>> e : ips.entrySet()) {
             final List<TribClusterNode> hostNodes = e.getValue();
             hostNodes.sort((o1, o2) -> {
                 if (StringUtils.equals(o1.getNode().getHost(), o2.getNode().getHost())) {
@@ -973,7 +973,7 @@ public class RedisTrib implements AutoCloseable {
                 last = first;
             }
 
-            Set<Integer> slots = Sets.newTreeSet(
+            final Set<Integer> slots = Sets.newTreeSet(
                     IntStream.rangeClosed(first, last).boxed().collect(Collectors.toList()));
             log.info("Add slots to {}. first={}, last={}", masters.get(i), first, last);
             masters.get(i).addTmpSlots(slots);
