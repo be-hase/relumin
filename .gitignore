@@ -5,6 +5,7 @@
 # ------------------------------
 relumin-front/node_modules
 relumin-front/dist/
+.DS_Store
 
 # ------------------------------
 # Java.gitignore
@@ -36,7 +37,7 @@ hs_err_pid*
 # Gradle.gitignore
 # ------------------------------
 .gradle
-/build/
+build/
 
 # Ignore Gradle GUI config
 gradle-app.setting
