@@ -167,8 +167,7 @@ public class RedisTrib implements AutoCloseable {
                         .map(v -> String.format("%s (%s)",
                                                 v.getNode().getHostAndPort(), v.getNode().getNodeId()))
                         .collect(Collectors.toList()));
-        log.info("Destination nodes : {} ({})",
-                 target.getNode().getHostAndPort(), target.getNode().getNodeId());
+        log.info("Destination nodes : {} ({})", target, target.getNode().getNodeId());
         final List<ReshardTable> reshardTables = computeReshardTable(sources, slotCount);
         reshardTables.forEach(
                 reshardTable -> moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), null));
@@ -230,12 +229,12 @@ public class RedisTrib implements AutoCloseable {
         checkCluster();
 
         // Add the new node
-        TribClusterNode newNode = createTribClusterNode(newHostAndPort);
+        final TribClusterNode newNode = createTribClusterNode(newHostAndPort);
         validateClusterAndEmptyNode(newNode);
         addNodes(newNode);
 
         // Send CLUSTER MEET command to the new node
-        TribClusterNode node = getNodeByHostAndPort(hostAndPort);
+        final TribClusterNode node = getNodeByHostAndPort(hostAndPort);
         log.info("Send CLUSTER MEET to node {} to make it join the cluster.", newHostAndPort);
         newNode.getRedisCommands().clusterMeet(node.getNode().getHost(), node.getNode().getPort());
 
@@ -251,11 +250,10 @@ public class RedisTrib implements AutoCloseable {
 
         // If --master-id was specified, try to resolve it now so that we
         // abort before starting with the node configuration.
-        TribClusterNode master;
+        final TribClusterNode master;
         if (StringUtils.equals(materNodeId, "RANDOM")) {
             master = getMasterWithLeastReplicas();
-            log.info("Automatically selected master {} ().", master.getNode().getHostAndPort(),
-                     master.getNode().getMasterNodeId());
+            log.info("Automatically selected master {}({}).", master, master.getNode().getNodeId());
         } else {
             master = getNodeByNodeId(materNodeId);
             if (master == null) {
@@ -264,12 +262,12 @@ public class RedisTrib implements AutoCloseable {
         }
 
         // Add the new node
-        TribClusterNode newNode = createTribClusterNode(newHostAndPort);
+        final TribClusterNode newNode = createTribClusterNode(newHostAndPort);
         validateClusterAndEmptyNode(newNode);
         addNodes(newNode);
 
         // Send CLUSTER MEET command to the new node
-        TribClusterNode node = getNodeByHostAndPort(hostAndPort);
+        final TribClusterNode node = getNodeByHostAndPort(hostAndPort);
         log.info("Send CLUSTER MEET to node {} to make it join the cluster.", newHostAndPort);
         newNode.getRedisCommands().clusterMeet(node.getNode().getHost(), node.getNode().getPort());
 
@@ -282,7 +280,8 @@ public class RedisTrib implements AutoCloseable {
         log.info("New node added correctly.");
     }
 
-    public void deleteNodeOfCluster(final String hostAndPort, String nodeId, String reset, boolean shutdown)
+    public void deleteNodeOfCluster(final String hostAndPort, final String nodeId, final String reset,
+                                    final boolean shutdown)
             throws Exception {
         log.info("Removing node({}) from cluster({}).", nodeId, hostAndPort);
 
@@ -290,7 +289,7 @@ public class RedisTrib implements AutoCloseable {
         loadClusterInfoFromNode(hostAndPort);
 
         // Check if the node exists and is not empty
-        TribClusterNode node = getNodeByNodeId(nodeId);
+        final TribClusterNode node = getNodeByNodeId(nodeId);
         if (node == null) {
             throw new IllegalArgumentException(String.format("No such node ID %s", nodeId));
         }
@@ -317,7 +316,7 @@ public class RedisTrib implements AutoCloseable {
         }
     }
 
-    public void deleteFailNodeOfCluster(final String hostAndPort, String nodeId)
+    public void deleteFailNodeOfCluster(final String hostAndPort, final String nodeId)
             throws Exception {
         log.info("Removing node({}) from cluster({}).", nodeId, hostAndPort);
 
@@ -328,7 +327,7 @@ public class RedisTrib implements AutoCloseable {
         forgotNode(nodeId);
     }
 
-    void forgotNode(String nodeId) {
+    void forgotNode(final String nodeId) {
         log.info("Sending CLUSTER FORGET messages to the cluster...");
         nodes.stream()
              .filter(v -> !StringUtils.equalsIgnoreCase(v.getNode().getNodeId(), nodeId))
@@ -338,8 +337,7 @@ public class RedisTrib implements AutoCloseable {
                      // Reconfigure the slave to replicate with some other node
                      TribClusterNode master = getMasterWithLeastReplicasSpecifiedNodeIdExcluded(nodeId);
                      log.info("new master={}, old master = {}", master.getNode().getNodeId(), nodeId);
-                     log.info("{} as replica of {}", v.getNode().getNodeId(),
-                              master.getNode().getNodeId());
+                     log.info("{} as replica of {}", v.getNode().getNodeId(), master.getNode().getNodeId());
                      v.getRedisCommands().clusterReplicate(master.getNode().getNodeId());
                  }
                  v.getRedisCommands().clusterForget(nodeId);
@@ -351,9 +349,8 @@ public class RedisTrib implements AutoCloseable {
         log.info("Replicate node({}) as slave of {}.", hostAndPort, masterNodeId);
 
         loadClusterInfoFromNode(hostAndPort);
-        checkCluster();
 
-        TribClusterNode node = getNodeByHostAndPort(hostAndPort);
+        final TribClusterNode node = getNodeByHostAndPort(hostAndPort);
         if (node == null) {
             throw new IllegalArgumentException(String.format("Node(%s) does not exists.", hostAndPort));
         }
@@ -366,7 +363,7 @@ public class RedisTrib implements AutoCloseable {
             }
         }
 
-        TribClusterNode master = getNodeByNodeId(masterNodeId);
+        final TribClusterNode master = getNodeByNodeId(masterNodeId);
         if (master == null) {
             throw new IllegalArgumentException(String.format("Node(%s) does not exists.", masterNodeId));
         }
@@ -383,9 +380,8 @@ public class RedisTrib implements AutoCloseable {
         log.info("Failover node({}).", hostAndPort);
 
         loadClusterInfoFromNode(hostAndPort);
-        checkCluster();
 
-        TribClusterNode node = getNodeByHostAndPort(hostAndPort);
+        final TribClusterNode node = getNodeByHostAndPort(hostAndPort);
         if (node == null) {
             throw new IllegalArgumentException(String.format("Node(%s) does not exists.", hostAndPort));
         }
@@ -414,11 +410,11 @@ public class RedisTrib implements AutoCloseable {
     }
 
     TribClusterNode getMasterWithLeastReplicasSpecifiedNodeIdExcluded(final String nodeId) {
-        final List<TribClusterNode> masters = nodes.stream()
-                                                   .filter(node -> node.hasFlag("master"))
-                                                   .filter(node -> !StringUtils.equalsIgnoreCase(
-                                                           node.getNode().getNodeId(), nodeId))
-                                                   .collect(Collectors.toList());
+        final List<TribClusterNode> masters =
+                nodes.stream()
+                     .filter(node -> node.hasFlag("master"))
+                     .filter(node -> !StringUtils.equalsIgnoreCase(node.getNode().getNodeId(), nodeId))
+                     .collect(Collectors.toList());
         masters.sort(Comparator.comparingInt(v -> v.getNode().getServedSlotsSet().size()));
         return masters.get(0);
     }
@@ -510,13 +506,13 @@ public class RedisTrib implements AutoCloseable {
             if (!node.getNode().getMigrating().isEmpty()) {
                 clusterError(String.format("[Warning] Node %s has slots in migrating state. (%s).",
                                            node.getNode().getHostAndPort(),
-                                           node.getNode().getMigrating().keySet()));
+                                           StringUtils.join(node.getNode().getMigrating().keySet(), ",")));
                 openSlots.addAll(node.getNode().getMigrating().keySet());
             }
             if (!node.getNode().getImporting().isEmpty()) {
                 clusterError(String.format("[Warning] Node %s has slots in importing state (%s).",
                                            node.getNode().getHostAndPort(),
-                                           node.getNode().getImporting().keySet()));
+                                           StringUtils.join(node.getNode().getImporting().keySet(), ",")));
                 openSlots.addAll(node.getNode().getImporting().keySet());
             }
         }
@@ -545,19 +541,17 @@ public class RedisTrib implements AutoCloseable {
             if (node.hasFlag("slave")) {
                 continue;
             }
-            if (node.getNode().getMigrating().containsKey(Integer.valueOf(slot))) {
+            if (node.getNode().getMigrating().containsKey(slot)) {
                 migrating.add(node);
-            } else if (node.getNode().getImporting().containsKey(Integer.valueOf(slot))) {
+            } else if (node.getNode().getImporting().containsKey(slot)) {
                 importing.add(node);
             } else if (node.getRedisCommands().clusterCountKeysInSlot(slot) > 0 && !node.equals(owner)) {
-                log.info("Found keys about slot {} in node {}", slot, node.getNode().getHostAndPort());
+                log.info("Found keys about slot {} in node {}", slot, node);
                 importing.add(node);
             }
         }
-        log.info("Set as migrating in: {}",
-                 migrating.stream().map(v -> v.getNode().getHostAndPort()).collect(Collectors.toList()));
-        log.info("Set as migrating in: {}",
-                 importing.stream().map(v -> v.getNode().getHostAndPort()).collect(Collectors.toList()));
+        log.info("Set as migrating in: {}", migrating);
+        log.info("Set as migrating in: {}", importing);
 
         // If there is no slot owner, set as owner the slot with the biggest
         // number of keys, among the set of migrating / importing nodes.
@@ -602,7 +596,7 @@ public class RedisTrib implements AutoCloseable {
                 node.getRedisCommands().clusterDelSlots(slot);
                 node.getRedisCommands().clusterSetSlotImporting(slot, owner.getNode().getNodeId());
 
-                importing.remove(node); // Avoid duplciates
+                importing.remove(node); // Avoid duplicates
                 importing.add(node);
             }
             owner.getRedisCommands().clusterBumpepoch();
@@ -623,7 +617,7 @@ public class RedisTrib implements AutoCloseable {
                     continue;
                 }
                 moveSlot(importingNode, owner, slot, Sets.newHashSet("fix", "cold"));
-                log.info("Setting {} as STABLE in {}", slot, importingNode.getNode().getHostAndPort());
+                log.info("Setting {} as STABLE in {}", slot, importingNode);
                 importingNode.getRedisCommands().clusterSetSlotStable(slot);
             }
         } else if (importing.isEmpty() && migrating.size() == 1
@@ -636,8 +630,8 @@ public class RedisTrib implements AutoCloseable {
             throw new RedisTribException(String.format(
                     "Sorry, can't fix this slot yet (work in progress)."
                     + "Slot is set as migrating in %s, as importing in %s, owner is %s",
-                    migrating.stream().map(TribClusterNode::toString).collect(Collectors.joining(",")),
-                    importing.stream().map(TribClusterNode::toString).collect(Collectors.joining(",")),
+                    StringUtils.join(migrating, ","),
+                    StringUtils.join(importing, ","),
                     owner
             ));
         }
@@ -659,8 +653,7 @@ public class RedisTrib implements AutoCloseable {
         // and the slot as migrating in the target host. Note that the order of
         // the operations is important, as otherwise a client may be redirected
         // to the target node that does not yet know it is importing this slot.
-        log.info("Moving slot {} from {} to {}.", slot, source.getNode().getHostAndPort(),
-                 target.getNode().getHostAndPort());
+        log.info("Moving slot {} from {} to {}.", slot, source, target);
 
         if (!options.contains("cold")) {
             target.getRedisCommands().clusterSetSlotImporting(slot, source.getNode().getNodeId());
@@ -669,7 +662,7 @@ public class RedisTrib implements AutoCloseable {
 
         // Migrate all the keys from source to target using the MIGRATE command
         while (true) {
-            final List<String> keys = source.getRedisCommands().clusterGetKeysInSlot(slot, 10);
+            final List<String> keys = source.getRedisCommands().clusterGetKeysInSlot(slot, 100);
             if (keys.isEmpty()) {
                 break;
             }
@@ -801,7 +794,7 @@ public class RedisTrib implements AutoCloseable {
             log.info("The following uncovered slots have no keys across the cluster: {}", none.keySet());
             none.forEach((slot, noneNodes) -> {
                 List<TribClusterNode> masters = nodes.stream()
-                                                     .filter(v -> !v.hasFlag("master"))
+                                                     .filter(v -> v.hasFlag("master"))
                                                      .collect(Collectors.toList());
                 final TribClusterNode node = masters.get(new Random().nextInt(masters.size()));
                 log.info("Covering slot {} with {}", slot, node);
@@ -811,7 +804,7 @@ public class RedisTrib implements AutoCloseable {
 
         // Handle case "2": keys only in one node.
         if (!single.isEmpty()) {
-            log.info("The folowing uncovered slots have keys in just one node: {}", single.keySet());
+            log.info("The following uncovered slots have keys in just one node: {}", single.keySet());
             single.forEach((slot, singleNodes) -> {
                 log.info("Covering slot {} with {}", slot, singleNodes.get(0));
                 singleNodes.get(0).getRedisCommands().clusterAddSlots(slot);
@@ -820,7 +813,7 @@ public class RedisTrib implements AutoCloseable {
 
         // Handle case "3": keys in multiple nodes.
         if (!multi.isEmpty()) {
-            log.info("The folowing uncovered slots have keys in multiple nodes: {}", multi.keySet());
+            log.info("The following uncovered slots have keys in multiple nodes: {}", multi.keySet());
             multi.forEach((slot, multiNodes) -> {
                 final TribClusterNode target = getNodeWithMostKeysInSlot(multiNodes, slot);
                 log.info("Covering slot {} moving keys to {}", slot, target);
@@ -853,8 +846,7 @@ public class RedisTrib implements AutoCloseable {
         for (final TribClusterNode node : nodes) {
             try {
                 node.getRedisCommands().clusterSetConfigEpoch(configEpoch);
-            } catch (Exception e) {
-                // no problem
+            } catch (Exception ignored) {
             }
             configEpoch++;
         }
@@ -877,13 +869,16 @@ public class RedisTrib implements AutoCloseable {
         }
     }
 
-    void waitClusterJoin() throws Exception {
+    void waitClusterJoin() {
         log.info("Waiting for the cluster join.");
-        StringBuilder waiting = new StringBuilder(".");
+        final StringBuilder waiting = new StringBuilder(".");
         while (!isConfigConsistent()) {
             log.info(waiting.toString());
             waiting.append('.');
-            Thread.sleep(1000);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {
+            }
         }
     }
 
@@ -1069,9 +1064,10 @@ public class RedisTrib implements AutoCloseable {
     }
 
     List<CreateClusterParam> buildCreateClusterParam() {
-        // first loop master
+        // first loop (master)
         final List<CreateClusterParam> params = Lists.newArrayList();
         nodes.stream()
+             // is master
              .filter(node -> StringUtils.isBlank(node.getNode().getMasterNodeId()))
              .forEach(node -> {
                  final int startSlotNumber = node.getTmpSlots().stream().min(Integer::compare).get();
@@ -1088,17 +1084,12 @@ public class RedisTrib implements AutoCloseable {
         // replica loop
         nodes.stream()
              .filter(node -> StringUtils.isNotBlank(node.getNode().getMasterNodeId()))
+             // is slave
              .forEach(node -> {
                  final String masterNodeId = node.getNode().getMasterNodeId();
-                 params.stream().filter(param -> StringUtils.equals(param.getMasterNodeId(), masterNodeId))
-                       .forEach(param -> {
-                           List<String> replicaList = param.getReplicas();
-                           if (param.getReplicas() == null) {
-                               replicaList = Lists.newArrayList();
-                               param.setReplicas(replicaList);
-                           }
-                           replicaList.add(node.getNode().getHostAndPort());
-                       });
+                 params.stream()
+                       .filter(param -> StringUtils.equals(param.getMasterNodeId(), masterNodeId))
+                       .forEach(param -> param.getReplicas().add(node.getNode().getHostAndPort()));
              });
 
         // sort
@@ -1142,14 +1133,10 @@ public class RedisTrib implements AutoCloseable {
         nodes.forEach(node -> {
             final String masterNodeId = node.getNode().getMasterNodeId();
             if (StringUtils.isNotBlank(masterNodeId)) {
-                TribClusterNode master = getNodeByNodeId(masterNodeId);
+                final TribClusterNode master = getNodeByNodeId(masterNodeId);
                 log.info("master={}, masterNodeId={}", master, masterNodeId);
                 if (master == null) {
-                    log.warn(
-                            "{} claims to be slave of unknown node ID {}.",
-                            node.getNode().getHostAndPort(),
-                            masterNodeId
-                    );
+                    log.warn("{} claims to be slave of unknown node ID {}.", node, masterNodeId);
                 } else {
                     master.getReplicas().add(node);
                 }
@@ -1166,8 +1153,7 @@ public class RedisTrib implements AutoCloseable {
 
     TribClusterNode getNodeByHostAndPort(final String hostAndPort) {
         return nodes.stream()
-                    .filter(node -> StringUtils.equalsIgnoreCase(node.getNode().getHostAndPort(),
-                                                                 hostAndPort))
+                    .filter(node -> StringUtils.equalsIgnoreCase(node.getNode().getHostAndPort(), hostAndPort))
                     .findFirst()
                     .orElse(null);
     }

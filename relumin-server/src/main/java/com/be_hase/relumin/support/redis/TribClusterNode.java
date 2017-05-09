@@ -41,7 +41,7 @@ public class TribClusterNode implements AutoCloseable {
     @Getter
     private final String password;
     @Getter
-    private Map<String, String> clusterInfo = Maps.newHashMap();
+    private Map<String, String> clusterInfo = Maps.newLinkedHashMap();
     @Getter
     private boolean dirty;
     @Getter
