@@ -1,6 +1,5 @@
 package com.be_hase.relumin.support.redis;
 
-import java.security.InvalidParameterException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -12,6 +11,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 
 import com.be_hase.relumin.model.ClusterNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -76,11 +76,7 @@ public class TribClusterNode implements AutoCloseable {
         }
 
         try {
-            final RedisURI.Builder redisURIBuilder = RedisURI.Builder.redis(node.getHost(), node.getPort());
-            if (StringUtils.isNotBlank(password)) {
-                redisURIBuilder.withPassword(password);
-            }
-            redisClient = RedisClient.create(redisURIBuilder.build());
+            redisClient = getRedisClient();
             redisConnection = redisClient.connect();
             redisCommands = redisConnection.sync();
 
@@ -101,7 +97,7 @@ public class TribClusterNode implements AutoCloseable {
         final Map<String, String> infoResult = redisSupport.parseInfoResult(redisCommands.info());
         final String clusterEnabled = infoResult.get("cluster_enabled");
         if (StringUtils.isBlank(clusterEnabled) || StringUtils.equals(clusterEnabled, "0")) {
-            throw new InvalidParameterException(
+            throw new IllegalArgumentException(
                     String.format("'%s' is not configured as a cluster node.", node.getHostAndPort()));
         }
     }
@@ -113,7 +109,7 @@ public class TribClusterNode implements AutoCloseable {
 
         if (infoResult.get("db0") != null
             || !StringUtils.equals(clusterInfoResult.get("cluster_known_nodes"), "1")) {
-            throw new InvalidParameterException(
+            throw new IllegalArgumentException(
                     String.format(
                             "'%s' is not empty. Either the node already knows other nodes (check with CLUSTER NODES) "
                             + "or contains some key in database 0.",
@@ -243,5 +239,14 @@ public class TribClusterNode implements AutoCloseable {
 
         TribClusterNode other = (TribClusterNode) obj;
         return StringUtils.equalsIgnoreCase(node.getHostAndPort(), other.node.getHostAndPort());
+    }
+
+    @VisibleForTesting
+    RedisClient getRedisClient() {
+        final RedisURI.Builder redisURIBuilder = RedisURI.Builder.redis(node.getHost(), node.getPort());
+        if (StringUtils.isNotBlank(password)) {
+            redisURIBuilder.withPassword(password);
+        }
+        return RedisClient.create(redisURIBuilder.build());
     }
 }

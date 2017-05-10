@@ -69,7 +69,7 @@ public final class ValidationUtils {
         }
         try {
             Integer.valueOf(hostAndPortArray[1]);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             throw new IllegalArgumentException(
                     String.format("Node's port is invalid. (%s)", hostAndPortArray[1]));
         }
@@ -79,7 +79,7 @@ public final class ValidationUtils {
         final int slotInt;
         try {
             slotInt = Integer.valueOf(slot);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException ignored) {
             throw new IllegalArgumentException(String.format("Slot number must be numeric. (%s)", slot));
         }
         slotNumber(slotInt);

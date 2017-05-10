@@ -124,6 +124,12 @@ public class RedisSupportTest {
     }
 
     @Test
+    public void getSlots() {
+        Set<Integer> result = target.getSlots(Lists.newArrayList("0-3", "5"));
+        assertThat(result).containsExactly(0, 1, 2, 3, 5);
+    }
+
+    @Test
     public void getSlotsInvalidStartSlotThrowException() {
         assertThatThrownBy(() -> target.getSlots(Lists.newArrayList("hoge-3")))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -142,11 +148,5 @@ public class RedisSupportTest {
         assertThatThrownBy(() -> target.getSlots(Lists.newArrayList("3-1")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("'3-1' is invalid format. start slot must be equal or less than end slot.");
-    }
-
-    @Test
-    public void getSlots() {
-        Set<Integer> result = target.getSlots(Lists.newArrayList("0-3", "5"));
-        assertThat(result).containsExactly(0, 1, 2, 3, 5);
     }
 }
