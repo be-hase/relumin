@@ -1,5 +1,3 @@
-Now, I am developing major version.
-
 <p align="center">
   <img src="https://i.gyazo.com/02f5ca76c736aae604d9cd1d595901ec.png">
   <br>
@@ -8,6 +6,8 @@ Now, I am developing major version.
 [![CircleCI](https://circleci.com/gh/be-hase/relumin/tree/master.svg?style=svg)](https://circleci.com/gh/be-hase/relumin/tree/master) [![codecov](https://codecov.io/gh/be-hase/relumin/branch/master/graph/badge.svg)](https://codecov.io/gh/be-hase/relumin)
 
 ## What's Relumin ?
+
+※ Now, I am developing major version. (v1.0.0)
 
 Relumin is a REdis cLUster adMIN tool.  
 ( Support not only cluster-mode but also standalone-mode )
