@@ -1,30 +1,36 @@
-[![CircleCI](https://circleci.com/gh/be-hase/relumin/tree/master.svg?style=svg)](https://circleci.com/gh/be-hase/relumin/tree/master) [![codecov](https://codecov.io/gh/be-hase/relumin/branch/master/graph/badge.svg)](https://codecov.io/gh/be-hase/relumin)
-
-# Relumin (Redis cluster admin)
+Now, I am developing major version.
 
 <p align="center">
   <img src="https://i.gyazo.com/02f5ca76c736aae604d9cd1d595901ec.png">
+  <br>
 </p>
+
+[![CircleCI](https://circleci.com/gh/be-hase/relumin/tree/master.svg?style=svg)](https://circleci.com/gh/be-hase/relumin/tree/master) [![codecov](https://codecov.io/gh/be-hase/relumin/branch/master/graph/badge.svg)](https://codecov.io/gh/be-hase/relumin)
 
 ## What's Relumin ?
 
-Relumin is a REdis cLUster adMIN tool.
+Relumin is a REdis cLUster adMIN tool.  
+( Support not only cluster-mode but also standalone-mode )
 
-Main feature is ...
+Main features are ...
 
-* Visualize Redis cluster status
 * Operating Cluster
     * Add node, Resharding, Delete node, Replicate, Failover...etc
-* Visualize Redis node metrics as chart
-    * Metrics is get by http://redis.io/commands/info
-* Alert
+* Visualizing Redis cluster status
+* Visualizing Redis node metrics as chart
+    * Got by using `INFO` command. ( http://redis.io/commands/info )
+* Visualize Redis SLOWLOG as plot chat.
+    * Got by using `SLOWLOG` command. ( http://redis.io/commands/slowlog )
+* Alerting
     * You can set threshold freely.
+    * And you can select alert types.
+      * mail, http, LINE.
 
 ### Why develop ?
 
 * There are some redis tool, but they don't support Redis cluster.
-* It is difficult to understand cluster status. I want visualize.
-* Other cluster storages have GUI tool.  
+* It is difficult to understand cluster status. I want visualization.
+* Other cluster storage has GUI tool.  
     * For example,  
         * Riak has "Riak control(http://docs.basho.com/riak/latest/ops/advanced/riak-control/)".
         * Cassandra has "Datastax(http://www.datastax.com/)".
