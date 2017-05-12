@@ -2,14 +2,14 @@
   "hints": [],
   "groups": [
     {
-      "sourceType": "com.be_hase.relumin.properties.ReluminProperties",
+      "sourceType": "org.relumin.properties.ReluminProperties",
       "name": "relumin",
-      "type": "com.be_hase.relumin.properties.ReluminProperties"
+      "type": "org.relumin.properties.ReluminProperties"
     }
   ],
   "properties": [
     {
-      "sourceType": "com.be_hase.relumin.properties.ReluminProperties",
+      "sourceType": "org.relumin.properties.ReluminProperties",
       "name": "relumin.meta-data-dir",
       "type": "java.lang.String"
     }

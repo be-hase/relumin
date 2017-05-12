@@ -3,9 +3,16 @@ rootProject.name = 'relumin'
 include 'relumin-server'
 
 include 'relumin-metrics:core'
+project(':relumin-metrics:core').name = 'relumin-metrics-core'
+
 include 'relumin-metrics:xodus'
+project(':relumin-metrics:xodus').name = 'relumin-metrics-xodus'
 
 include 'relumin-notify:core'
+project(':relumin-notify:core').name = 'relumin-notify-core'
 include 'relumin-notify:http'
+project(':relumin-notify:http').name = 'relumin-notify-http'
 include 'relumin-notify:line'
+project(':relumin-notify:line').name = 'relumin-notify-line'
 include 'relumin-notify:mail'
+project(':relumin-notify:mail').name = 'relumin-notify-mail'
