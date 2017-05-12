@@ -2,6 +2,10 @@
 
 # Relumin (Redis cluster admin)
 
+<p align="center">
+  <img src="https://i.gyazo.com/02f5ca76c736aae604d9cd1d595901ec.png">
+</p>
+
 ## What's Relumin ?
 
 Relumin is a REdis cLUster adMIN tool.
