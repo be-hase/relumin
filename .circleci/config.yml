@@ -8,8 +8,8 @@ jobs:
           SPRING_PROFILES_ACTIVE: ci
     working_directory: /home/ubuntu/relumin
 
-  steps:
-    - checkout
+    steps:
+      - checkout
 
-    - run:
-      command: ./gradlew clean check
+      - run:
+        command: ./gradlew clean check
