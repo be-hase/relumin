@@ -1,0 +1,15 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: circleci/openjdk:8u121
+        environment:
+          SPRING_PROFILES_ACTIVE: ci
+    working_directory: /home/ubuntu/relumin
+
+  steps:
+    - checkout
+
+    - run:
+      command: ./gradlew clean check

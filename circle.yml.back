@@ -3,6 +3,7 @@ machine:
     - docker
   java:
     version: oraclejdk8
+  timezone: Asia/Tokyo
   post:
     - sudo service mysql stop
     - sudo service postgresql stop
@@ -14,14 +15,12 @@ dependencies:
     - if [[ -e ~/docker/image.tar ]]; then docker load -i ~/docker/image.tar; fi
     - docker build -t relumin/relumin-test .
     - mkdir -p ~/docker; docker save relumin/relumin-test > ~/docker/image.tar
-    - mvn compile -DskipTests
+    - ./gradlew testClasses
 
 test:
   override:
-    - docker run --rm -d -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 -p 10004:10004 -p 10005:10005 -p 20000:20000 -p 20001:20001 -p 20002:20002 -p 20003:20003 -p 20004:20004 -p 20005:20005 -p 10010:10010 -p 10011:10011 -p 10012:10012 -p 10013:10013 -p 10014:10014 -p 10015:10015 relumin/relumin-test
-    - mvn test jacoco:report -DargLine="@{argLine} -Dspring.profiles.active=ci"
+    - docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 -p 10004:10004 -p 10005:10005 -p 20000:20000 -p 20001:20001 -p 20002:20002 -p 20003:20003 -p 20004:20004 -p 20005:20005 -p 10010:10010 -p 10011:10011 -p 10012:10012 -p 10013:10013 -p 10014:10014 -p 10015:10015 relumin/relumin-test
+    - SPRING_PROFILES_ACTIVE=ci ./gradlew clean check
   post:
-    - mkdir -p $CIRCLE_TEST_REPORTS/junit
-    - find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} $CIRCLE_TEST_REPORTS/junit/ \;
-    - cp -r ./target/site/* $CIRCLE_TEST_REPORTS/
-    - bash <(curl -s https://codecov.io/bash)
+    - mkdir -p $CIRCLE_TEST_REPORTS/reports/tests
+    - find . -type f -regex ".*/build/reports/tests/.*html" -exec cp {} $CIRCLE_TEST_REPORTS/reports/tests/ \;

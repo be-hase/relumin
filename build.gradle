@@ -94,4 +94,3 @@ subprojects {
 
     compileJava.dependsOn(processResources)
 }
-
