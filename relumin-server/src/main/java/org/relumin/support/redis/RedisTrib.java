@@ -130,7 +130,7 @@ public class RedisTrib implements AutoCloseable {
         final TribClusterNode target = getNodeByNodeId(toNodeId);
         if (target == null || target.hasFlag("slave")) {
             throw new IllegalArgumentException(
-                    "The specified node is not known or not a master, please retry.");
+                    "The specified node is not known or not a master.");
         }
 
         // Get the source instance
@@ -149,9 +149,7 @@ public class RedisTrib implements AutoCloseable {
             for (final String fromNodeId : StringUtils.split(fromNodeIds, ",")) {
                 final TribClusterNode fromNode = getNodeByNodeId(fromNodeId);
                 if (fromNode == null || fromNode.hasFlag("slave")) {
-                    throw new IllegalArgumentException(String.format(
-                            "The specified node(%s) is not known or is not a master, please retry.",
-                            fromNodeId));
+                    throw new IllegalArgumentException("The specified node is not known or not a master.");
                 }
                 sources.add(fromNode);
             }
@@ -161,7 +159,7 @@ public class RedisTrib implements AutoCloseable {
         if (sources.stream()
                    .anyMatch(source -> StringUtils.equals(source.getNode().getNodeId(),
                                                           target.getNode().getNodeId()))) {
-            throw new IllegalArgumentException("Target node is also listed among the source nodes!");
+            throw new IllegalArgumentException("Target node is also listed among the source nodes.");
         }
 
         log.info("Ready to move {} slots.", slotCount);

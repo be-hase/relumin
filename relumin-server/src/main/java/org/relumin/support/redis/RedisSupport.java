@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class RedisSupport {
+    public static final String REDIS_SCHEME = "redis://";
     public static final int ALL_SLOTS_SIZE = 16384;
 
     public Map<String, String> parseInfoResult(String result) {
