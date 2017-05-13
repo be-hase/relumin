@@ -6,6 +6,7 @@ jobs:
       - image: openjdk:8u121
         environment:
           SPRING_PROFILES_ACTIVE: ci
+      - image: behase/relumin-test
 
     working_directory: /home/ubuntu/relumin
 
