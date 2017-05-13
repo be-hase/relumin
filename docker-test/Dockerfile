@@ -1,5 +1,6 @@
 # --------------------------------------------------------------------------------------------------------------
 # FOR DEVELOPING / TESTING
+# behase/relumin-test (https://hub.docker.com/r/behase/relumin-test/)
 # --------------------------------------------------------------------------------------------------------------
 
 FROM centos:6
@@ -12,9 +13,9 @@ ENV REDIS_VER 3.2.8
 # Define working directory.
 WORKDIR $HOME
 
-COPY docker/conf $HOME/conf
-COPY docker/install $HOME/install
-COPY docker/scripts $HOME/scripts
+COPY conf $HOME/conf
+COPY install $HOME/install
+COPY scripts $HOME/scripts
 
 # yum
 RUN yum -y groupinstall "Development Tools"

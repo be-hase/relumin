@@ -418,5 +418,39 @@ public class RedisTribTest {
         assertThat(result.get(5).getHostAndPort()).isEqualTo("127.0.0.1:10005");
         assertThat(result.get(5).hasFlag("master")).isTrue();
         assertThat(result.get(5).getServedSlots()).isEqualTo("5001-16383");
+
+        // 1 replicas, 5 nodes (a node does not have slave)
+        resetAllRedis();
+        List<CreateClusterParam> params3 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params3));
+        Thread.sleep(5000);
+        result = redisSupport.computeCommands(testRedisProperties.getClusterUris().get(0).toRedisURI(),
+                                              commands -> redisSupport.parseClusterNodesResult(
+                                                      commands.clusterNodes(),
+                                                      testRedisProperties.getClusterUris().get(0)
+                                                                         .toHostAndPort()));
+        result.sort(Comparator.comparing(ClusterNode::getHostAndPort));
+        log.info("result={}", result);
+        assertThat(result.get(0).getHostAndPort()).isEqualTo("127.0.0.1:10000");
+        assertThat(result.get(0).hasFlag("master")).isTrue();
+        assertThat(result.get(0).getServedSlots()).isEqualTo("0-5460");
+        assertThat(result.get(1).getHostAndPort()).isEqualTo("127.0.0.1:10001");
+        assertThat(result.get(1).hasFlag("master")).isTrue();
+        assertThat(result.get(1).getServedSlots()).isEqualTo("5461-10921");
+        assertThat(result.get(2).getHostAndPort()).isEqualTo("127.0.0.1:10002");
+        assertThat(result.get(2).hasFlag("master")).isTrue();
+        assertThat(result.get(2).getServedSlots()).isEqualTo("10922-16383");
+        assertThat(result.get(3).getHostAndPort()).isEqualTo("127.0.0.1:10003");
+        assertThat(result.get(3).hasFlag("slave")).isTrue();
+        assertThat(result.get(4).getHostAndPort()).isEqualTo("127.0.0.1:10004");
+        assertThat(result.get(4).hasFlag("slave")).isTrue();
+        assertThat(result.size()).isEqualTo(5);
     }
 }
