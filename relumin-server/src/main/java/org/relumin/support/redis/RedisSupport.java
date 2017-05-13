@@ -4,16 +4,21 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
+import org.relumin.model.ClusterNode;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
-import org.relumin.model.ClusterNode;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.lambdaworks.redis.RedisClient;
+import com.lambdaworks.redis.RedisURI;
+import com.lambdaworks.redis.api.StatefulRedisConnection;
+import com.lambdaworks.redis.api.sync.RedisCommands;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -205,7 +210,8 @@ public class RedisSupport {
 
             if (start > end) {
                 throw new IllegalArgumentException(
-                        String.format("'%s' is invalid format. start slot must be equal or less than end slot.", v));
+                        String.format("'%s' is invalid format. start slot must be equal or less than end slot.",
+                                      v));
             }
             for (int i = start; i <= end; i++) {
                 slots.add(i);
@@ -231,5 +237,51 @@ public class RedisSupport {
         }
 
         return map;
+    }
+
+    public void executeCommands(final RedisURI redisUri, final RedisCommandsExecutable func) {
+        RedisClient redisClient = null;
+        StatefulRedisConnection<String, String> connection = null;
+        try {
+            redisClient = RedisClient.create(redisUri);
+            connection = redisClient.connect();
+            final RedisCommands<String, String> commands = connection.sync();
+            func.execute(commands);
+        } finally {
+            if (connection != null) {
+                connection.close();
+            }
+            if (redisClient != null) {
+                redisClient.shutdown(0, 0, TimeUnit.MILLISECONDS);
+            }
+        }
+    }
+
+    public <T> T computeCommands(final RedisURI redisUri, final RedisCommandsComputable<T> func) {
+        RedisClient redisClient = null;
+        StatefulRedisConnection<String, String> connection = null;
+        try {
+            redisClient = RedisClient.create(redisUri);
+            connection = redisClient.connect();
+            final RedisCommands<String, String> commands = connection.sync();
+            return func.compute(commands);
+        } finally {
+            if (connection != null) {
+                connection.close();
+            }
+            if (redisClient != null) {
+                redisClient.shutdown(0, 0, TimeUnit.MILLISECONDS);
+            }
+        }
+    }
+
+    @FunctionalInterface
+    public interface RedisCommandsExecutable {
+        void execute(RedisCommands<String, String> commands);
+    }
+
+    @FunctionalInterface
+    public interface RedisCommandsComputable<T> {
+        T compute(RedisCommands<String, String> commands);
     }
 }

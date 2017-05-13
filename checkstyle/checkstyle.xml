@@ -20,7 +20,7 @@
     </module>
     <module name="PackageName">
       <property name="format"
-                value="^(com\.be_hase\.){1}([a-z])+(\.[a-z_][a-z0-9_]*)*$" />
+                value="^org\.relumin" />
     </module>
     <module name="ParameterName" />
     <module name="StaticVariableName">

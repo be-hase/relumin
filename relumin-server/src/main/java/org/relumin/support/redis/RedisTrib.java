@@ -1,6 +1,6 @@
 package org.relumin.support.redis;
 
-import java.io.IOException;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +40,11 @@ public class RedisTrib implements AutoCloseable {
     @Getter
     private final List<TribClusterNode> nodes = Lists.newArrayList();
 
-    public List<CreateClusterParam> getCreateClusterParams(final int replicas, final Set<String> hostAndPorts) {
+    public List<CreateClusterParam> getCreateClusterParams(final int replicas,
+                                                           final Collection<String> hostAndPorts) {
         this.replicas = replicas;
 
-        for (String hostAndPort : hostAndPorts) {
+        for (String hostAndPort : Sets.newLinkedHashSet(hostAndPorts)) {
             hostAndPort = StringUtils.trim(hostAndPort);
             final TribClusterNode node = createTribClusterNode(hostAndPort);
             validateClusterAndEmptyNode(node);
@@ -56,7 +57,7 @@ public class RedisTrib implements AutoCloseable {
         return buildCreateClusterParam();
     }
 
-    public void createCluster(final List<CreateClusterParam> params) throws Exception {
+    public void createCluster(final List<CreateClusterParam> params) {
         ValidationUtils.createClusterParams(params);
 
         log.info("Creating cluster.");
@@ -91,7 +92,10 @@ public class RedisTrib implements AutoCloseable {
         // Give one second for the join to start, in order to avoid that
         // wait_cluster_join will find all the nodes agree about the config as
         // they are still empty with unassigned slots.
-        Thread.sleep(1000);
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignored) {
+        }
         waitClusterJoin();
         flushNodesConfig(); // Useful for the replicas.
 
@@ -108,15 +112,14 @@ public class RedisTrib implements AutoCloseable {
         return checkCluster();
     }
 
-    public void fixCluster(final String hostAndPort) throws Exception {
+    public void fixCluster(final String hostAndPort) {
         fix = true;
         loadClusterInfoFromNode(hostAndPort);
         checkCluster();
     }
 
     public void reshardCluster(final String hostAndPort, final int slotCount, final String fromNodeIds,
-                               final String toNodeId)
-            throws Exception {
+                               final String toNodeId) {
         loadClusterInfoFromNode(hostAndPort);
         checkCluster();
         if (!errors.isEmpty()) {
@@ -173,8 +176,8 @@ public class RedisTrib implements AutoCloseable {
                 reshardTable -> moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), null));
     }
 
-    public void reshardClusterBySlots(final String hostAndPort, final Set<Integer> slots, final String toNodeId)
-            throws Exception {
+    public void reshardClusterBySlots(final String hostAndPort, final Set<Integer> slots,
+                                      final String toNodeId) {
         loadClusterInfoFromNode(hostAndPort);
         checkCluster();
         if (!errors.isEmpty()) {
@@ -223,7 +226,7 @@ public class RedisTrib implements AutoCloseable {
                 reshardTable -> moveSlot(reshardTable.getSource(), target, reshardTable.getSlot(), null));
     }
 
-    public void addNodeIntoCluster(final String hostAndPort, final String newHostAndPort) throws Exception {
+    public void addNodeIntoCluster(final String hostAndPort, final String newHostAndPort) {
         log.info("Adding node {} to cluster {}", newHostAndPort, hostAndPort);
         loadClusterInfoFromNode(hostAndPort);
         checkCluster();
@@ -242,8 +245,7 @@ public class RedisTrib implements AutoCloseable {
     }
 
     public void addNodeIntoClusterAsReplica(final String hostAndPort, final String newHostAndPort,
-                                            final String materNodeId)
-            throws Exception {
+                                            final String materNodeId) {
         log.info("Adding node {} to cluster {}", newHostAndPort, hostAndPort);
         loadClusterInfoFromNode(hostAndPort);
         checkCluster();
@@ -281,8 +283,7 @@ public class RedisTrib implements AutoCloseable {
     }
 
     public void deleteNodeOfCluster(final String hostAndPort, final String nodeId, final String reset,
-                                    final boolean shutdown)
-            throws Exception {
+                                    final boolean shutdown) {
         log.info("Removing node({}) from cluster({}).", nodeId, hostAndPort);
 
         // Load cluster information
@@ -316,8 +317,7 @@ public class RedisTrib implements AutoCloseable {
         }
     }
 
-    public void deleteFailNodeOfCluster(final String hostAndPort, final String nodeId)
-            throws Exception {
+    public void deleteFailNodeOfCluster(final String hostAndPort, final String nodeId) {
         log.info("Removing node({}) from cluster({}).", nodeId, hostAndPort);
 
         // Load cluster information
@@ -883,6 +883,10 @@ public class RedisTrib implements AutoCloseable {
     }
 
     void checkCreateParameters() {
+        if (replicas < 0) {
+            throw new IllegalArgumentException(
+                    String.format("Replicas must be equal or longer than 0. (%s)", replicas));
+        }
         final int masters = nodes.size() / (replicas + 1);
         if (masters < 3) {
             final String errorMessage = String.format(
@@ -1159,11 +1163,11 @@ public class RedisTrib implements AutoCloseable {
     }
 
     TribClusterNode createTribClusterNode(final String hostAndPort) {
-        return new TribClusterNode(hostAndPort, "");
+        return new TribClusterNode(hostAndPort);
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         if (nodes != null) {
             nodes.forEach(v -> {
                 try {

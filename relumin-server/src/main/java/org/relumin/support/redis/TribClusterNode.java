@@ -5,12 +5,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
-
 import org.relumin.model.ClusterNode;
+import org.relumin.support.ValidationUtils;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -39,8 +41,6 @@ public class TribClusterNode implements AutoCloseable {
     @Getter
     private ClusterNode node;
     @Getter
-    private final String password;
-    @Getter
     private Map<String, String> clusterInfo = Maps.newLinkedHashMap();
     @Getter
     private boolean dirty;
@@ -51,15 +51,10 @@ public class TribClusterNode implements AutoCloseable {
     @Getter
     private final List<TribClusterNode> replicas = Lists.newArrayList();
 
-    public TribClusterNode(final String hostAndPort, final String password) {
-        final String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
-        if (hostAndPortArray.length < 2) {
-            throw new IllegalArgumentException("Invalid IP or Port. Use IP:Port format");
-        }
-
+    public TribClusterNode(final String hostAndPort) {
+        ValidationUtils.hostAndPort(hostAndPort);
         node = new ClusterNode();
         node.setHostAndPort(hostAndPort);
-        this.password = password;
     }
 
     public boolean hasFlag(final String flag) {
@@ -169,7 +164,7 @@ public class TribClusterNode implements AutoCloseable {
             try {
                 redisCommands.clusterReplicate(node.getMasterNodeId());
             } catch (Exception e) {
-                log.error("Replicate error.", e);
+                log.info("Replicate error. {}", e.getMessage());
                 // If the cluster did not already joined it is possible that
                 // the slave does not know the master node yet. So on errors
                 // we return ASAP leaving the dirty flag set, to flush the
@@ -212,7 +207,7 @@ public class TribClusterNode implements AutoCloseable {
             redisConnection.close();
         }
         if (redisClient != null) {
-            redisClient.shutdown();
+            redisClient.shutdown(0, 0, TimeUnit.MILLISECONDS);
         }
 
         redisClient = null;
@@ -244,9 +239,6 @@ public class TribClusterNode implements AutoCloseable {
     @VisibleForTesting
     RedisClient getRedisClient() {
         final RedisURI.Builder redisURIBuilder = RedisURI.Builder.redis(node.getHost(), node.getPort());
-        if (StringUtils.isNotBlank(password)) {
-            redisURIBuilder.withPassword(password);
-        }
         return RedisClient.create(redisURIBuilder.build());
     }
 }

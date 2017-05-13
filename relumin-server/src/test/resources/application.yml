@@ -1,0 +1,108 @@
+spring:
+  freemarker:
+    charset: UTF-8
+
+management:
+  add-application-context-header: false
+  security:
+    enabled: false
+
+security:
+  basic:
+    enabled: false
+
+build:
+  number: 0
+
+---
+spring.profiles: default
+spring.profiles.active: test
+---
+spring.profiles: test
+
+test:
+  redis:
+   cluster-uris:
+     - host: 127.0.0.1
+       port: 10000
+       password:
+     - host: 127.0.0.1
+       port: 10001
+       password:
+     - host: 127.0.0.1
+       port: 10002
+       password:
+     - host: 127.0.0.1
+       port: 10003
+       password:
+     - host: 127.0.0.1
+       port: 10004
+       password:
+     - host: 127.0.0.1
+       port: 10005
+       password:
+   standalone-uris:
+     - host: 127.0.0.1
+       port: 10010
+       password:
+     - host: 127.0.0.1
+       port: 10011
+       password:
+     - host: 127.0.0.1
+       port: 10012
+       password:
+   standalone-password-uris:
+     - host: 127.0.0.1
+       port: 10013
+       password: password
+     - host: 127.0.0.1
+       port: 10014
+       password: password
+     - host: 127.0.0.1
+       port: 10015
+       password: password
+
+---
+spring.profiles: ci
+
+test:
+  redis:
+   cluster-uris:
+     - host: 127.0.0.1
+       port: 10000
+       password:
+     - host: 127.0.0.1
+       port: 10001
+       password:
+     - host: 127.0.0.1
+       port: 10002
+       password:
+     - host: 127.0.0.1
+       port: 10003
+       password:
+     - host: 127.0.0.1
+       port: 10004
+       password:
+     - host: 127.0.0.1
+       port: 10005
+       password:
+   standalone-uris:
+     - host: 127.0.0.1
+       port: 10010
+       password:
+     - host: 127.0.0.1
+       port: 10011
+       password:
+     - host: 127.0.0.1
+       port: 10012
+       password:
+   standalone-password-uris:
+     - host: 127.0.0.1
+       port: 10013
+       password: password
+     - host: 127.0.0.1
+       port: 10014
+       password: password
+     - host: 127.0.0.1
+       port: 10015
+       password: password

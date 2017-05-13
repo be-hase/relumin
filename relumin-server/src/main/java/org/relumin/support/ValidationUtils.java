@@ -6,8 +6,8 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.relumin.model.CreateClusterParam;
-
 import org.relumin.support.redis.RedisSupport;
+
 import com.google.common.collect.Sets;
 
 public final class ValidationUtils {
@@ -62,16 +62,17 @@ public final class ValidationUtils {
         }
     }
 
-    public static void hostAndPort(final String node) {
-        final String[] hostAndPortArray = StringUtils.split(node, ":");
+    public static void hostAndPort(final String hostAndPort) {
+        final String[] hostAndPortArray = StringUtils.split(hostAndPort, ":");
         if (hostAndPortArray.length != 2) {
-            throw new IllegalArgumentException(String.format("Node is invalid. (%s)", node));
+            throw new IllegalArgumentException(
+                    String.format("HostAndPort is invalid format. (%s)", hostAndPort));
         }
         try {
             Integer.valueOf(hostAndPortArray[1]);
         } catch (Exception ignored) {
             throw new IllegalArgumentException(
-                    String.format("Node's port is invalid. (%s)", hostAndPortArray[1]));
+                    String.format("Port is invalid. (%s)", hostAndPortArray[1]));
         }
     }
 

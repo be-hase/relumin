@@ -16,7 +16,7 @@ import lombok.AllArgsConstructor;
 public class XodusConfiguration {
     private final ReluminProperties reluminProperties;
 
-    @Bean
+    @Bean(destroyMethod = "close")
     public PersistentEntityStore metaDataPersistentEntityStore() {
         final String dir = StringUtils.defaultIfBlank(
                 reluminProperties.getMetaDataDir(),

@@ -18,9 +18,9 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.relumin.model.ClusterNode;
 import org.springframework.boot.test.rule.OutputCapture;
 
-import org.relumin.model.ClusterNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -34,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @RunWith(MockitoJUnitRunner.class)
 public class TribClusterNodeTest {
     @Spy
-    private TribClusterNode target = new TribClusterNode("localhost:10000", "");
+    private TribClusterNode target = new TribClusterNode("localhost:10000");
 
     @Mock
     private RedisClient redisClient;
@@ -63,15 +63,15 @@ public class TribClusterNodeTest {
 
     @Test
     public void constructor() {
-        TribClusterNode result = new TribClusterNode("localhost:10000", "");
+        TribClusterNode result = new TribClusterNode("localhost:10000");
         assertThat(result.getNode().getHostAndPort()).isEqualTo("localhost:10000");
     }
 
     @Test
     public void constructor_invalid_host_and_port() {
-        assertThatThrownBy(() -> new TribClusterNode("", ""))
+        assertThatThrownBy(() -> new TribClusterNode("aaa"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Invalid IP or Port. Use IP:Port format");
+                .hasMessage("HostAndPort is invalid format. (aaa)");
     }
 
     @Test
@@ -157,19 +157,15 @@ public class TribClusterNodeTest {
 
     @Test
     public void loadInfo_getFriends_true() {
-        // given
-        List<ClusterNode> nodes = Lists.newArrayList(
-                ClusterNode.builder()
-                           .nodeId("nodeId1")
-                           .hostAndPort("localhost:10000")
-                           .flags(Sets.newHashSet("myself"))
-                           .build(),
-                ClusterNode.builder()
-                           .nodeId("nodeId2")
-                           .hostAndPort("localhost:10001")
-                           .flags(Sets.newHashSet())
-                           .build()
-        );
+        ClusterNode clusterNode1 = new ClusterNode();
+        clusterNode1.setNodeId("nodeId1");
+        clusterNode1.setHostAndPort("localhost:10000");
+        clusterNode1.setFlags(Sets.newHashSet("myself"));
+        ClusterNode clusterNode2 = new ClusterNode();
+        clusterNode2.setNodeId("nodeId2");
+        clusterNode2.setHostAndPort("localhost:10001");
+        clusterNode2.setFlags(Sets.newHashSet());
+        List<ClusterNode> nodes = Lists.newArrayList(clusterNode1, clusterNode2);
 
         initConnect();
         when(redisSupport.parseClusterNodesResult(anyString(), anyString())).thenReturn(nodes);
@@ -184,18 +180,15 @@ public class TribClusterNodeTest {
 
     @Test
     public void loadInfoGetFriendsFalse() {
-        List<ClusterNode> nodes = Lists.newArrayList(
-                ClusterNode.builder()
-                           .nodeId("nodeId1")
-                           .hostAndPort("localhost:10000")
-                           .flags(Sets.newHashSet("myself"))
-                           .build(),
-                ClusterNode.builder()
-                           .nodeId("nodeId2")
-                           .hostAndPort("localhost:10001")
-                           .flags(Sets.newHashSet())
-                           .build()
-        );
+        ClusterNode clusterNode1 = new ClusterNode();
+        clusterNode1.setNodeId("nodeId1");
+        clusterNode1.setHostAndPort("localhost:10000");
+        clusterNode1.setFlags(Sets.newHashSet("myself"));
+        ClusterNode clusterNode2 = new ClusterNode();
+        clusterNode2.setNodeId("nodeId2");
+        clusterNode2.setHostAndPort("localhost:10001");
+        clusterNode2.setFlags(Sets.newHashSet());
+        List<ClusterNode> nodes = Lists.newArrayList(clusterNode1, clusterNode2);
 
         initConnect();
         when(redisSupport.parseClusterNodesResult(anyString(), anyString())).thenReturn(nodes);
@@ -297,13 +290,13 @@ public class TribClusterNodeTest {
     @Test
     public void equalsTest() {
         // when
-        TribClusterNode node = new TribClusterNode("localhost:10000", "");
+        TribClusterNode node = new TribClusterNode("localhost:10000");
 
         // given
         assertThat(node.equals(null)).isFalse();
         assertThat(node.equals("")).isFalse();
         assertThat(node.equals(node)).isTrue();
-        assertThat(node.equals(new TribClusterNode("localhost:10000", ""))).isTrue();
-        assertThat(node.equals(new TribClusterNode("localhost:10001", ""))).isFalse();
+        assertThat(node.equals(new TribClusterNode("localhost:10000"))).isTrue();
+        assertThat(node.equals(new TribClusterNode("localhost:10001"))).isFalse();
     }
 }
