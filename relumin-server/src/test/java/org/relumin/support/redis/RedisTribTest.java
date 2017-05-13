@@ -341,7 +341,7 @@ public class RedisTribTest {
                                        null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         assertThatThrownBy(
                 () -> executeRedisTrib(
                         redisTrib -> redisTrib.getCreateClusterParams(
@@ -369,7 +369,7 @@ public class RedisTribTest {
                                        Lists.newArrayList("127.0.0.1:10005"), null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         result = getClusterNodes("127.0.0.1:10000");
         result.sort(Comparator.comparing(ClusterNode::getHostAndPort));
         log.info("result={}", result);
@@ -406,7 +406,7 @@ public class RedisTribTest {
                                        Lists.newArrayList(), null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params2));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         result = getClusterNodes("127.0.0.1:10000");
         result.sort(Comparator.comparing(ClusterNode::getHostAndPort));
         log.info("result={}", result);
@@ -440,7 +440,7 @@ public class RedisTribTest {
                                        Lists.newArrayList(), null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params3));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         result = getClusterNodes("127.0.0.1:10000");
         result.sort(Comparator.comparing(ClusterNode::getHostAndPort));
         log.info("result={}", result);
@@ -504,7 +504,7 @@ public class RedisTribTest {
                                        Lists.newArrayList("127.0.0.1:10005"), null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         executeRedisTrib(redisTrib -> {
             List<String> result = redisTrib.checkCluster("127.0.0.1:10000");
             assertThat(result).isEmpty();
@@ -514,7 +514,7 @@ public class RedisTribTest {
         redisSupport.executeCommands(testRedisProperties.getClusterUris().get(0).toRedisURI(), commands -> {
             commands.clusterDelSlots(0, 1, 2); //delete
         });
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         executeRedisTrib(redisTrib -> {
             List<String> result = redisTrib.checkCluster("127.0.0.1:10000");
             // error added
@@ -534,14 +534,14 @@ public class RedisTribTest {
                                        Lists.newArrayList("127.0.0.1:10005"), null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         // ALL pattern
         ClusterNode node = getClusterNode("127.0.0.1:10000");
         executeRedisTrib(redisTrib -> {
             redisTrib.reshardCluster("127.0.0.1:10000", 1000, "ALL", node.getNodeId());
         });
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         ClusterNode nodeAfter1 = getClusterNode("127.0.0.1:10000");
         assertThat(nodeAfter1.getServedSlots()).isEqualTo("0-5959,10922-11422");
 
@@ -550,7 +550,7 @@ public class RedisTribTest {
         executeRedisTrib(redisTrib -> {
             redisTrib.reshardCluster("127.0.0.1:10000", 1000, fromNode.getNodeId(), node.getNodeId());
         });
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         ClusterNode nodeAfter2 = getClusterNode("127.0.0.1:10000");
         assertThat(nodeAfter2.getServedSlots()).isEqualTo("0-6959,10922-11422");
     }
@@ -567,7 +567,7 @@ public class RedisTribTest {
                                        Lists.newArrayList("127.0.0.1:10005"), null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         List<ClusterNode> nodes = getClusterNodes("127.0.0.1:10000");
         List<ClusterNode> masterNodes = nodes.stream()
@@ -632,7 +632,7 @@ public class RedisTribTest {
                                        Lists.newArrayList("127.0.0.1:10005"), null)
         );
         executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         // ALL pattern
         ClusterNode node = getClusterNode("127.0.0.1:10000");
@@ -640,7 +640,7 @@ public class RedisTribTest {
         executeRedisTrib(redisTrib -> {
             redisTrib.reshardClusterBySlots("127.0.0.1:10000", slots, node.getNodeId());
         });
-        Thread.sleep(3000);
+        Thread.sleep(5000);
         ClusterNode nodeAfter1 = getClusterNode("127.0.0.1:10000");
         assertThat(nodeAfter1.getServedSlots()).isEqualTo("0-5460,10000-10999");
     }
