@@ -135,7 +135,7 @@ public class RedisTrib implements AutoCloseable {
 
         // Get the source instance
         final List<TribClusterNode> sources = Lists.newArrayList();
-        if (StringUtils.equals("ALL", fromNodeIds)) {
+        if (StringUtils.equalsIgnoreCase(fromNodeIds, "all")) {
             for (final TribClusterNode node : nodes) {
                 if (StringUtils.equals(node.getNode().getNodeId(), target.getNode().getNodeId())) {
                     continue;
@@ -248,16 +248,19 @@ public class RedisTrib implements AutoCloseable {
         loadClusterInfoFromNode(hostAndPort);
         checkCluster();
 
-        // If --master-id was specified, try to resolve it now so that we
+        // If masterId was specified, try to resolve it now so that we
         // abort before starting with the node configuration.
         final TribClusterNode master;
-        if (StringUtils.equals(materNodeId, "RANDOM")) {
+        if (StringUtils.equalsIgnoreCase(materNodeId, "random")) {
             master = getMasterWithLeastReplicas();
             log.info("Automatically selected master {}({}).", master, master.getNode().getNodeId());
         } else {
             master = getNodeByNodeId(materNodeId);
             if (master == null) {
-                throw new IllegalArgumentException(String.format("No such master ID %s", materNodeId));
+                throw new IllegalArgumentException(String.format("No such master ID. (%s)", materNodeId));
+            }
+            if (!master.hasFlag("master")) {
+                throw new IllegalArgumentException("This node is not master node.");
             }
         }
 
@@ -290,7 +293,7 @@ public class RedisTrib implements AutoCloseable {
         // Check if the node exists and is not empty
         final TribClusterNode node = getNodeByNodeId(nodeId);
         if (node == null) {
-            throw new IllegalArgumentException(String.format("No such node ID %s", nodeId));
+            throw new IllegalArgumentException(String.format("No such node ID. (%s)", nodeId));
         }
         if (!node.getNode().getServedSlotsSet().isEmpty()) {
             throw new IllegalArgumentException(
@@ -342,8 +345,7 @@ public class RedisTrib implements AutoCloseable {
              });
     }
 
-    public void replicateNode(final String hostAndPort, final String masterNodeId)
-            throws Exception {
+    public void replicateNode(final String hostAndPort, final String masterNodeId) {
         log.info("Replicate node({}) as slave of {}.", hostAndPort, masterNodeId);
 
         loadClusterInfoFromNode(hostAndPort);
@@ -373,8 +375,7 @@ public class RedisTrib implements AutoCloseable {
         node.getRedisCommands().clusterReplicate(masterNodeId);
     }
 
-    public void failoverNode(final String hostAndPort)
-            throws Exception {
+    public void failoverNode(final String hostAndPort) {
         log.info("Failover node({}).", hostAndPort);
 
         loadClusterInfoFromNode(hostAndPort);
@@ -400,21 +401,41 @@ public class RedisTrib implements AutoCloseable {
     }
 
     TribClusterNode getMasterWithLeastReplicas() {
-        final List<TribClusterNode> masters = nodes.stream()
-                                                   .filter(node -> node.hasFlag("master"))
-                                                   .collect(Collectors.toList());
-        masters.sort(Comparator.comparingInt(v -> v.getNode().getServedSlotsSet().size()));
-        return masters.get(0);
+        final Map<String, List<String>> masterAndReplicas = getMasterAndReplicasNodeId();
+        final String masterId = masterAndReplicas
+                .entrySet()
+                .stream()
+                .sorted(Comparator.comparingInt(e -> e.getValue().size()))
+                .collect(Collectors.toList())
+                .get(0).getKey();
+        return getNodeByNodeId(masterId);
     }
 
     TribClusterNode getMasterWithLeastReplicasSpecifiedNodeIdExcluded(final String nodeId) {
-        final List<TribClusterNode> masters =
-                nodes.stream()
-                     .filter(node -> node.hasFlag("master"))
-                     .filter(node -> !StringUtils.equalsIgnoreCase(node.getNode().getNodeId(), nodeId))
-                     .collect(Collectors.toList());
-        masters.sort(Comparator.comparingInt(v -> v.getNode().getServedSlotsSet().size()));
-        return masters.get(0);
+        final Map<String, List<String>> masterAndReplicas = getMasterAndReplicasNodeId();
+        final String masterId = masterAndReplicas
+                .entrySet()
+                .stream()
+                .filter(e -> !StringUtils.equalsIgnoreCase(e.getKey(), nodeId))
+                .sorted(Comparator.comparingInt(e -> e.getValue().size()))
+                .collect(Collectors.toList())
+                .get(0).getKey();
+        return getNodeByNodeId(masterId);
+    }
+
+    private Map<String, List<String>> getMasterAndReplicasNodeId() {
+        final Map<String, List<String>> masterAndReplicas = Maps.newHashMap();
+        nodes.forEach(node -> {
+            if (StringUtils.isBlank(node.getNode().getMasterNodeId())) {
+                //master
+                masterAndReplicas.putIfAbsent(node.getNode().getNodeId(), Lists.newArrayList());
+            } else {
+                //slave
+                masterAndReplicas.putIfAbsent(node.getNode().getMasterNodeId(), Lists.newArrayList());
+                masterAndReplicas.get(node.getNode().getMasterNodeId()).add(node.getNode().getNodeId());
+            }
+        });
+        return masterAndReplicas;
     }
 
     // Given a list of source nodes return a "resharding plan"

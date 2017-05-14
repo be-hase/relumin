@@ -53,27 +53,27 @@ public class RedisTribTest {
     }
 
     private void executeRedisTrib(final Consumer<RedisTrib> consumer) {
-        try (RedisTrib redisTrib = new RedisTrib()) {
+        try (final RedisTrib redisTrib = new RedisTrib()) {
             consumer.accept(redisTrib);
         }
     }
 
-    private <T> T computeRedisTrib(Function<RedisTrib, T> function) {
-        try (RedisTrib redisTrib = new RedisTrib()) {
+    private <T> T computeRedisTrib(final Function<RedisTrib, T> function) {
+        try (final RedisTrib redisTrib = new RedisTrib()) {
             return function.apply(redisTrib);
         }
     }
 
-    private ClusterNode getClusterNode(String hostAndPort) {
-        List<ClusterNode> nodes = getClusterNodes(hostAndPort);
+    private ClusterNode getClusterNode(final String hostAndPort) {
+        final List<ClusterNode> nodes = getClusterNodes(hostAndPort);
         return nodes.stream()
                     .filter(v -> hostAndPort.equals(v.getHostAndPort()))
                     .findFirst()
                     .get();
     }
 
-    private List<ClusterNode> getClusterNodes(String hostAndPort) {
-        return redisSupport.computeCommands(RedisURI.create("redis://" + hostAndPort),
+    private List<ClusterNode> getClusterNodes(final String hostAndPort) {
+        return redisSupport.computeCommands(RedisURI.create(RedisSupport.REDIS_SCHEME + hostAndPort),
                                             commands -> redisSupport.parseClusterNodesResult(
                                                     commands.clusterNodes(), hostAndPort));
     }
@@ -299,10 +299,10 @@ public class RedisTribTest {
                         "'127.0.0.1:10010' is not configured as a cluster node.");
 
         // not connected redis
-        final List<String> hasNotConnectedRedis = testRedisProperties.getClusterUris()
-                                                                     .stream()
-                                                                     .map(RedisUri::toHostAndPort)
-                                                                     .collect(Collectors.toList());
+        List<String> hasNotConnectedRedis = testRedisProperties.getClusterUris()
+                                                               .stream()
+                                                               .map(RedisUri::toHostAndPort)
+                                                               .collect(Collectors.toList());
         hasNotConnectedRedis.add("127.0.0.1:10020");
         assertThatThrownBy(
                 () -> executeRedisTrib(
@@ -643,5 +643,332 @@ public class RedisTribTest {
         Thread.sleep(5000);
         ClusterNode nodeAfter1 = getClusterNode("127.0.0.1:10000");
         assertThat(nodeAfter1.getServedSlots()).isEqualTo("0-5460,10000-10999");
+    }
+
+    @Test
+    public void addNodeIntoCluster() throws Exception {
+        // 0 replicas, 3 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList(), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList(), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // Add node as master
+        executeRedisTrib(redisTrib -> {
+            redisTrib.addNodeIntoCluster("127.0.0.1:10000", "127.0.0.1:10003");
+        });
+        ClusterNode node = getClusterNode("127.0.0.1:10003");
+        assertThat(node.getHostAndPort()).isEqualTo("127.0.0.1:10003");
+        assertThat(node.hasFlag("master")).isTrue();
+        assertThat(node.getServedSlotsSet()).isEmpty();
+    }
+
+    @Test
+    public void addNodeIntoClusterError() throws Exception {
+        // 0 replicas, 3 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList(), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList(), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // invalid hostAndPort
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib.addNodeIntoCluster("invalid", "127.0.0.1:10003")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("HostAndPort is invalid format. (invalid)");
+
+        // invalid newHostAndPort
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib.addNodeIntoCluster("127.0.0.1:10000", "invalid")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("HostAndPort is invalid format. (invalid)");
+
+        // not empty
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib.addNodeIntoCluster("127.0.0.1:10000", "127.0.0.1:10000")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage(
+                        "'127.0.0.1:10000' is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.");
+    }
+
+    @Test
+    public void addNodeIntoClusterAsReplicaRandom() throws Exception {
+        // 1 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // Add node as replica, master node is random
+        executeRedisTrib(redisTrib -> {
+            redisTrib.addNodeIntoClusterAsReplica("127.0.0.1:10000", "127.0.0.1:10005", "random");
+        });
+        ClusterNode node = getClusterNode("127.0.0.1:10005");
+        ClusterNode masterNode = getClusterNode("127.0.0.1:10002");
+        assertThat(node.getHostAndPort()).isEqualTo("127.0.0.1:10005");
+        assertThat(node.hasFlag("slave")).isTrue();
+        assertThat(node.getMasterNodeId()).isEqualTo(masterNode.getNodeId());
+    }
+
+    @Test
+    public void addNodeIntoClusterAsReplicaWithMasterNodeId() throws Exception {
+        // 1 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList(), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList(), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // Add node as replica
+        ClusterNode masterNode = getClusterNode("127.0.0.1:10002");
+        executeRedisTrib(redisTrib -> {
+            redisTrib.addNodeIntoClusterAsReplica("127.0.0.1:10000", "127.0.0.1:10003", masterNode.getNodeId());
+        });
+        ClusterNode node = getClusterNode("127.0.0.1:10003");
+        assertThat(node.getHostAndPort()).isEqualTo("127.0.0.1:10003");
+        assertThat(node.hasFlag("slave")).isTrue();
+        assertThat(node.getMasterNodeId()).isEqualTo(masterNode.getNodeId());
+    }
+
+    @Test
+    public void addNodeIntoClusterAsReplicaError() throws Exception {
+        // 1 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList(), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // invalid maserId
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib
+                                .addNodeIntoClusterAsReplica("127.0.0.1:10000", "127.0.0.1:10004", "invalid")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("No such master ID. (invalid)");
+
+        // specify slave nodeId
+        ClusterNode slaveNode = getClusterNode("127.0.0.1:10003");
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib
+                                .addNodeIntoClusterAsReplica("127.0.0.1:10000", "127.0.0.1:10004",
+                                                             slaveNode.getNodeId())))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("This node is not master node.");
+
+        // not empty
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib
+                                .addNodeIntoClusterAsReplica("127.0.0.1:10000", "127.0.0.1:10001", "random")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage(
+                        "'127.0.0.1:10001' is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0.");
+    }
+
+    @Test
+    public void deleteNodeOfCluster() throws Exception {
+        // 1 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList("127.0.0.1:10005"), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // not reset
+        ClusterNode slave1 = getClusterNode("127.0.0.1:10003");
+        executeRedisTrib(
+                redisTrib -> redisTrib.deleteNodeOfCluster("127.0.0.1:10000", slave1.getNodeId(), null, false));
+        List<ClusterNode> slave1Nodes = getClusterNodes("127.0.0.1:10003");
+        assertThat(slave1Nodes.size()).isEqualTo(6);
+
+        // soft reset
+        ClusterNode slave2 = getClusterNode("127.0.0.1:10004");
+        executeRedisTrib(
+                redisTrib -> redisTrib
+                        .deleteNodeOfCluster("127.0.0.1:10000", slave2.getNodeId(), "soft", false));
+        List<ClusterNode> slave2Nodes = getClusterNodes("127.0.0.1:10004");
+        assertThat(slave2Nodes.size()).isEqualTo(1);
+        assertThat(slave2Nodes.get(0).getNodeId()).isEqualTo(slave2.getNodeId());
+
+        // soft reset
+        ClusterNode slave3 = getClusterNode("127.0.0.1:10005");
+        executeRedisTrib(
+                redisTrib -> redisTrib
+                        .deleteNodeOfCluster("127.0.0.1:10000", slave3.getNodeId(), "hard", false));
+        List<ClusterNode> slave3Nodes = getClusterNodes("127.0.0.1:10005");
+        assertThat(slave3Nodes.size()).isEqualTo(1);
+        assertThat(slave3Nodes.get(0).getNodeId()).isNotEqualTo(slave3.getNodeId());
+    }
+
+    @Test
+    public void deleteNodeOfClusterError() throws Exception {
+        // 1 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList("127.0.0.1:10005"), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // not exist nodeId
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib.deleteNodeOfCluster("127.0.0.1:10000", "invalid", null, false)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("No such node ID. (invalid)");
+
+        // master
+        ClusterNode master = getClusterNode("127.0.0.1:10001");
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib
+                                .deleteNodeOfCluster("127.0.0.1:10000", master.getNodeId(), null, false)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Node(127.0.0.1:10001) is not empty! Reshard data away and try again.");
+    }
+
+    @Test
+    public void replicateNode() throws Exception {
+        // 0 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+        // add empty master
+        executeRedisTrib(redisTrib -> redisTrib.addNodeIntoCluster("127.0.0.1:10000", "127.0.0.1:10005"));
+
+        // change master
+        ClusterNode master1 = getClusterNode("127.0.0.1:10000");
+        executeRedisTrib(redisTrib -> redisTrib.replicateNode("127.0.0.1:10004", master1.getNodeId()));
+        ClusterNode slave2 = getClusterNode("127.0.0.1:10004");
+        assertThat(slave2.getMasterNodeId()).isEqualTo(master1.getNodeId());
+
+        // master to slave
+        executeRedisTrib(redisTrib -> redisTrib.replicateNode("127.0.0.1:10005", master1.getNodeId()));
+        ClusterNode slave3 = getClusterNode("127.0.0.1:10005");
+        assertThat(slave3.getMasterNodeId()).isEqualTo(master1.getNodeId());
+    }
+
+    @Test
+    public void replicateNodeError() throws Exception {
+        // 0 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList(), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        // this is master
+        ClusterNode master1 = getClusterNode("127.0.0.1:10000");
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib.replicateNode("127.0.0.1:10001", master1.getNodeId())))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Node(127.0.0.1:10001) is not empty! Reshard data away and try again.");
+
+        // invalid master node id
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib.replicateNode("127.0.0.1:10003", "invalid")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Node(invalid) does not exists.");
+
+        // target is not master
+        ClusterNode slave2 = getClusterNode("127.0.0.1:10004");
+        assertThatThrownBy(
+                () -> executeRedisTrib(
+                        redisTrib -> redisTrib.replicateNode("127.0.0.1:10003", slave2.getNodeId())))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage(String.format("Node(%s) is not master.", slave2.getNodeId()));
+    }
+
+    @Test
+    public void failoverNode() throws Exception {
+        // 0 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList("127.0.0.1:10005"), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        executeRedisTrib(redisTrib -> redisTrib.failoverNode("127.0.0.1:10003"));
+        ClusterNode master1 = getClusterNode("127.0.0.1:10000");
+        assertThat(master1.hasFlag("slave")).isTrue();
+    }
+
+    @Test
+    public void failoverError() throws Exception {
+        // 0 replicas, 5 nodes
+        List<CreateClusterParam> params1 = Lists.newArrayList(
+                new CreateClusterParam("0", "5460", "127.0.0.1:10000",
+                                       Lists.newArrayList("127.0.0.1:10003"), null),
+                new CreateClusterParam("5461", "10921", "127.0.0.1:10001",
+                                       Lists.newArrayList("127.0.0.1:10004"), null),
+                new CreateClusterParam("10922", "16383", "127.0.0.1:10002",
+                                       Lists.newArrayList("127.0.0.1:10005"), null)
+        );
+        executeRedisTrib(redisTrib -> redisTrib.createCluster(params1));
+        Thread.sleep(5000);
+
+        assertThatThrownBy(() -> executeRedisTrib(redisTrib -> redisTrib.failoverNode("127.0.0.1:10000")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("Node(127.0.0.1:10000) is not slave.");
     }
 }
