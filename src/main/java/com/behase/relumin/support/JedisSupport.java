@@ -71,7 +71,7 @@ public class JedisSupport {
             String[] resultLineArray = StringUtils.split(resultLine);
             clusterNode.setNodeId(resultLineArray[0]);
 
-            String eachHostAndPort = resultLineArray[1];
+            String eachHostAndPort = resultLineArray[1].split("@")[0];
             if (StringUtils.isBlank(hostAndPort)) {
                 clusterNode.setHostAndPort(eachHostAndPort);
             } else {
