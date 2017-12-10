@@ -98,6 +98,7 @@ public class JedisSupportTest {
         // then
         assertThat(result.get(0).getNodeId(), is("7893f01887835a6e19b09ff663909fced0744926"));
         assertThat(result.get(0).getHost(), is("192.168.99.100"));
+        assertThat(result.get(0).getPort(), is(7001));
         assertThat(result.get(0).getFlags(), contains("myself", "master"));
         assertThat(result.get(1).getFlags(), contains("slave"));
         assertThat(result.get(0).getMasterNodeId(), is(""));
@@ -113,10 +114,56 @@ public class JedisSupportTest {
         assertThat(result.get(1).getServedSlots(), is(""));
 
         // when
+        result = tested.parseClusterNodesResult(clusterNodesText, "");
+
+        // then
+        assertThat(result.get(0).getHost(), is("127.0.0.1"));
+        assertThat(result.get(0).getPort(), is(7001));
+    }
+
+    // redis4.0 has gosssip protocol port.
+    @Test
+    public void parseClusterNodesResult4_0() {
+        // given
+        String clusterNodesText = "" +
+                                  "7893f01887835a6e19b09ff663909fced0744926 127.0.0.1:7001@17001 myself,master - 0 0 1 connected 0-2000 2001-4094 4095 [93-<-292f8b365bb7edb5e285caf0b7e6ddc7265d2f4f] [77->-e7d1eecce10fd6bb5eb35b9f99a514335d9ba9ca]\n" +
+                                  "9bd5a779d5981cee7d561dc2bfc984ffbfc744d3 192.168.99.100:7002@17002 slave 4e97c7f8fc08d2bb3e45571c4f001a7a347cbbe2 0 1459242326643 5 disconnected\n" +
+                                  "c3c0b2b7d7d50e339565de468e7ebd7db79a1ea5 192.168.99.100:7003@17003 master - 0 1459242325640 3 connected 8192-12287\n" +
+                                  "20e7c57506199c468b0672fda7b00d12a2d6a547 192.168.99.100:7004@17004 slave a4f318b3fb0affd5d130b29cb6161a7e225216b5 0 1459242324639 6 connected\n" +
+                                  "8e309bc36225a6bfd46ede7ff377b54e0bdbfc5d 192.168.99.101:7001@17001 slave 7893f01887835a6e19b09ff663909fced0744926 0 1459242328644 1 connected\n" +
+                                  "4e97c7f8fc08d2bb3e45571c4f001a7a347cbbe2 192.168.99.101:7002@17002 master - 0 1459242323638 5 connected 4096-8191\n" +
+                                  "7040f0339855ff0faf1abeb32baad0d6441e8e2f 192.168.99.101:7003@17003 slave c3c0b2b7d7d50e339565de468e7ebd7db79a1ea5 0 1459242327643 3 connected\n" +
+                                  "a4f318b3fb0affd5d130b29cb6161a7e225216b5 192.168.99.101:7004@17004 master - 0 1459242328644 6 connected 12288-16383";
+
+        List<ClusterNode> result;
+
+        // when
         result = tested.parseClusterNodesResult(clusterNodesText, "192.168.99.100:7001");
 
         // then
+        assertThat(result.get(0).getNodeId(), is("7893f01887835a6e19b09ff663909fced0744926"));
         assertThat(result.get(0).getHost(), is("192.168.99.100"));
+        assertThat(result.get(0).getPort(), is(7001));
+        assertThat(result.get(0).getFlags(), contains("myself", "master"));
+        assertThat(result.get(1).getFlags(), contains("slave"));
+        assertThat(result.get(0).getMasterNodeId(), is(""));
+        assertThat(result.get(1).getMasterNodeId(), is("4e97c7f8fc08d2bb3e45571c4f001a7a347cbbe2"));
+        assertThat(result.get(0).getPingSent(), is(0L));
+        assertThat(result.get(0).getPongReceived(), is(0L));
+        assertThat(result.get(0).getConfigEpoch(), is(1L));
+        assertThat(result.get(0).isConnect(), is(true));
+        assertThat(result.get(1).isConnect(), is(false));
+        assertThat(result.get(0).getServedSlots(), is("0-4095"));
+        assertThat(result.get(0).getImporting(), hasEntry(93, "292f8b365bb7edb5e285caf0b7e6ddc7265d2f4f"));
+        assertThat(result.get(0).getMigrating(), hasEntry(77, "e7d1eecce10fd6bb5eb35b9f99a514335d9ba9ca"));
+        assertThat(result.get(1).getServedSlots(), is(""));
+
+        // when
+        result = tested.parseClusterNodesResult(clusterNodesText, "");
+
+        // then
+        assertThat(result.get(0).getHost(), is("127.0.0.1"));
+        assertThat(result.get(0).getPort(), is(7001));
     }
 
     @Test
