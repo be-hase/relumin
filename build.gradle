@@ -1,5 +1,10 @@
 buildscript {
     ext {
+        springBootVersion = '2.0.4.RELEASE'
+        springPlatformVersion = 'Cairo-SR3'
+        kotlinVersion = '1.2.41'
+        xodusVersion = '1.2.3'
+
         repos = {
             mavenLocal()
             mavenCentral()
@@ -12,10 +17,13 @@ buildscript {
     repositories repos
 
     dependencies {
-        classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.5.3.RELEASE'
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.2.RELEASE'
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.4.RELEASE'
         classpath 'io.spring.gradle:propdeps-plugin:0.0.8'
-        classpath "net.rdrei.android.buildtimetracker:gradle-plugin:0.9.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}"
+        classpath("org.jetbrains.kotlin:kotlin-allopen:${kotlinVersion}")
+        classpath "gradle.plugin.com.gorylenko.gradle-git-properties:gradle-git-properties:1.4.21"
+        classpath "net.rdrei.android.buildtimetracker:gradle-plugin:0.11.0"
     }
 }
 
@@ -30,7 +38,10 @@ buildtimetracker {
 }
 
 subprojects {
-    apply plugin: 'java'
+    apply plugin: 'kotlin'
+    apply plugin: "kotlin-kapt"
+    apply plugin: 'kotlin-spring'
+
     apply plugin: 'maven'
     apply plugin: 'idea'
     apply plugin: 'eclipse'
@@ -40,56 +51,62 @@ subprojects {
     apply plugin: 'propdeps-idea'
     apply plugin: 'propdeps-eclipse'
 
-    apply plugin: 'checkstyle'
-
     apply plugin: 'io.spring.dependency-management'
+
+    apply plugin: "com.gorylenko.gradle-git-properties"
 
     group = 'org.relumin'
     version = '1.0.0-SNAPSHOT'
 
     sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-    tasks.withType(JavaCompile) {
-        options.encoding = 'UTF-8'
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-parameters" << "-Xdiags:verbose"
+
+    compileKotlin {
+        kotlinOptions {
+            freeCompilerArgs = ["-Xjsr305=strict"]
+            jvmTarget = "1.8"
+            javaParameters = true
+        }
+    }
+    compileTestKotlin {
+        kotlinOptions {
+            freeCompilerArgs = ["-Xjsr305=strict"]
+            jvmTarget = "1.8"
+            javaParameters = true
+        }
     }
 
     repositories repos
 
-    checkstyle {
-        toolVersion = '7.6.1'
-        configFile = file("${rootProject.rootDir}/checkstyle/checkstyle.xml")
-        ignoreFailures true
-        sourceSets = [project.sourceSets.main] // ignore test code checkstyle
-    }
-
+    // Basically, we manage by spring platform BOM.
     dependencyManagement {
         imports {
-            mavenBom 'io.spring.platform:platform-bom:Brussels-RELEASE'
+            mavenBom "io.spring.platform:platform-bom:${springPlatformVersion}"
         }
+
+        // except spring platform-bom library versions
         dependencies {
             // except spring platform-bom library versions
             [
-                    // lombok
-                    'org.projectlombok:lombok:1.16.16',
+                    // kotlin
+                    "org.jetbrains.kotlin:kotlin-stdlib-jre8:${kotlinVersion}",
+                    "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}",
 
                     // xodus
-                    'org.jetbrains.xodus:xodus-openAPI:1.0.4',
-                    'org.jetbrains.xodus:xodus-entity-store:1.0.4',
-
-                    // lettuce
-                    'biz.paluch.redis:lettuce:4.3.2.Final',
+                    "org.jetbrains.xodus:xodus-openAPI:${xodusVersion}",
+                    "org.jetbrains.xodus:xodus-entity-store:${xodusVersion}",
             ].each { dependency it }
         }
     }
 
     dependencies {
+        compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+        compile 'org.jetbrains.kotlin:kotlin-reflect'
+        compile 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
         compile 'org.springframework.boot:spring-boot-starter'
+        kapt "org.springframework.boot:spring-boot-configuration-processor"
         compileOnly "org.springframework.boot:spring-boot-configuration-processor"
         testCompile 'org.springframework.boot:spring-boot-starter-test'
-
-        compileOnly 'org.projectlombok:lombok'
-        testCompileOnly 'org.projectlombok:lombok'
     }
 
     compileJava.dependsOn(processResources)

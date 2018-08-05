@@ -13,3 +13,5 @@ dependencies {
     compile 'org.jetbrains.xodus:xodus-openAPI'
     compile 'org.jetbrains.xodus:xodus-entity-store'
 }
+
+bootJar.enabled = true
