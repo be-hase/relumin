@@ -42,10 +42,10 @@ var HeaderSidebar = React.createClass({
             );
         }
 
-        var registAndCreateClusterMenuView;
+        var registerAndCreateClusterMenuView;
         if (!AUTH_ENABLED || me.role === 'RELUMIN_ADMIN') {
-            registAndCreateClusterMenuView = [
-                (<li key="regist-cluster"><a href="#" data-toggle="modal" data-target=".regist-cluster-modal-components">Regist cluster</a></li>),
+            registerAndCreateClusterMenuView = [
+                (<li key="register-cluster"><a href="#" data-toggle="modal" data-target=".register-cluster-modal-components">Register cluster</a></li>),
                 (<li key="create-cluster"><a href="#/create-cluster">Create cluster</a></li>)
             ];
         }
@@ -86,7 +86,7 @@ var HeaderSidebar = React.createClass({
                         {clusterNames}
                     </ul>
                     <ul className="nav navbar-nav navbar-right dis-iframe">
-                        {registAndCreateClusterMenuView}
+                        {registerAndCreateClusterMenuView}
                         <li><a href="#/users">Users</a></li>
                         {loginDropDownView}
                     </ul>

@@ -21,18 +21,18 @@ var ClusterSettingDelete = React.createClass({
             <div className="cluster-setting-delete-components">
                 <div className="panel panel-default">
                     <div className="panel-heading clearfix">
-                        Unregist cluster
+                        Unregister cluster
                     </div>
                     <div className="panel-body">
-                        <button className="btn btn-danger" data-toggle="modal" data-target=".unregist-cluster-modal">Unregist cluster.</button>
+                        <button className="btn btn-danger" data-toggle="modal" data-target=".unregister-cluster-modal">Unregister cluster.</button>
                     </div>
                 </div>
-                <div className="modal unregist-cluster-modal" ref="unregist-cluster-modal">
+                <div className="modal unregister-cluster-modal" ref="unregister-cluster-modal">
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                <h4 className="modal-title">Unregist this cluster</h4>
+                                <h4 className="modal-title">Unregister this cluster</h4>
                             </div>
                             <div className="modal-body">
                                 Are you sure ?
@@ -61,7 +61,7 @@ var ClusterSettingDelete = React.createClass({
                         _this.hideModal();
                     }
                     Utils.showAlert({
-                        message: 'Unregisted successfully',
+                        message: 'Unregistered successfully',
                         level: 'success'
                     });
                 },
@@ -75,7 +75,7 @@ var ClusterSettingDelete = React.createClass({
         );
     },
     hideModal: function() {
-        $(React.findDOMNode(this.refs['unregist-cluster-modal'])).modal('hide');
+        $(React.findDOMNode(this.refs['unregister-cluster-modal'])).modal('hide');
     }
 });
 

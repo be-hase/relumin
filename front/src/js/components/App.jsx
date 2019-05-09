@@ -5,7 +5,7 @@ var NotificationSystem = require('react-notification-system');
 var Spinner = require('react-spinkit');
 
 var HeaderSidebar = require('./HeaderSidebar');
-var RegistClusterModal = require('./RegistClusterModal');
+var RegisterClusterModal = require('./RegisterClusterModal');
 
 var AppStore = require('../stores/AppStore');
 var UserStore = require('../stores/UserStore');
@@ -18,11 +18,11 @@ var App = React.createClass({
         AppStore.removeAlertListener(this.onAlertHandle);
     },
     render: function() {
-        var registClusterModalView;
+        var registerClusterModalView;
         var me = UserStore.getMe();
         
         if (!AUTH_ENABLED || me.role === 'RELUMIN_ADMIN') {
-            registClusterModalView = (<RegistClusterModal />);
+            registerClusterModalView = (<RegisterClusterModal />);
         }
         return (
             <div>
@@ -32,7 +32,7 @@ var App = React.createClass({
                         <RouteHandler/>
                     </div>
                 </div>
-                {registClusterModalView}
+                {registerClusterModalView}
                 <NotificationSystem ref="notificationSystem" />
                 <div className="global-loading">
                     <Spinner spinnerName='three-bounce' ref="spinner" />

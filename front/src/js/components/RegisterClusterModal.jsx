@@ -20,12 +20,12 @@ var RegisterClusterModal = React.createClass({
     },
     render: function() {
         return (
-            <div className="modal regist-cluster-modal-components" ref="modal">
+            <div className="modal register-cluster-modal-components" ref="modal">
                 <div className="modal-dialog">
                     <div className="modal-content">
                         <div className="modal-header">
                             <button type="button" className="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                            <h4 className="modal-title">Regist cluster</h4>
+                            <h4 className="modal-title">Register cluster</h4>
                         </div>
                         <div className="modal-body">
                             <div className={this.getClasses('clusterName')}>
@@ -83,7 +83,7 @@ var RegisterClusterModal = React.createClass({
                             _this.closeModal();
                         }
                         Utils.showAlert({
-                            message: 'Registed successfully',
+                            message: 'Registered successfully',
                             level: 'success'
                         });
                     },
